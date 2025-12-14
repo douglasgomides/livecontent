@@ -40,6 +40,10 @@ export interface PatientVoice {
   implicitQuestions: string[];
   languageStyle: string;
   emotionalJourney: { stage: string; emotion: string }[];
+  // Insights adicionais
+  hiddenConcerns: string[];
+  decisionBlockers: string[];
+  motivators: string[];
 }
 
 export interface DoctorCommunication {
@@ -47,6 +51,10 @@ export interface DoctorCommunication {
   didacticExplanations: string[];
   strongAnalogies: string[];
   confusingPoints: string[];
+  // Insights adicionais
+  connectionMoments: string[];
+  missedOpportunities: string[];
+  strengthsToReinforce: string[];
 }
 
 export interface ClinicalIntelligence {
@@ -99,36 +107,91 @@ export interface FinalGuidance {
 }
 
 export interface SalesArsenal {
-  // Sugestões de fala para o médico
+  // Probabilidade de fechamento
+  closingProbability: number;
+  readinessLevel: 'cold' | 'warm' | 'hot';
+  
+  // Diagnóstico comercial
+  commercialDiagnosis: {
+    patientProfile: string;
+    buyingStage: string;
+    mainBarrier: string;
+    opportunityWindow: string;
+  };
+  
+  // Argumentos baseados na fala do PACIENTE
+  patientBasedArguments: {
+    whatPatientSaid: string;
+    argument: string;
+    why: string;
+  }[];
+  
+  // Argumentos baseados na fala do MÉDICO
+  doctorBasedArguments: {
+    doctorStrength: string;
+    howToUse: string;
+    suggestedPhrase: string;
+  }[];
+  
+  // Argumentos empáticos
+  empatheticApproaches: {
+    situation: string;
+    approach: string;
+    phrase: string;
+    emotionalConnection: string;
+  }[];
+  
+  // Sugestões de fala contextual
   suggestedPhrases: {
     situation: string;
     phrase: string;
     why: string;
+    timing: 'now' | 'follow-up' | 'closing';
   }[];
+  
   // Produtos/tratamentos recomendados
   recommendedProducts: {
     name: string;
     reason: string;
     priority: 'high' | 'medium' | 'low';
     priceRange?: string;
+    patientBenefit: string;
+    howToPresent: string;
   }[];
-  // Scripts para objeções comuns
+  
+  // Scripts para objeções
   objectionHandlers: {
     objection: string;
     response: string;
     tone: 'empathetic' | 'educational' | 'reassuring';
+    followUp: string;
   }[];
+  
   // Gatilhos de fechamento
   closingTriggers: {
     signal: string;
     action: string;
+    phrase: string;
   }[];
-  // Probabilidade de fechamento
-  closingProbability: number;
-  // Próximos passos recomendados
-  nextSteps: string[];
+  
+  // Cuidados com o paciente
+  patientCareGuidance: {
+    emotionalNeeds: string[];
+    communicationStyle: string;
+    avoidTopics: string[];
+    reinforceTopics: string[];
+    followUpCare: string[];
+  };
+  
   // Pontos de urgência
   urgencyPoints: string[];
+  
+  // Próximos passos
+  nextSteps: {
+    action: string;
+    timing: string;
+    purpose: string;
+  }[];
 }
 
 export interface Consultation {
