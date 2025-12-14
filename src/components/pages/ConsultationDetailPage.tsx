@@ -27,6 +27,7 @@ import { ProgressRing } from '@/components/dashboard/ProgressRing';
 import { EmotionBadge } from '@/components/dashboard/EmotionBadge';
 import { ProcessingStages } from '@/components/consultation/ProcessingStages';
 import { ContentPreview } from '@/components/content/ContentPreview';
+import { SalesArsenalSection } from '@/components/dashboard/SalesArsenalSection';
 import { cn } from '@/lib/utils';
 import type { Consultation } from '@/types/consultation';
 
@@ -388,6 +389,11 @@ export function ConsultationDetailPage({ consultations, onUpdate }: Consultation
             ))}
           </div>
         </DashboardSection>
+      )}
+
+      {/* Sales Arsenal */}
+      {consultation.salesArsenal && (
+        <SalesArsenalSection arsenal={consultation.salesArsenal} />
       )}
 
       {/* Generated Content Preview */}
