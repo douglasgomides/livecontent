@@ -98,6 +98,39 @@ export interface FinalGuidance {
   ethicalAlerts: string[];
 }
 
+export interface SalesArsenal {
+  // Sugestões de fala para o médico
+  suggestedPhrases: {
+    situation: string;
+    phrase: string;
+    why: string;
+  }[];
+  // Produtos/tratamentos recomendados
+  recommendedProducts: {
+    name: string;
+    reason: string;
+    priority: 'high' | 'medium' | 'low';
+    priceRange?: string;
+  }[];
+  // Scripts para objeções comuns
+  objectionHandlers: {
+    objection: string;
+    response: string;
+    tone: 'empathetic' | 'educational' | 'reassuring';
+  }[];
+  // Gatilhos de fechamento
+  closingTriggers: {
+    signal: string;
+    action: string;
+  }[];
+  // Probabilidade de fechamento
+  closingProbability: number;
+  // Próximos passos recomendados
+  nextSteps: string[];
+  // Pontos de urgência
+  urgencyPoints: string[];
+}
+
 export interface Consultation {
   id: string;
   createdAt: Date;
@@ -147,4 +180,7 @@ export interface Consultation {
   
   // Stage 12
   finalGuidance?: FinalGuidance;
+
+  // Sales Arsenal
+  salesArsenal?: SalesArsenal;
 }

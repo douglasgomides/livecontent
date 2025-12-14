@@ -118,6 +118,88 @@ export function generateDemoConsultations(): Consultation[] {
         expectedImpact: 'Engajamento alto, potencial de viralização',
         ethicalAlerts: ['Não mencionar casos específicos', 'Evitar promessas de resultado'],
       },
+      salesArsenal: {
+        closingProbability: 7,
+        suggestedPhrases: [
+          {
+            situation: 'Quando o paciente expressar medo',
+            phrase: 'Entendo perfeitamente. Muitos dos meus pacientes tinham esse mesmo receio, e hoje me agradecem pela mudança de vida.',
+            why: 'Validação emocional + prova social',
+          },
+          {
+            situation: 'Ao apresentar o procedimento',
+            phrase: 'Vou te mostrar exatamente o que vai acontecer. Sem surpresas, sem mistérios.',
+            why: 'Transmite transparência e controle',
+          },
+          {
+            situation: 'Para criar urgência',
+            phrase: 'Quanto mais tempo deixamos passar, mais o problema pode evoluir. Mas a boa notícia é que agora você tem uma solução.',
+            why: 'Urgência ética sem pressão',
+          },
+        ],
+        recommendedProducts: [
+          {
+            name: 'Procedimento Minimamente Invasivo',
+            reason: 'Alinhado com o medo do paciente de cirurgias grandes',
+            priority: 'high',
+            priceRange: 'R$ 8.000 - R$ 12.000',
+          },
+          {
+            name: 'Pacote de Acompanhamento Pós',
+            reason: 'Aumenta confiança e reduz ansiedade',
+            priority: 'medium',
+            priceRange: 'R$ 1.500',
+          },
+          {
+            name: 'Consulta com Fisioterapeuta',
+            reason: 'Complementa recuperação acelerada',
+            priority: 'low',
+            priceRange: 'R$ 300/sessão',
+          },
+        ],
+        objectionHandlers: [
+          {
+            objection: 'Vou pensar melhor',
+            response: 'Claro, é uma decisão importante. Posso te enviar um material com todas as informações para você revisar com calma?',
+            tone: 'empathetic',
+          },
+          {
+            objection: 'Está muito caro',
+            response: 'Entendo. Você está investindo na sua qualidade de vida. Temos opções de parcelamento, e o custo de não tratar pode ser maior a longo prazo.',
+            tone: 'educational',
+          },
+          {
+            objection: 'Tenho medo da dor',
+            response: 'A dor é muito menor do que você imagina. Usamos técnicas modernas de anestesia. 95% dos pacientes relatam desconforto mínimo.',
+            tone: 'reassuring',
+          },
+        ],
+        closingTriggers: [
+          {
+            signal: 'Pergunta sobre agendamento',
+            action: 'Oferecer datas imediatamente e confirmar preferência',
+          },
+          {
+            signal: 'Pergunta sobre formas de pagamento',
+            action: 'Apresentar todas as opções e perguntar qual prefere',
+          },
+          {
+            signal: 'Fala "quando posso fazer?"',
+            action: 'Já agendar e pedir documentos necessários',
+          },
+        ],
+        urgencyPoints: [
+          'A condição pode progredir se não tratada',
+          'Próxima vaga disponível em 3 semanas',
+          'Recuperação antes das férias é possível se agendar agora',
+        ],
+        nextSteps: [
+          'Enviar material explicativo por WhatsApp',
+          'Agendar retorno em 5 dias para decisão',
+          'Oferecer conversa com paciente que já fez o procedimento',
+          'Preparar orçamento detalhado com opções de parcelamento',
+        ],
+      },
     },
     {
       id: 'cons-002',
