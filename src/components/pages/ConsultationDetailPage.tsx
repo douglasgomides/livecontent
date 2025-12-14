@@ -128,20 +128,42 @@ export function ConsultationDetailPage({ consultations, onUpdate }: Consultation
         </Card>
       )}
 
+      {/* Didactic Section Header */}
+      <div className="p-4 rounded-xl bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/10">
+        <h2 className="text-lg font-semibold text-foreground mb-2">📋 Análise Completa da Consulta</h2>
+        <p className="text-sm text-muted-foreground">
+          Abaixo você encontra todos os insights extraídos desta consulta. As informações estão organizadas por 
+          <span className="text-info font-medium"> fala do paciente</span>, 
+          <span className="text-success font-medium"> fala do médico</span> e 
+          <span className="text-primary font-medium"> análises do sistema</span>.
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Patient Voice */}
         {consultation.patientVoice && (
-          <DashboardSection title="Voz do Paciente" icon={User}>
-            <div className="space-y-4">
+          <DashboardSection 
+            title="Voz do Paciente" 
+            icon={User}
+            source="patient"
+            description="Frases literais, emoções e perguntas não ditas que o paciente expressou durante a consulta"
+          >
+            <div className="space-y-5">
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Frases-Chave</p>
+                <div className="flex items-center gap-2 mb-3">
+                  <p className="text-sm font-semibold text-foreground">Frases-Chave</p>
+                  <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">O que o paciente realmente disse</span>
+                </div>
                 <div className="space-y-2">
                   {consultation.patientVoice.keyPhrases.map((phrase, idx) => (
-                    <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-secondary/50">
-                      <Quote className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                    <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-info/5 border border-info/20">
+                      <Quote className="h-4 w-4 text-info mt-0.5 shrink-0" />
                       <div>
                         <p className="text-sm text-foreground italic">"{phrase.text}"</p>
-                        <EmotionBadge emotion={phrase.emotion} size="sm" />
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-muted-foreground">Emoção detectada:</span>
+                          <EmotionBadge emotion={phrase.emotion} size="sm" />
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -149,20 +171,24 @@ export function ConsultationDetailPage({ consultations, onUpdate }: Consultation
               </div>
 
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Perguntas Implícitas</p>
-                <ul className="space-y-1.5">
+                <div className="flex items-center gap-2 mb-3">
+                  <p className="text-sm font-semibold text-foreground">Perguntas Implícitas</p>
+                  <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">O que o paciente queria saber mas não perguntou</span>
+                </div>
+                <ul className="space-y-2">
                   {consultation.patientVoice.implicitQuestions.map((q, idx) => (
-                    <li key={idx} className="flex items-center gap-2 text-sm text-foreground">
-                      <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                    <li key={idx} className="flex items-start gap-2 text-sm text-foreground p-2 rounded-lg bg-warning/5 border border-warning/20">
+                      <span className="text-warning">❓</span>
                       {q}
                     </li>
                   ))}
                 </ul>
               </div>
 
-              <div className="p-3 rounded-lg bg-info/5 border border-info/20">
-                <p className="text-xs font-medium text-info mb-1">Estilo de Linguagem</p>
+              <div className="p-3 rounded-lg bg-secondary/50 border border-border">
+                <p className="text-xs font-medium text-muted-foreground mb-1">💬 Estilo de Linguagem do Paciente</p>
                 <p className="text-sm text-foreground">{consultation.patientVoice.languageStyle}</p>
+                <p className="text-xs text-muted-foreground mt-2 italic">Use esse estilo ao criar conteúdo para conectar melhor com pacientes similares.</p>
               </div>
             </div>
           </DashboardSection>
@@ -170,27 +196,41 @@ export function ConsultationDetailPage({ consultations, onUpdate }: Consultation
 
         {/* Doctor Communication */}
         {consultation.doctorCommunication && (
-          <DashboardSection title="Comunicação do Médico" icon={Stethoscope}>
-            <div className="space-y-4">
+          <DashboardSection 
+            title="Comunicação do Médico" 
+            icon={Stethoscope}
+            source="doctor"
+            description="Momentos de destaque da sua fala que geram autoridade e podem ser reaproveitados em conteúdo"
+          >
+            <div className="space-y-5">
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Pontos de Autoridade</p>
-                <div className="space-y-1.5">
+                <div className="flex items-center gap-2 mb-3">
+                  <p className="text-sm font-semibold text-foreground">Momentos de Autoridade</p>
+                  <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">Quando você transmitiu credibilidade</span>
+                </div>
+                <div className="space-y-2">
                   {consultation.doctorCommunication.authorityMoments.map((m, idx) => (
-                    <div key={idx} className="flex items-center gap-2 text-sm text-foreground">
-                      <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
-                      {m}
+                    <div key={idx} className="flex items-start gap-2 text-sm text-foreground p-2 rounded-lg bg-success/5 border border-success/20">
+                      <CheckCircle2 className="h-4 w-4 text-success mt-0.5 shrink-0" />
+                      <span>{m}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Analogias Fortes</p>
-                <div className="space-y-1.5">
+                <div className="flex items-center gap-2 mb-3">
+                  <p className="text-sm font-semibold text-foreground">Analogias Poderosas</p>
+                  <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">Explicações que facilitam o entendimento</span>
+                </div>
+                <div className="space-y-2">
                   {consultation.doctorCommunication.strongAnalogies.map((a, idx) => (
-                    <div key={idx} className="flex items-center gap-2 p-2 rounded-lg bg-primary/5 text-sm text-foreground">
-                      <Lightbulb className="h-4 w-4 text-primary shrink-0" />
-                      {a}
+                    <div key={idx} className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                      <Lightbulb className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-sm text-foreground">"{a}"</p>
+                        <p className="text-xs text-muted-foreground mt-1 italic">Ótima para usar em conteúdo educativo</p>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -198,12 +238,15 @@ export function ConsultationDetailPage({ consultations, onUpdate }: Consultation
 
               {consultation.doctorCommunication.confusingPoints.length > 0 && (
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Pontos a Melhorar</p>
-                  <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <p className="text-sm font-semibold text-foreground">Oportunidades de Melhoria</p>
+                    <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">Pontos para refinar na comunicação</span>
+                  </div>
+                  <div className="space-y-2">
                     {consultation.doctorCommunication.confusingPoints.map((p, idx) => (
-                      <div key={idx} className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
-                        {p}
+                      <div key={idx} className="flex items-start gap-2 text-sm text-muted-foreground p-2 rounded-lg bg-warning/5 border border-warning/20">
+                        <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+                        <span>{p}</span>
                       </div>
                     ))}
                   </div>
@@ -215,33 +258,46 @@ export function ConsultationDetailPage({ consultations, onUpdate }: Consultation
 
         {/* Brand Extraction */}
         {consultation.brandExtraction && (
-          <DashboardSection title="Marca Médica" icon={Sparkles}>
-            <div className="space-y-4">
+          <DashboardSection 
+            title="Sua Marca Médica" 
+            icon={Sparkles}
+            source="doctor"
+            description="Elementos da sua identidade profissional que emergiram naturalmente durante a consulta"
+          >
+            <div className="space-y-5">
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Valores Percebidos</p>
+                <div className="flex items-center gap-2 mb-3">
+                  <p className="text-sm font-semibold text-foreground">Valores que Você Transmitiu</p>
+                  <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">Percepções que o paciente capta</span>
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {consultation.brandExtraction.transmittedValues.map((v, idx) => (
                     <span key={idx} className="px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium">
-                      {v}
+                      ✨ {v}
                     </span>
                   ))}
                 </div>
               </div>
 
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Frases-Mãe da Marca</p>
+                <div className="flex items-center gap-2 mb-3">
+                  <p className="text-sm font-semibold text-foreground">Frases-Mãe da Sua Marca</p>
+                  <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">Suas expressões únicas e memoráveis</span>
+                </div>
                 <div className="space-y-2">
                   {consultation.brandExtraction.motherPhrases.map((p, idx) => (
-                    <div key={idx} className="p-3 rounded-lg bg-gradient-to-r from-primary/5 to-transparent border-l-2 border-primary">
-                      <p className="text-sm text-foreground italic">"{p}"</p>
+                    <div key={idx} className="p-3 rounded-lg bg-gradient-to-r from-primary/10 to-transparent border-l-3 border-primary">
+                      <p className="text-sm text-foreground font-medium">"{p}"</p>
+                      <p className="text-xs text-muted-foreground mt-1 italic">Use essa frase em conteúdos e bio</p>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="p-3 rounded-lg bg-accent/5 border border-accent/20">
-                <p className="text-xs font-medium text-accent mb-1">Causa de Posicionamento</p>
+              <div className="p-4 rounded-lg bg-accent/5 border border-accent/20">
+                <p className="text-xs font-medium text-accent mb-1">🎯 Sua Causa de Posicionamento</p>
                 <p className="text-sm text-foreground">{consultation.brandExtraction.positioningCause}</p>
+                <p className="text-xs text-muted-foreground mt-2 italic">Esse é o "porquê" por trás do seu trabalho que conecta com pacientes.</p>
               </div>
             </div>
           </DashboardSection>
@@ -249,43 +305,55 @@ export function ConsultationDetailPage({ consultations, onUpdate }: Consultation
 
         {/* Clinical Intelligence */}
         {consultation.clinicalIntelligence && (
-          <DashboardSection title="Inteligência Comercial Ética" icon={Target}>
-            <div className="space-y-4">
+          <DashboardSection 
+            title="Inteligência Comercial Ética" 
+            icon={Target}
+            source="system"
+            description="Análise do perfil do paciente para melhorar o atendimento e aumentar conversões de forma ética"
+          >
+            <div className="space-y-5">
               <div className="grid grid-cols-2 gap-4">
-                <div className="text-center">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Interesse</p>
+                <div className="text-center p-4 rounded-lg bg-secondary/30">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">📈 Nível de Interesse</p>
                   <ProgressRing value={consultation.clinicalIntelligence.interestLevel} size={80} />
+                  <p className="text-xs text-muted-foreground mt-2">Quanto o paciente quer resolver</p>
                 </div>
-                <div className="text-center">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Confiança</p>
+                <div className="text-center p-4 rounded-lg bg-secondary/30">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">🤝 Nível de Confiança</p>
                   <ProgressRing value={consultation.clinicalIntelligence.trustLevel} size={80} />
+                  <p className="text-xs text-muted-foreground mt-2">Quanto confia em você</p>
                 </div>
               </div>
 
-              <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Tipo de Objeção</p>
+              <div className="p-4 rounded-lg bg-warning/5 border border-warning/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <p className="text-sm font-semibold text-foreground">Principal Objeção Detectada</p>
+                </div>
                 <span className={cn(
-                  "px-3 py-1.5 rounded-full text-sm font-medium",
+                  "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium",
                   consultation.clinicalIntelligence.objectionType === 'fear' && "bg-destructive/10 text-destructive",
                   consultation.clinicalIntelligence.objectionType === 'information' && "bg-info/10 text-info",
                   consultation.clinicalIntelligence.objectionType === 'timing' && "bg-warning/10 text-warning",
                 )}>
-                  {consultation.clinicalIntelligence.objectionType === 'fear' && '🛡️ Medo'}
-                  {consultation.clinicalIntelligence.objectionType === 'information' && '📚 Falta de Informação'}
-                  {consultation.clinicalIntelligence.objectionType === 'timing' && '⏰ Timing'}
+                  {consultation.clinicalIntelligence.objectionType === 'fear' && '🛡️ Medo - O paciente tem receios emocionais sobre o procedimento'}
+                  {consultation.clinicalIntelligence.objectionType === 'information' && '📚 Falta de Informação - Precisa de mais dados para decidir'}
+                  {consultation.clinicalIntelligence.objectionType === 'timing' && '⏰ Timing - Não é o momento ideal para o paciente'}
                 </span>
               </div>
 
-              <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Perfil de Decisão</p>
+              <div className="p-3 rounded-lg bg-secondary/50 border border-border">
+                <p className="text-xs font-medium text-muted-foreground mb-1">🧠 Perfil de Decisão</p>
                 <p className="text-sm text-foreground">{consultation.clinicalIntelligence.decisionProfile}</p>
               </div>
 
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Orientações de Follow-up</p>
-                <ul className="space-y-1.5">
+                <div className="flex items-center gap-2 mb-3">
+                  <p className="text-sm font-semibold text-foreground">Orientações de Follow-up</p>
+                  <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">O que fazer após a consulta</span>
+                </div>
+                <ul className="space-y-2">
                   {consultation.clinicalIntelligence.followUpGuidelines.map((g, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-sm text-foreground">
+                    <li key={idx} className="flex items-start gap-2 text-sm text-foreground p-2 rounded-lg bg-success/5 border border-success/20">
                       <CheckCircle2 className="h-4 w-4 text-success mt-0.5 shrink-0" />
                       {g}
                     </li>
@@ -298,13 +366,21 @@ export function ConsultationDetailPage({ consultations, onUpdate }: Consultation
 
         {/* Patient Experience */}
         {consultation.patientExperience && (
-          <DashboardSection title="Experiência do Paciente" icon={Users}>
-            <div className="space-y-4">
+          <DashboardSection 
+            title="Experiência do Paciente" 
+            icon={Users}
+            source="system"
+            description="Como o paciente percebeu a consulta e o que ainda pode ser reforçado"
+          >
+            <div className="space-y-5">
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">O que Ficou Claro</p>
-                <ul className="space-y-1.5">
+                <div className="flex items-center gap-2 mb-3">
+                  <p className="text-sm font-semibold text-foreground">✅ O Que Ficou Claro</p>
+                  <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">Pontos bem absorvidos</span>
+                </div>
+                <ul className="space-y-2">
                   {consultation.patientExperience.clearPoints.map((p, idx) => (
-                    <li key={idx} className="flex items-center gap-2 text-sm text-foreground">
+                    <li key={idx} className="flex items-center gap-2 text-sm text-foreground p-2 rounded-lg bg-success/5 border border-success/20">
                       <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
                       {p}
                     </li>
@@ -313,10 +389,13 @@ export function ConsultationDetailPage({ consultations, onUpdate }: Consultation
               </div>
 
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Ainda Gera Insegurança</p>
-                <ul className="space-y-1.5">
+                <div className="flex items-center gap-2 mb-3">
+                  <p className="text-sm font-semibold text-foreground">⚠️ Ainda Gera Insegurança</p>
+                  <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">Precisa reforço no follow-up</span>
+                </div>
+                <ul className="space-y-2">
                   {consultation.patientExperience.uncertainties.map((u, idx) => (
-                    <li key={idx} className="flex items-center gap-2 text-sm text-foreground">
+                    <li key={idx} className="flex items-center gap-2 text-sm text-foreground p-2 rounded-lg bg-warning/5 border border-warning/20">
                       <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
                       {u}
                     </li>
@@ -325,10 +404,13 @@ export function ConsultationDetailPage({ consultations, onUpdate }: Consultation
               </div>
 
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Conteúdos Recomendados Pós-Consulta</p>
-                <ul className="space-y-1.5">
+                <div className="flex items-center gap-2 mb-3">
+                  <p className="text-sm font-semibold text-foreground">📨 Conteúdos para Enviar ao Paciente</p>
+                  <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">Reforce esses pontos pós-consulta</span>
+                </div>
+                <ul className="space-y-2">
                   {consultation.patientExperience.recommendedContent.map((c, idx) => (
-                    <li key={idx} className="flex items-center gap-2 text-sm text-foreground">
+                    <li key={idx} className="flex items-center gap-2 text-sm text-foreground p-2 rounded-lg bg-info/5 border border-info/20">
                       <FileText className="h-4 w-4 text-info shrink-0" />
                       {c}
                     </li>
