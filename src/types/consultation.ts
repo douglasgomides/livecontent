@@ -1,14 +1,34 @@
 export type ConsultationStatus = 
   | 'recording'
-  | 'transcribed'
-  | 'anonymized'
-  | 'separated'
-  | 'analyzed'
+  | 'transcribing'
+  | 'anonymizing'
+  | 'separating'
+  | 'extracting_patient'
+  | 'analyzing_doctor'
+  | 'clinical_intelligence'
+  | 'brand_extraction'
   | 'dashboard_ready'
-  | 'content_generated'
+  | 'content_decision'
+  | 'content_generating'
   | 'completed';
 
+export const PROCESSING_STAGES: { id: ConsultationStatus; label: string; description: string }[] = [
+  { id: 'recording', label: 'Gravação', description: 'Capturando áudio da consulta' },
+  { id: 'transcribing', label: 'Transcrição', description: 'Convertendo áudio em texto (100%)' },
+  { id: 'anonymizing', label: 'Anonimização', description: 'Removendo dados identificáveis' },
+  { id: 'separating', label: 'Separação de Falas', description: 'Identificando médico e paciente' },
+  { id: 'extracting_patient', label: 'Voz do Paciente', description: 'Extraindo frases, emoções e linguagem' },
+  { id: 'analyzing_doctor', label: 'Comunicação Médica', description: 'Analisando pontos fortes e analogias' },
+  { id: 'clinical_intelligence', label: 'Inteligência Clínica', description: 'Mapeando objeções e decisão' },
+  { id: 'brand_extraction', label: 'Extração de Marca', description: 'Identificando valores e diferenciais' },
+  { id: 'dashboard_ready', label: 'Dashboard', description: 'Organizando dados para visualização' },
+  { id: 'content_decision', label: 'Decisão de Conteúdo', description: 'Classificando temas e riscos' },
+  { id: 'content_generating', label: 'Geração de Conteúdo', description: 'Criando Reels, Carrosséis, Stories' },
+  { id: 'completed', label: 'Concluído', description: 'Consulta transformada em ativos' },
+];
+
 export interface DoctorSettings {
+  name: string;
   specialty: string;
   objective: 'authority' | 'education' | 'growth' | 'conversion';
   tone: 'didactic' | 'empathetic' | 'direct' | 'technical';
@@ -50,17 +70,32 @@ export interface BrandExtraction {
 }
 
 export interface ContentSuggestion {
+  id: string;
   theme: string;
   ethicalRisk: 'low' | 'medium' | 'high';
   format: 'reel' | 'carousel' | 'stories' | 'post';
   description: string;
+  blocked?: boolean;
 }
 
 export interface GeneratedContent {
-  reels: { title: string; script: string; duration: string }[];
-  carousels: { title: string; slides: string[] }[];
-  stories: { content: string }[];
-  posts: { title: string; content: string }[];
+  reels: { id: string; title: string; script: string; duration: string }[];
+  carousels: { id: string; title: string; slides: string[] }[];
+  stories: { id: string; slides: { content: string; type: 'text' | 'question' | 'poll' }[] }[];
+  posts: { id: string; title: string; content: string }[];
+}
+
+export interface PatientExperience {
+  clearPoints: string[];
+  uncertainties: string[];
+  recommendedContent: string[];
+}
+
+export interface FinalGuidance {
+  postFirst: string;
+  reason: string;
+  expectedImpact: string;
+  ethicalAlerts: string[];
 }
 
 export interface Consultation {
@@ -68,27 +103,48 @@ export interface Consultation {
   createdAt: Date;
   duration: number;
   status: ConsultationStatus;
+  currentStage: number;
   consentGiven: boolean;
   audioUrl?: string;
+  
+  // Stage 2
   transcription?: string;
+  
+  // Stage 3
   anonymizedTranscription?: string;
+  
+  // Stage 4
   patientSpeech?: string[];
   doctorSpeech?: string[];
+  
+  // Stage 5
   patientVoice?: PatientVoice;
+  
+  // Stage 6
   doctorCommunication?: DoctorCommunication;
+  
+  // Stage 7
   clinicalIntelligence?: ClinicalIntelligence;
+  
+  // Stage 8
   brandExtraction?: BrandExtraction;
+  
+  // Dashboard metrics
   contentPotential?: number;
   authorityPotential?: number;
   initialEmotion?: string;
   finalEmotion?: string;
   awarenessLevel?: string;
+  
+  // Stage 10
   contentSuggestions?: ContentSuggestion[];
+  
+  // Stage 11
   generatedContent?: GeneratedContent;
-  finalGuidance?: {
-    postFirst: string;
-    reason: string;
-    expectedImpact: string;
-    ethicalAlerts: string[];
-  };
+  
+  // Patient experience
+  patientExperience?: PatientExperience;
+  
+  // Stage 12
+  finalGuidance?: FinalGuidance;
 }
