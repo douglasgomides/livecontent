@@ -15,7 +15,7 @@ export function RecordingPage({ onComplete }: RecordingPageProps) {
   const [status, setStatus] = useState<'idle' | 'consent' | 'recording' | 'paused' | 'processing'>('idle');
   const [duration, setDuration] = useState(0);
   const [consentGiven, setConsentGiven] = useState(false);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (status === 'recording') {
