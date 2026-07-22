@@ -56,7 +56,12 @@ export interface ContentPiece {
     duration?: string;
     cta?: string;
   };
+  brainSignals?: {
+    pillar?: string;
+    usedTraits: string[];
+  };
 }
+
 
 export interface ScienceSource {
   reference: string;
