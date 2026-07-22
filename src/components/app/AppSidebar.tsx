@@ -9,6 +9,7 @@ import {
   Library,
   Settings,
   CheckSquare,
+  Brain as BrainIcon,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -24,6 +25,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { loadProfile } from '@/lib/storage';
+import { loadBrain, getCompleteness } from '@/lib/brainStorage';
 
 const createItems = [
   { title: 'Gravar consulta', url: '/app/record', icon: Mic },
@@ -39,7 +41,11 @@ const workItems = [
   { title: 'Biblioteca', url: '/app/library', icon: Library },
 ];
 
-const accountItems = [{ title: 'Ajustes', url: '/app/settings', icon: Settings }];
+const accountItems = [
+  { title: 'Brain', url: '/app/brain', icon: BrainIcon },
+  { title: 'Ajustes', url: '/app/settings', icon: Settings },
+];
+
 
 export function AppSidebar() {
   const { state } = useSidebar();
