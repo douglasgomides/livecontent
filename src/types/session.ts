@@ -10,7 +10,14 @@ export type SessionStatus =
 
 export type SessionSource = 'recording' | 'upload' | 'voice_note' | 'science';
 
-export type ContentFormat = 'reel' | 'carousel' | 'caption' | 'linkedin';
+export type ContentFormat =
+  | 'reel' | 'carousel' | 'caption' | 'stories' | 'linkedin'
+  | 'blog' | 'youtube' | 'tiktok' | 'podcast'
+  | 'gmb' | 'doctoralia' | 'website';
+
+export type ContentChannel =
+  | 'instagram' | 'linkedin' | 'youtube' | 'tiktok'
+  | 'blog' | 'gmb' | 'doctoralia' | 'website' | 'podcast';
 
 export interface PIIFinding {
   original: string;
