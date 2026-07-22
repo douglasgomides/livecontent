@@ -42,7 +42,7 @@ export default function SessionDetail() {
   const { id } = useParams();
   const nav = useNavigate();
   const [session, setSession] = useState<Session | null>(id ? getSession(id) || null : null);
-  const [selectedFormats, setSelectedFormats] = useState<ContentFormat[]>(['reel', 'carousel', 'caption', 'linkedin']);
+  const [selectedFormats, setSelectedFormats] = useState<ContentFormat[]>(RECOMMENDED_FORMATS);
   const [tab, setTab] = useState<TabId>(() => session ? defaultTabFor(session) : 'pipeline');
 
   const stages = useMemo(() => session ? stagesFor(session.source) : ALL_STAGES, [session?.source]);
