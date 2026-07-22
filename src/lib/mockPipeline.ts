@@ -419,6 +419,15 @@ export function seedPipeline(s: Session): Session {
       topics: [{ ...VOICE_NOTE_TOPIC, id: uid() }],
     };
   }
+  if (s.source === 'audio_livre') {
+    return {
+      ...s,
+      rawTranscript: VOICE_NOTE_DEMO_TRANSCRIPT,
+      anonymizedTranscript: VOICE_NOTE_DEMO_TRANSCRIPT,
+      piiFindings: [],
+      topics: DEMO_TOPICS.map(t => ({ ...t, id: uid() })),
+    };
+  }
   return {
     ...s,
     rawTranscript: DEMO_TRANSCRIPT,
@@ -427,6 +436,7 @@ export function seedPipeline(s: Session): Session {
     topics: DEMO_TOPICS.map(t => ({ ...t, id: uid() })),
   };
 }
+
 
 export function seedScience(s: Session, text: string, reference: string, kind: NonNullable<Session['science']>['kind']): Session {
   const firstSentence = text.split(/[.!?]/)[0].trim().slice(0, 90);
