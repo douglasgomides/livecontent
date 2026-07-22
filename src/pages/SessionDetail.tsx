@@ -3,6 +3,8 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import type { Session, SessionStatus, ContentFormat, Topic } from '@/types/session';
 import { getSession, upsertSession, loadProfile } from '@/lib/storage';
 import { seedPipeline, generateContentFor } from '@/lib/mockPipeline';
+import { loadBrain } from '@/lib/brainStorage';
+
 import AnonymizationReview from '@/components/session/AnonymizationReview';
 import TopicsReview from '@/components/session/TopicsReview';
 import ContentPieceCard from '@/components/session/ContentPieceCard';
@@ -83,10 +85,12 @@ export default function SessionDetail() {
   const runGeneration = () => {
     if (!session) return;
     const profile = loadProfile();
+    const brain = loadBrain();
     const included = (session.topics || []).filter(t => t.included);
     const formats = session.source === 'voice_note' ? (['caption'] as ContentFormat[]) : selectedFormats;
-    const pieces = included.flatMap((t: Topic) => generateContentFor(t, formats, profile, session.science));
+    const pieces = included.flatMap((t: Topic) => generateContentFor(t, formats, profile, session.science, brain));
     const updated: Session = { ...session, content: pieces, status: 'ready' };
+
     upsertSession(updated); setSession(updated);
   };
 
