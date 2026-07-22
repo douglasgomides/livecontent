@@ -56,16 +56,25 @@ export function AppSidebar() {
   const isActive = (path: string, end?: boolean) =>
     end ? pathname === path : pathname === path || pathname.startsWith(path + '/');
 
-  const renderItem = (item: { title: string; url: string; icon: any; end?: boolean }) => (
-    <SidebarMenuItem key={item.url}>
-      <SidebarMenuButton asChild isActive={isActive(item.url, item.end)} tooltip={item.title}>
-        <NavLink to={item.url} end={item.end}>
-          <item.icon className="h-4 w-4" />
-          <span>{item.title}</span>
-        </NavLink>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
-  );
+  const brainPct = getCompleteness(loadBrain()).total;
+
+  const renderItem = (item: { title: string; url: string; icon: any; end?: boolean }) => {
+    const showBadge = item.url === '/app/brain' && brainPct < 60 && !collapsed;
+    return (
+      <SidebarMenuItem key={item.url}>
+        <SidebarMenuButton asChild isActive={isActive(item.url, item.end)} tooltip={item.title}>
+          <NavLink to={item.url} end={item.end}>
+            <item.icon className="h-4 w-4" />
+            <span className="flex-1">{item.title}</span>
+            {showBadge && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">{brainPct}%</span>
+            )}
+          </NavLink>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  };
+
 
   return (
     <Sidebar collapsible="icon">
