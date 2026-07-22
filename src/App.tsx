@@ -14,6 +14,7 @@ import VoiceNote from "./pages/VoiceNote";
 import ScienceToContent from "./pages/ScienceToContent";
 import SessionDetail from "./pages/SessionDetail";
 import Library from "./pages/Library";
+import Approvals from "./pages/Approvals";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import { loadProfile } from "./lib/storage";
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="new/science" element={<ScienceToContent />} />
             <Route path="session/:id" element={<SessionDetail />} />
             <Route path="library" element={<Library />} />
+            <Route path="approvals" element={<Approvals />} />
             <Route path="settings" element={<Settings />} />
           </Route>
           <Route path="*" element={<NotFound />} />
