@@ -28,7 +28,9 @@ const SOURCE_LABEL: Record<SessionSource, string> = {
   upload: 'Upload',
   voice_note: 'Voice Note',
   science: 'Science',
+  audio_livre: 'Áudio livre',
 };
+
 
 const fmtDate = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 const fmtDur = (s: number) => `${Math.floor(s / 60)}min ${(s % 60).toString().padStart(2, '0')}s`;

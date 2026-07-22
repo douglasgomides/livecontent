@@ -284,6 +284,9 @@ export default function SessionDetail() {
                             <ContentPieceCard
                               key={p.id}
                               piece={p}
+                              topic={topic}
+                              brain={loadBrain()}
+                              sessionId={session.id}
                               onChange={(updated) => {
                                 const content = session.content!.map(c => c.id === updated.id ? updated : c);
                                 const s = { ...session, content }; upsertSession(s); setSession(s);
@@ -295,6 +298,7 @@ export default function SessionDetail() {
                             />
                           ))}
                         </div>
+
                       </div>
                     );
                   })}

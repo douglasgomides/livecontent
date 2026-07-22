@@ -388,7 +388,9 @@ export function createBlankSession(source: SessionSource, durationSec = 0, audio
     upload: `Consulta enviada — ${new Date().toLocaleDateString('pt-BR')}`,
     voice_note: `Voice Note — ${new Date().toLocaleDateString('pt-BR')}`,
     science: `Science to Content — ${new Date().toLocaleDateString('pt-BR')}`,
+    audio_livre: `Áudio livre — ${new Date().toLocaleDateString('pt-BR')}`,
   };
+
   return {
     id: uid(),
     createdAt: new Date().toISOString(),
