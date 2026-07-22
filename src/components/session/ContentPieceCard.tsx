@@ -1,14 +1,22 @@
 import { useState } from 'react';
-import type { ContentPiece } from '@/types/session';
+import type { ContentPiece, Topic } from '@/types/session';
+import type { Brain } from '@/types/brain';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { rescoreContent } from '@/lib/mockPipeline';
 import { FORMAT_LABEL, FORMAT_ICON, EXPORT_MODE } from '@/lib/contentFormats';
-import { Copy, CheckCircle2, AlertTriangle, ShieldAlert, RefreshCw, Download, Send } from 'lucide-react';
+import { Copy, CheckCircle2, AlertTriangle, ShieldAlert, RefreshCw, Download } from 'lucide-react';
 import { toast } from 'sonner';
+import PieceArtwork from './PieceArtwork';
+import PiecePrompts from './PiecePrompts';
+import PiecePublish from './PiecePublish';
 
-export default function ContentPieceCard({ piece, onChange, onApprove }: {
+export default function ContentPieceCard({ piece, topic, brain, sessionId, onChange, onApprove }: {
   piece: ContentPiece;
+  topic?: Topic;
+  brain?: Brain | null;
+  sessionId: string;
   onChange: (p: ContentPiece) => void;
   onApprove: () => void;
 }) {
@@ -40,11 +48,9 @@ export default function ContentPieceCard({ piece, onChange, onApprove }: {
     toast.success('Baixado');
   };
 
-  const preparePublish = () => {
-    toast.info('Publicação preparada. Conecte sua conta para publicar.', {
-      description: `${FORMAT_LABEL[piece.format]} pronto no formato do canal.`,
-    });
-  };
+  const topicTitle = topic?.title || piece.meta?.title || 'Sem título';
+  const hasArtwork = !!piece.artwork;
+  const hasPrompts = piece.externalPrompts && Object.keys(piece.externalPrompts).length > 0;
 
   return (
     <div className="border border-border/60 rounded-lg overflow-hidden bg-card">
@@ -54,9 +60,7 @@ export default function ContentPieceCard({ piece, onChange, onApprove }: {
           <span className="text-xs uppercase tracking-widest text-primary truncate">{FORMAT_LABEL[piece.format]}</span>
           <ScoreBadge score={cfm.score} blocked={blocked} warned={warned} />
         </div>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" onClick={rescore}><RefreshCw className="h-3.5 w-3.5 mr-1" /> Rescan</Button>
-        </div>
+        <Button variant="ghost" size="sm" onClick={rescore}><RefreshCw className="h-3.5 w-3.5 mr-1" /> Rescan</Button>
       </div>
 
       {piece.brainSignals && (piece.brainSignals.pillar || piece.brainSignals.usedTraits.length > 0) && (
@@ -70,34 +74,49 @@ export default function ContentPieceCard({ piece, onChange, onApprove }: {
         </div>
       )}
 
-      {piece.meta && <MetaBlock meta={piece.meta} />}
+      <Tabs defaultValue="text">
+        <TabsList className="w-full justify-start rounded-none border-b border-border/60 h-9 bg-transparent px-2">
+          <TabsTrigger value="text" className="text-xs">Texto</TabsTrigger>
+          <TabsTrigger value="art" className="text-xs" disabled={!hasArtwork}>Arte</TabsTrigger>
+          <TabsTrigger value="prompts" className="text-xs" disabled={!hasPrompts}>Prompts externos</TabsTrigger>
+          <TabsTrigger value="publish" className="text-xs">Publicar</TabsTrigger>
+        </TabsList>
 
-
-      <Textarea value={body} onChange={e => setBody(e.target.value)} rows={12} className="border-0 rounded-none focus-visible:ring-0 font-mono text-xs" />
-
-      <div className="px-4 py-3 border-t border-border/60 space-y-2">
-        {cfm.flags.map((f, i) => (
-          <div key={i} className={`text-xs flex items-start gap-2 ${
-            f.severity === 'block' ? 'text-destructive' : f.severity === 'warning' ? 'text-warning' : 'text-muted-foreground'
-          }`}>
-            {f.severity === 'block' ? <ShieldAlert className="h-3.5 w-3.5 mt-0.5 shrink-0" /> :
-             f.severity === 'warning' ? <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" /> :
-             <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 shrink-0" />}
-            {f.label}
+        <TabsContent value="text" className="m-0">
+          {piece.meta && <MetaBlock meta={piece.meta} />}
+          <Textarea value={body} onChange={e => setBody(e.target.value)} rows={12} className="border-0 rounded-none focus-visible:ring-0 font-mono text-xs" />
+          <div className="px-4 py-3 border-t border-border/60 space-y-2">
+            {cfm.flags.map((f, i) => (
+              <div key={i} className={`text-xs flex items-start gap-2 ${
+                f.severity === 'block' ? 'text-destructive' : f.severity === 'warning' ? 'text-warning' : 'text-muted-foreground'
+              }`}>
+                {f.severity === 'block' ? <ShieldAlert className="h-3.5 w-3.5 mt-0.5 shrink-0" /> :
+                 f.severity === 'warning' ? <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" /> :
+                 <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 shrink-0" />}
+                {f.label}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </TabsContent>
+
+        <TabsContent value="art" className="m-0">
+          <PieceArtwork piece={piece} topic={topic} brain={brain} />
+        </TabsContent>
+
+        <TabsContent value="prompts" className="m-0">
+          <PiecePrompts piece={piece} />
+        </TabsContent>
+
+        <TabsContent value="publish" className="m-0">
+          <PiecePublish piece={piece} sessionId={sessionId} topicTitle={topicTitle} />
+        </TabsContent>
+      </Tabs>
 
       <div className="px-4 py-3 border-t border-border/60 flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="sm" onClick={copy}><Copy className="h-3.5 w-3.5 mr-1" /> Copiar</Button>
           {exportMode === 'download' && (
             <Button variant="ghost" size="sm" onClick={download}><Download className="h-3.5 w-3.5 mr-1" /> Baixar</Button>
-          )}
-          {piece.approved && exportMode === 'publish' && (
-            <Button variant="ghost" size="sm" onClick={preparePublish}>
-              <Send className="h-3.5 w-3.5 mr-1" /> Preparar publicação
-            </Button>
           )}
         </div>
         <Button

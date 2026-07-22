@@ -8,7 +8,7 @@ export type SessionStatus =
   | 'generating_content'
   | 'ready';
 
-export type SessionSource = 'recording' | 'upload' | 'voice_note' | 'science';
+export type SessionSource = 'recording' | 'upload' | 'voice_note' | 'science' | 'audio_livre';
 
 export type ContentFormat =
   | 'reel' | 'carousel' | 'caption' | 'stories' | 'linkedin'
@@ -38,6 +38,22 @@ export interface CFMResult {
   flags: { label: string; severity: 'info' | 'warning' | 'block' }[];
 }
 
+export interface ArtworkSlide {
+  kind: 'cover' | 'content' | 'cta' | 'story';
+  eyebrow?: string;
+  title?: string;
+  body?: string;
+  footer?: string;
+}
+
+export interface Artwork {
+  width: number;
+  height: number;
+  slides: ArtworkSlide[];
+}
+
+export type ExternalPromptTool = 'sora' | 'runway' | 'notebook_lm' | 'midjourney' | 'heygen' | 'elevenlabs';
+
 export interface ContentPiece {
   id: string;
   topicId: string;
@@ -60,8 +76,9 @@ export interface ContentPiece {
     pillar?: string;
     usedTraits: string[];
   };
+  artwork?: Artwork;
+  externalPrompts?: Partial<Record<ExternalPromptTool, string>>;
 }
-
 
 export interface ScienceSource {
   reference: string;
@@ -91,4 +108,20 @@ export interface DoctorProfile {
   idealPatient: string;
   tone: 'didactic' | 'empathetic' | 'direct' | 'technical';
   onboarded: boolean;
+}
+
+// Publish queue
+export type PublishStatus = 'queued' | 'publishing' | 'published' | 'needs_connection' | 'downloaded' | 'failed';
+
+export interface PublishJob {
+  id: string;
+  pieceId: string;
+  sessionId: string;
+  channel: ContentChannel;
+  format: ContentFormat;
+  title: string;
+  status: PublishStatus;
+  createdAt: string;
+  updatedAt: string;
+  message?: string;
 }

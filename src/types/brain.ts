@@ -29,6 +29,11 @@ export interface BrandLayer {
   wordsYes: string[];
   wordsNo: string[];
   defaultCTA: string;
+  handle: string;
+  colorPrimary: string;
+  colorBackground: string;
+  colorText: string;
+  fontHeading: string;
 }
 
 export interface Brain {
@@ -68,6 +73,11 @@ export const EMPTY_BRAIN: Brain = {
     wordsYes: [],
     wordsNo: [],
     defaultCTA: '',
+    handle: '@seu.consultorio',
+    colorPrimary: '#C9A84C',
+    colorBackground: '#0A0A0A',
+    colorText: '#F5F0E8',
+    fontHeading: 'Cormorant Garamond, Georgia, serif',
   },
   onboarded: false,
 };
