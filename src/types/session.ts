@@ -8,7 +8,7 @@ export type SessionStatus =
   | 'generating_content'
   | 'ready';
 
-export type SessionSource = 'recording' | 'upload' | 'voice_note' | 'text' | 'science' | 'news';
+export type SessionSource = 'recording' | 'upload' | 'voice_note' | 'science';
 
 export type ContentFormat = 'reel' | 'carousel' | 'caption' | 'linkedin';
 
@@ -40,6 +40,12 @@ export interface ContentPiece {
   approved: boolean;
 }
 
+export interface ScienceSource {
+  reference: string;
+  kind: 'abstract' | 'news' | 'guideline' | 'other';
+  originalText: string;
+}
+
 export interface Session {
   id: string;
   createdAt: string;
@@ -53,6 +59,7 @@ export interface Session {
   piiFindings?: PIIFinding[];
   topics?: Topic[];
   content?: ContentPiece[];
+  science?: ScienceSource;
 }
 
 export interface DoctorProfile {
