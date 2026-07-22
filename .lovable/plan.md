@@ -1,93 +1,89 @@
-# Expansão de formatos + Central de Aprovações
 
-Consulta gera muito mais que post. Cada peça sai como **roteiro/texto pronto + assets sugeridos**, e aparece numa Central global pra aprovar em lote antes de exportar/publicar.
+# Fase 3 — Brain Builder (3 camadas de memória)
 
-## Novos formatos (roteiro-only, tudo frontend)
+Constrói a "cabeça" da ferramenta: uma memória persistente em 3 camadas que alimenta toda geração de conteúdo daqui pra frente. Hoje o `DoctorProfile` só tem nome, especialidade, paciente ideal e tom. Vamos expandir isso pra um sistema real de memória, editável, com página dedicada e integração no `mockPipeline`.
 
-Além de Reel, Carrossel, Legenda IG, LinkedIn (já existem), adicionar 8:
-
-| Formato | O que o sistema gera |
-|---|---|
-| **Blog / artigo** | Título SEO, meta description, corpo 800-1500 palavras em markdown, tags |
-| **Stories IG** | 3-5 telas com texto curto, sugestão de sticker (enquete/quiz), CTA final |
-| **YouTube** | Título, descrição, tags, timestamps, roteiro completo (intro/corpo/CTA), thumbnail sugerida (texto + estilo) |
-| **TikTok** | Hook 3s, roteiro 30-60s, texto on-screen, hashtags, sugestão de trilha |
-| **Podcast** | Título do episódio, show notes, roteiro conversacional (intro/desenvolvimento/fecho), duração estimada |
-| **Google Meu Negócio** | Post curto (max 1500 chars), CTA (Saiba mais/Agendar), sugestão de imagem |
-| **Doctoralia** | Artigo/atualização de perfil no tom da plataforma, tags de especialidade |
-| **Site do médico** | Bloco pronto pra colar (artigo, FAQ, ou seção "novidades"), com título e HTML simples |
-
-Cada peça continua tendo **CFM Score + flags éticas** e pode ser reescaneada/aprovada.
-
-## Onde selecionar formatos
-
-Na tela **Geração** dentro da consulta (`SessionDetail` aba Conteúdo), trocar o grid atual de 4 formatos por 3 grupos:
+## As 3 camadas
 
 ```text
-Redes sociais       Conteúdo longo         Presença online
-[ ] Reel            [ ] Blog / artigo      [ ] Google Meu Negócio
-[ ] Carrossel       [ ] YouTube            [ ] Doctoralia
-[ ] Stories IG      [ ] Podcast            [ ] Site do médico
-[ ] Legenda IG      [ ] TikTok
-[ ] LinkedIn
+┌─────────────────────────────────────────────────────────┐
+│ 1. MÉDICO (quem fala)                                   │
+│    Nome, especialidade, credenciais, anos de prática,   │
+│    tom de voz, bordões, temas que ama / evita,          │
+│    referências que costuma citar, estilo de abertura    │
+├─────────────────────────────────────────────────────────┤
+│ 2. PACIENTE IDEAL (pra quem fala)                       │
+│    Perfil demográfico, dores principais, objeções       │
+│    comuns, linguagem que usa, medos, gatilhos de        │
+│    decisão, canais onde consome conteúdo                │
+├─────────────────────────────────────────────────────────┤
+│ 3. MARCA (como se posiciona)                            │
+│    Posicionamento em 1 frase, 3 pilares de conteúdo,    │
+│    valores inegociáveis, promessas éticas, paleta       │
+│    verbal (palavras sim / palavras não), CTA padrão     │
+└─────────────────────────────────────────────────────────┘
 ```
 
-Botão "Selecionar recomendados" pré-marca conforme o perfil do médico e o tipo do tema.
+Cada camada é editável, salva em `localStorage` e aparece como contexto nas peças geradas.
 
-## Central de Aprovações global
+## Nova página `/app/brain`
 
-Nova rota **`/app/aprovacoes`** no menu da sidebar (grupo "Trabalho", acima da Biblioteca).
+Sidebar ganha item **"Brain"** no grupo "Conta", acima de Ajustes, com ícone `Brain`.
 
 Layout:
 
 ```text
-┌─────────────────────────────────────────────────────┐
-│ Aprovações pendentes · 24 peças de 6 consultas      │
-├─────────────────────────────────────────────────────┤
-│ Filtros: [canal ▾] [consulta ▾] [tema ▾]  [CFM ▾]  │
-├─────────────────────────────────────────────────────┤
-│ ▸ Instagram · 8 peças                               │
-│   □ [Reel]  "5 sinais que..."  · CFM 87  · [preview]│
-│   □ [Carrossel] "Guia rápido"  · CFM 92  · [preview]│
-│   ...                                               │
-│ ▸ YouTube · 3 peças                                 │
-│ ▸ Google Meu Negócio · 4 peças                      │
-│ ▸ Blog / Site · 5 peças                             │
-├─────────────────────────────────────────────────────┤
-│ Selecionadas: 6   [Aprovar em lote] [Rejeitar]     │
-└─────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│ Brain · a cabeça da sua ferramenta                   │
+│ Quanto mais completa, mais cada peça soa como você.  │
+│                                                      │
+│ Completude: ●●●●●○○○○○ 52%                          │
+├──────────────────────────────────────────────────────┤
+│ [ Médico ] [ Paciente ideal ] [ Marca ]              │
+├──────────────────────────────────────────────────────┤
+│  (form da aba selecionada com campos agrupados)      │
+│                                                      │
+│  [Salvar camada]  [Ver como isso afeta a geração]   │
+└──────────────────────────────────────────────────────┘
 ```
 
-- Agrupamento por canal (default), ou por consulta.
-- Clicar numa peça abre um **drawer lateral** com preview real + editor + CFM flags + botão "aprovar/reescanear/rejeitar".
-- Botão "Aprovar tudo neste grupo" no header de cada canal.
-- Peças bloqueadas por flag `block` do CFM aparecem separadas em "Precisam de revisão".
+- 3 abas (uma por camada), cada uma com seus campos.
+- Barra de completude global (% dos campos preenchidos entre as 3 camadas).
+- Botão "Ver como isso afeta a geração" abre um painel lateral com uma peça de exemplo (Reel ou Legenda) renderizada usando a Brain atual — útil pra sentir o efeito.
+- Estado vazio inicial pergunta "Quer preencher agora ou depois?" com atalho pra Ajustes.
 
-## Publicação (mock)
+## Como a Brain entra na geração
 
-Depois de aprovar, a peça vira status `approved` e ganha ações por canal na Central e no card:
+`mockPipeline.ts` passa a receber a Brain inteira (não só `DoctorProfile`) e usa nos templates:
 
-- Instagram / TikTok / YouTube / Stories → **"Preparar publicação"** (mock: gera preview no formato do canal com legenda/hashtag e um botão "Publicar" desabilitado com tooltip "Conecte sua conta").
-- Blog / Site / Doctoralia → **"Copiar HTML"** e **"Baixar .md"**.
-- Google Meu Negócio → **"Copiar texto"** + link direto pro painel do GMB.
-- Podcast → **"Baixar roteiro"** + placeholder "Gerar áudio" desabilitado.
+- **Camada Médico** — abertura das peças ("Aqui é a Dra. X, [especialidade] há Y anos"), bordões, tom.
+- **Camada Paciente ideal** — vocabulário, gatilhos emocionais, objeções antecipadas nas peças de fundo de funil.
+- **Camada Marca** — CTA final padrão, palavras banidas removidas do texto, alinhamento aos 3 pilares (peça sinaliza qual pilar reforça).
 
-Peças aprovadas somem da Central e aparecem com selo "Aprovada / pronta pra publicar" na Biblioteca.
+Cada `ContentPiece` ganha um campo opcional `brainSignals: { pillar?: string; usedTraits: string[] }` que aparece no card como chip discreto ("Pilar: Prevenção · Tom: Didático").
+
+## Migração do que já existe
+
+`DoctorProfile` atual vira `Brain.doctor` (mantém compatibilidade). Ao carregar, se existir `cc_profile` mas não `cc_brain`, migra automaticamente. Página **Ajustes** vira uma versão enxuta da aba Médico + atalho "Editar Brain completa".
 
 ## Detalhes técnicos
 
-- `src/types/session.ts`: expandir `ContentFormat` para incluir `stories | blog | youtube | tiktok | podcast | gmb | doctoralia | website`. Adicionar `ContentPiece.channel` (canal agrupador: `instagram | linkedin | youtube | tiktok | blog | gmb | doctoralia | website | podcast`) e `ContentPiece.assets?` (thumbnail hints, imagem sugerida, hashtags, timestamps).
-- `src/lib/mockPipeline.ts`: expandir `generateContentFor` com templates por formato + heurísticas de CFM. Cada template usa o `topic` + `profile` + `science?` pra montar corpo específico do canal.
-- `src/components/session/ContentPieceCard.tsx`: renderização adaptativa por formato (blog mostra título + meta, YouTube mostra thumbnail box + timestamps, GMB mostra caixa curta com CTA).
-- Nova página `src/pages/Approvals.tsx` com filtros locais, drawer usando `Sheet` do shadcn, e reuso do `ContentPieceCard`.
-- Novo componente `src/components/session/FormatPicker.tsx` com os 3 grupos + "Selecionar recomendados".
-- `AppSidebar` ganha item "Aprovações" com badge de contagem pendente.
-- `Dashboard.tsx` ganha 4º stat card: "Aguardando aprovação".
-- `App.tsx` registra rota `/app/aprovacoes`.
-- Tudo em `localStorage` via storage atual — sem backend, sem Cloud, sem APIs externas nessa fase.
+- `src/types/brain.ts` — novo arquivo com `DoctorLayer`, `PatientLayer`, `BrandLayer`, `Brain`.
+- `src/lib/brainStorage.ts` — `loadBrain / saveBrain / getCompleteness(brain)`. Migra `cc_profile` legado.
+- `src/lib/mockPipeline.ts` — assinatura de `generateContentFor` passa a receber `Brain`; templates injetam bordões, CTA da marca e sinalizam pilar.
+- `src/types/session.ts` — `ContentPiece.brainSignals?`.
+- `src/pages/Brain.tsx` — página com 3 abas (`Tabs` do shadcn), forms controlados, barra de progresso, painel de preview.
+- `src/components/brain/DoctorLayerForm.tsx`, `PatientLayerForm.tsx`, `BrandLayerForm.tsx` — um form por camada.
+- `src/components/brain/BrainPreviewPanel.tsx` — renderiza 1 peça de exemplo com a Brain atual.
+- `src/components/app/AppSidebar.tsx` — novo item "Brain" no grupo "Conta" com badge de completude (%) quando < 60%.
+- `src/pages/Settings.tsx` — simplifica pra editar só campos-chave do médico + link "Abrir Brain completa".
+- `src/pages/Dashboard.tsx` — se Brain < 40% completa, banner discreto "Complete sua Brain pra melhorar a geração".
+- `src/App.tsx` — rota `/app/brain`.
+- Tudo `localStorage`, sem backend.
 
-## Fora de escopo
+## Fora de escopo (fica pra depois)
 
-- Geração real de vídeo (Sora), áudio (ElevenLabs) e imagem de capa.
-- Publicação real em qualquer plataforma (só mock com botão desabilitado).
-- Fase 3 Brain Builder e Fase 4 integrações — ficam pra depois.
+- Aprendizado automático da Brain a partir das consultas gravadas (extração de bordões, temas frequentes).
+- Versionamento da Brain (histórico de mudanças).
+- Múltiplos perfis de paciente ideal (só 1 por enquanto).
+- Fase 4 (integrações reais WhatsApp / Meta / YouTube / GMB / Trends).
