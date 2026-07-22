@@ -23,7 +23,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { loadProfile, loadSessions } from '@/lib/storage';
+import { loadProfile } from '@/lib/storage';
 
 const createItems = [
   { title: 'Gravar consulta', url: '/app/record', icon: Mic },
