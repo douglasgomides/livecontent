@@ -27,8 +27,10 @@ const ALL_STAGES: { id: SessionStatus; label: string }[] = [
 function stagesFor(source: Session['source']): typeof ALL_STAGES {
   if (source === 'science') return ALL_STAGES.filter(s => !['anonymizing', 'anonymization_review'].includes(s.id));
   if (source === 'voice_note') return ALL_STAGES.filter(s => !['extracting_topics', 'topics_review'].includes(s.id));
+  if (source === 'audio_livre') return ALL_STAGES.filter(s => !['anonymizing', 'anonymization_review'].includes(s.id));
   return ALL_STAGES;
 }
+
 
 type TabId = 'pipeline' | 'transcript' | 'anon' | 'topics' | 'content';
 
