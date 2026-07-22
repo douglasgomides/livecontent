@@ -60,14 +60,17 @@ export default function SessionDetail() {
   useEffect(() => {
     if (!session) return;
     const isVoiceNote = session.source === 'voice_note';
+    const skipsAnon = session.source === 'science' || session.source === 'audio_livre';
     if (session.status === 'transcribing') {
       const t = setTimeout(() => {
         const seeded = seedPipeline(session);
-        const updated: Session = { ...seeded, status: 'anonymizing' };
+        const nextStatus: SessionStatus = skipsAnon ? 'extracting_topics' : 'anonymizing';
+        const updated: Session = { ...seeded, status: nextStatus };
         upsertSession(updated); setSession(updated);
       }, 1400);
       return () => clearTimeout(t);
     }
+
     if (session.status === 'anonymizing') {
       const t = setTimeout(() => {
         const updated: Session = { ...session, status: 'anonymization_review' };
