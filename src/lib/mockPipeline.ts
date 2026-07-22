@@ -1,6 +1,9 @@
 import type { Session, PIIFinding, Topic, ContentPiece, ContentFormat, CFMResult, DoctorProfile, SessionSource } from '@/types/session';
 import type { Brain } from '@/types/brain';
 import { FORMAT_CHANNEL } from './contentFormats';
+import { buildArtwork } from './artRenderer';
+import { buildExternalPrompts } from './externalPrompts';
+
 
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
@@ -365,7 +368,7 @@ export function generateContentFor(
     const draft = TEMPLATES[format](topic, profile, science);
     const applied = applyBrand(draft.body, brain);
     const pillar = pickPillar(topic, brain);
-    return {
+    const piece: ContentPiece = {
       id: uid(),
       topicId: topic.id,
       format,
@@ -376,7 +379,11 @@ export function generateContentFor(
       approved: false,
       brainSignals: brain ? { pillar, usedTraits: applied.usedTraits } : undefined,
     };
+    piece.artwork = buildArtwork(piece, topic, brain);
+    piece.externalPrompts = buildExternalPrompts(piece, topic, brain);
+    return piece;
   });
+
 }
 
 
@@ -388,7 +395,9 @@ export function createBlankSession(source: SessionSource, durationSec = 0, audio
     upload: `Consulta enviada — ${new Date().toLocaleDateString('pt-BR')}`,
     voice_note: `Voice Note — ${new Date().toLocaleDateString('pt-BR')}`,
     science: `Science to Content — ${new Date().toLocaleDateString('pt-BR')}`,
+    audio_livre: `Áudio livre — ${new Date().toLocaleDateString('pt-BR')}`,
   };
+
   return {
     id: uid(),
     createdAt: new Date().toISOString(),
@@ -410,6 +419,15 @@ export function seedPipeline(s: Session): Session {
       topics: [{ ...VOICE_NOTE_TOPIC, id: uid() }],
     };
   }
+  if (s.source === 'audio_livre') {
+    return {
+      ...s,
+      rawTranscript: VOICE_NOTE_DEMO_TRANSCRIPT,
+      anonymizedTranscript: VOICE_NOTE_DEMO_TRANSCRIPT,
+      piiFindings: [],
+      topics: DEMO_TOPICS.map(t => ({ ...t, id: uid() })),
+    };
+  }
   return {
     ...s,
     rawTranscript: DEMO_TRANSCRIPT,
@@ -418,6 +436,7 @@ export function seedPipeline(s: Session): Session {
     topics: DEMO_TOPICS.map(t => ({ ...t, id: uid() })),
   };
 }
+
 
 export function seedScience(s: Session, text: string, reference: string, kind: NonNullable<Session['science']>['kind']): Session {
   const firstSentence = text.split(/[.!?]/)[0].trim().slice(0, 90);

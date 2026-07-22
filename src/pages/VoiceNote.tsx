@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mic, ArrowLeft, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -5,18 +6,20 @@ import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { upsertSession } from '@/lib/storage';
 import { createBlankSession } from '@/lib/mockPipeline';
 
-const MAX = 90;
-
 export default function VoiceNote() {
   const nav = useNavigate();
+  const [mode, setMode] = useState<'quick' | 'full'>('quick');
+
+  const maxSec = mode === 'quick' ? 180 : 60 * 60;
+  const source = mode === 'quick' ? 'voice_note' : 'audio_livre';
 
   const finish = (result: { url: string; durationSec: number }) => {
-    const s = createBlankSession('voice_note', result.durationSec, result.url);
+    const s = createBlankSession(source, result.durationSec, result.url);
     upsertSession(s);
     nav(`/app/session/${s.id}`);
   };
 
-  const rec = useAudioRecorder({ maxSec: MAX, onAutoStop: finish });
+  const rec = useAudioRecorder({ maxSec, onAutoStop: finish });
 
   const stopManually = async () => {
     const r = await rec.stop();
@@ -24,7 +27,6 @@ export default function VoiceNote() {
   };
 
   const fmt = (s: number) => `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
-  const progress = Math.min(100, (rec.duration / MAX) * 100);
   const active = rec.status === 'recording' || rec.status === 'paused';
 
   return (
@@ -35,8 +37,25 @@ export default function VoiceNote() {
 
       <div>
         <p className="text-primary text-xs tracking-[0.3em] uppercase mb-2">Voice Note</p>
-        <h1 className="font-serif text-4xl mb-2">Insight rápido em até 90 segundos</h1>
-        <p className="text-muted-foreground">Grave uma observação solta entre atendimentos — vira 1 post pronto para publicar.</p>
+        <h1 className="font-serif text-4xl mb-2">Sua ideia vira conteúdo</h1>
+        <p className="text-muted-foreground">Grave uma observação entre atendimentos. Escolha 1 post rápido ou pacote multi-canal.</p>
+      </div>
+
+      <div className="inline-flex border border-border/60 rounded-lg p-1 bg-secondary/30">
+        <button
+          onClick={() => setMode('quick')}
+          disabled={active}
+          className={`px-4 py-1.5 text-sm rounded-md transition ${mode === 'quick' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}
+        >
+          Rápido · 1 post
+        </button>
+        <button
+          onClick={() => setMode('full')}
+          disabled={active}
+          className={`px-4 py-1.5 text-sm rounded-md transition ${mode === 'full' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}
+        >
+          Completo · multi-canal
+        </button>
       </div>
 
       <div className="border border-border/60 rounded-xl p-10 text-center bg-card">
@@ -49,15 +68,14 @@ export default function VoiceNote() {
           </div>
         </div>
 
-        <div className="font-mono text-4xl mb-1">{fmt(rec.duration)} <span className="text-muted-foreground text-lg">/ {fmt(MAX)}</span></div>
-        <div className="text-xs text-muted-foreground mb-4">
-          {rec.status === 'idle' && 'Aperte para começar'}
-          {rec.status === 'recording' && 'Gravando...'}
-          {rec.status === 'stopped' && 'Enviando...'}
+        <div className="font-mono text-4xl mb-1">
+          {fmt(rec.duration)}
+          {mode === 'quick' && <span className="text-muted-foreground text-lg"> / {fmt(maxSec)}</span>}
         </div>
-
-        <div className="h-1 w-full bg-secondary rounded-full overflow-hidden mb-6">
-          <div className="h-full bg-gold-gradient transition-all" style={{ width: `${progress}%` }} />
+        <div className="text-xs text-muted-foreground mb-6">
+          {rec.status === 'idle' && (mode === 'quick' ? 'Até 3 min · vira 1 legenda pronta' : 'Sem limite · vira Reel + Carrossel + Blog + Prompts externos')}
+          {rec.status === 'recording' && 'Gravando…'}
+          {rec.status === 'stopped' && 'Enviando…'}
         </div>
 
         {rec.error && <div className="text-destructive text-sm mb-4">{rec.error}</div>}

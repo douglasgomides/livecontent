@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Mic, Upload, MessageCircle, FlaskConical, ArrowRight, Clock, FileCheck2, Shield, Brain as BrainIcon } from 'lucide-react';
+import { Mic, Upload, MessageCircle, FlaskConical, Radio, ArrowRight, Clock, FileCheck2, Shield, Brain as BrainIcon } from 'lucide-react';
 import { loadSessions, loadProfile } from '@/lib/storage';
 import { loadBrain, getCompleteness } from '@/lib/brainStorage';
 import type { SessionStatus } from '@/types/session';
@@ -19,9 +19,11 @@ const STATUS_LABEL: Record<SessionStatus, string> = {
 const entries = [
   { icon: Mic, title: 'Gravar consulta', hint: 'Ao vivo, no consultório', to: '/app/record', primary: true },
   { icon: Upload, title: 'Upload de áudio', hint: 'MP3, M4A, WAV, WebM', to: '/app/new/upload' },
-  { icon: MessageCircle, title: 'Voice Note', hint: 'Insight de 30–90s', to: '/app/new/voice-note' },
+  { icon: MessageCircle, title: 'Voice Note', hint: 'Insight rápido → 1 post', to: '/app/new/voice-note' },
+  { icon: Radio, title: 'Áudio livre', hint: 'Aula, palestra, WhatsApp', to: '/app/new/audio-livre' },
   { icon: FlaskConical, title: 'Science to Content', hint: 'Abstract, notícia, diretriz', to: '/app/new/science' },
 ];
+
 
 const fmtDate = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 const fmtDur = (s: number) => `${Math.floor(s / 60)}min ${(s % 60).toString().padStart(2, '0')}s`;

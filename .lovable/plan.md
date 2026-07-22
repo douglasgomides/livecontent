@@ -1,89 +1,90 @@
+# Um input → conteúdo pronto pra vários canais
 
-# Fase 3 — Brain Builder (3 camadas de memória)
+Meta: qualquer input (consulta, áudio livre, aula, WhatsApp, palestra, texto) vira um pacote multi-canal com **texto + arte renderizada + prompts pra ferramentas externas**, e o médico só marca em quais canais quer publicar.
 
-Constrói a "cabeça" da ferramenta: uma memória persistente em 3 camadas que alimenta toda geração de conteúdo daqui pra frente. Hoje o `DoctorProfile` só tem nome, especialidade, paciente ideal e tom. Vamos expandir isso pra um sistema real de memória, editável, com página dedicada e integração no `mockPipeline`.
+## 1. Novos inputs
 
-## As 3 camadas
+- **Voice Note livre** (expandir o atual): tirar o limite de 90s, adicionar campo "tema/ângulo" opcional, mandar pro pipeline completo (não mais só 1 legenda).
+- **Novo card "Áudio livre / Aula / Palestra"** (`/app/new/audio-livre`): grava OU faz upload de áudio longo (aula, palestra, WhatsApp, conversa). Pula anonimização (não é paciente), vai direto pra extração de temas + geração multi-canal.
+- Dashboard passa a mostrar 5 cards de input: Consulta · Upload · Voice Note rápido · **Áudio livre** · Science.
+
+## 2. Artes visuais renderizadas no app (sem custo de IA)
+
+Cada formato visual ganha um **renderer HTML/Canvas** que usa a camada **Brand da Brain** (cor primária, cor de fundo, fonte, logo/monograma, CTA padrão):
+
+| Formato | Renderer |
+|---|---|
+| Post estático IG | 1080×1080, título grande + rodapé com @ do médico |
+| Carrossel IG | 5-8 slides 1080×1350, capa + slides de conteúdo + slide CTA |
+| Stories IG | 3-5 telas 1080×1920 com sticker sugerido |
+| Capa YouTube | 1280×720 com título + estilo definido |
+| Capa Reel/TikTok | 1080×1920 com hook em destaque |
+| Post LinkedIn | Imagem 1200×627 opcional |
+| GMB / Blog | Sem arte — só texto |
+
+- Preview ao vivo dentro do `ContentPieceCard` (via `<canvas>` ou HTML+html2canvas).
+- Botão **"Baixar PNG"** por slide + **"Baixar tudo (.zip)"** pro carrossel.
+- Botão **"Editar arte"** abre um drawer com cor/título/fonte editáveis (herda da Brand).
+- Sem IA de imagem nessa fase — templates só. (Botão futuro "Gerar com IA" fica marcado como próximo passo.)
+
+## 3. Aba "Prompts externos" em cada peça
+
+Cada `ContentPiece` ganha uma aba lateral com prompts prontos pra copiar, gerados a partir do próprio conteúdo:
+
+- **Sora / Runway / Kling** → prompt de vídeo (cena, câmera, duração).
+- **Notebook LM** → briefing de podcast com fontes e tom.
+- **Midjourney / Nano Banana** → prompt de capa/thumb no estilo da marca.
+- **HeyGen / D-ID** → roteiro pra avatar falando o texto.
+- **ElevenLabs** → texto limpo pronto pra TTS + sugestão de voz.
+
+Cada prompt tem botão "Copiar" e um link direto pra ferramenta.
+
+## 4. Central de Publicação (evolução da Central de Aprovações)
+
+`/app/approvals` vira **Aprovar → Publicar** em duas etapas visuais:
 
 ```text
-┌─────────────────────────────────────────────────────────┐
-│ 1. MÉDICO (quem fala)                                   │
-│    Nome, especialidade, credenciais, anos de prática,   │
-│    tom de voz, bordões, temas que ama / evita,          │
-│    referências que costuma citar, estilo de abertura    │
-├─────────────────────────────────────────────────────────┤
-│ 2. PACIENTE IDEAL (pra quem fala)                       │
-│    Perfil demográfico, dores principais, objeções       │
-│    comuns, linguagem que usa, medos, gatilhos de        │
-│    decisão, canais onde consome conteúdo                │
-├─────────────────────────────────────────────────────────┤
-│ 3. MARCA (como se posiciona)                            │
-│    Posicionamento em 1 frase, 3 pilares de conteúdo,    │
-│    valores inegociáveis, promessas éticas, paleta       │
-│    verbal (palavras sim / palavras não), CTA padrão     │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│ Peça aprovada: "5 sinais que…"               │
+│ Publicar em:                                 │
+│  [✓] Instagram (Reel + Carrossel + Stories) │
+│  [✓] LinkedIn                                │
+│  [ ] YouTube                                 │
+│  [✓] Blog do site                            │
+│  [✓] Google Meu Negócio                      │
+│  [ ] TikTok                                  │
+│  [ Publicar selecionados ]                   │
+└──────────────────────────────────────────────┘
 ```
 
-Cada camada é editável, salva em `localStorage` e aparece como contexto nas peças geradas.
+- Cada canal marcado entra numa **fila** (`publishQueue` no localStorage) com status `queued → publishing → published | needs_connection | failed`.
+- Estrutura de "adapter por canal" (`src/lib/publishers/*.ts`) com interface `PublishAdapter { channel, prepare(piece), publish(piece) }`. Nessa fase todos os adapters retornam `needs_connection` com CTA "Conectar conta", **exceto**:
+  - Blog / Site / Doctoralia → gera `.md`/`.html` pra download real.
+  - GMB → copia texto + abre painel do GMB.
+- Nova página `/app/publish-queue` mostra a fila com filtros por status e botão "Reenviar".
 
-## Nova página `/app/brain`
+## 5. Recomendação automática de canais
 
-Sidebar ganha item **"Brain"** no grupo "Conta", acima de Ajustes, com ícone `Brain`.
+Ao terminar a geração, o sistema mostra **"Combo recomendado pra este tema"** baseado em heurísticas (ex: tema educacional → Reel + Carrossel + Blog + GMB; tema comercial → Reel + Stories + LinkedIn; caso clínico anonimizado → Carrossel + Blog + YouTube). 1 clique marca tudo.
 
-Layout:
+## Escopo técnico
 
-```text
-┌──────────────────────────────────────────────────────┐
-│ Brain · a cabeça da sua ferramenta                   │
-│ Quanto mais completa, mais cada peça soa como você.  │
-│                                                      │
-│ Completude: ●●●●●○○○○○ 52%                          │
-├──────────────────────────────────────────────────────┤
-│ [ Médico ] [ Paciente ideal ] [ Marca ]              │
-├──────────────────────────────────────────────────────┤
-│  (form da aba selecionada com campos agrupados)      │
-│                                                      │
-│  [Salvar camada]  [Ver como isso afeta a geração]   │
-└──────────────────────────────────────────────────────┘
-```
+- `src/types/session.ts` — `ContentPiece.artwork?: { previewUrl, slides?, editableFields }`, `ContentPiece.externalPrompts?: Record<string,string>`, novo `PublishJob`.
+- `src/lib/artRenderer/` — renderers HTML por formato usando Brand da Brain.
+- `src/lib/externalPrompts.ts` — funções puras que geram prompt pra cada tool externo a partir de `piece + brain`.
+- `src/lib/publishers/` — adapters por canal (mock estruturado, fácil de plugar API depois).
+- `src/lib/publishQueue.ts` — fila em localStorage + hook `usePublishQueue`.
+- `src/pages/AudioLivre.tsx` — nova página de input.
+- `src/pages/VoiceNote.tsx` — remover limite de 90s, adicionar modo "completo".
+- `src/pages/PublishQueue.tsx` — nova página.
+- `src/pages/Approvals.tsx` — adicionar seletor de canais + botão publicar em lote.
+- `src/components/session/ContentPieceCard.tsx` — abas Texto · Arte · Prompts externos · Publicar.
+- `src/components/session/ArtworkPreview.tsx` + `ArtworkEditor.tsx`.
+- `src/lib/mockPipeline.ts` — `generateContentFor` passa a produzir também `artwork` e `externalPrompts`.
+- `AppSidebar` — item "Fila de publicação" no grupo Trabalho.
 
-- 3 abas (uma por camada), cada uma com seus campos.
-- Barra de completude global (% dos campos preenchidos entre as 3 camadas).
-- Botão "Ver como isso afeta a geração" abre um painel lateral com uma peça de exemplo (Reel ou Legenda) renderizada usando a Brain atual — útil pra sentir o efeito.
-- Estado vazio inicial pergunta "Quer preencher agora ou depois?" com atalho pra Ajustes.
+## Fora de escopo (fica pra próxima fase)
 
-## Como a Brain entra na geração
-
-`mockPipeline.ts` passa a receber a Brain inteira (não só `DoctorProfile`) e usa nos templates:
-
-- **Camada Médico** — abertura das peças ("Aqui é a Dra. X, [especialidade] há Y anos"), bordões, tom.
-- **Camada Paciente ideal** — vocabulário, gatilhos emocionais, objeções antecipadas nas peças de fundo de funil.
-- **Camada Marca** — CTA final padrão, palavras banidas removidas do texto, alinhamento aos 3 pilares (peça sinaliza qual pilar reforça).
-
-Cada `ContentPiece` ganha um campo opcional `brainSignals: { pillar?: string; usedTraits: string[] }` que aparece no card como chip discreto ("Pilar: Prevenção · Tom: Didático").
-
-## Migração do que já existe
-
-`DoctorProfile` atual vira `Brain.doctor` (mantém compatibilidade). Ao carregar, se existir `cc_profile` mas não `cc_brain`, migra automaticamente. Página **Ajustes** vira uma versão enxuta da aba Médico + atalho "Editar Brain completa".
-
-## Detalhes técnicos
-
-- `src/types/brain.ts` — novo arquivo com `DoctorLayer`, `PatientLayer`, `BrandLayer`, `Brain`.
-- `src/lib/brainStorage.ts` — `loadBrain / saveBrain / getCompleteness(brain)`. Migra `cc_profile` legado.
-- `src/lib/mockPipeline.ts` — assinatura de `generateContentFor` passa a receber `Brain`; templates injetam bordões, CTA da marca e sinalizam pilar.
-- `src/types/session.ts` — `ContentPiece.brainSignals?`.
-- `src/pages/Brain.tsx` — página com 3 abas (`Tabs` do shadcn), forms controlados, barra de progresso, painel de preview.
-- `src/components/brain/DoctorLayerForm.tsx`, `PatientLayerForm.tsx`, `BrandLayerForm.tsx` — um form por camada.
-- `src/components/brain/BrainPreviewPanel.tsx` — renderiza 1 peça de exemplo com a Brain atual.
-- `src/components/app/AppSidebar.tsx` — novo item "Brain" no grupo "Conta" com badge de completude (%) quando < 60%.
-- `src/pages/Settings.tsx` — simplifica pra editar só campos-chave do médico + link "Abrir Brain completa".
-- `src/pages/Dashboard.tsx` — se Brain < 40% completa, banner discreto "Complete sua Brain pra melhorar a geração".
-- `src/App.tsx` — rota `/app/brain`.
-- Tudo `localStorage`, sem backend.
-
-## Fora de escopo (fica pra depois)
-
-- Aprendizado automático da Brain a partir das consultas gravadas (extração de bordões, temas frequentes).
-- Versionamento da Brain (histórico de mudanças).
-- Múltiplos perfis de paciente ideal (só 1 por enquanto).
-- Fase 4 (integrações reais WhatsApp / Meta / YouTube / GMB / Trends).
+- Geração real de imagem via IA (Midjourney/Nano Banana dentro do app).
+- Chamadas reais de API pra IG/LinkedIn/YouTube/TikTok — a estrutura de adapter fica pronta.
+- Geração real de vídeo/áudio — só entregamos o prompt pronto.

@@ -27,8 +27,10 @@ const ALL_STAGES: { id: SessionStatus; label: string }[] = [
 function stagesFor(source: Session['source']): typeof ALL_STAGES {
   if (source === 'science') return ALL_STAGES.filter(s => !['anonymizing', 'anonymization_review'].includes(s.id));
   if (source === 'voice_note') return ALL_STAGES.filter(s => !['extracting_topics', 'topics_review'].includes(s.id));
+  if (source === 'audio_livre') return ALL_STAGES.filter(s => !['anonymizing', 'anonymization_review'].includes(s.id));
   return ALL_STAGES;
 }
+
 
 type TabId = 'pipeline' | 'transcript' | 'anon' | 'topics' | 'content';
 
@@ -58,14 +60,17 @@ export default function SessionDetail() {
   useEffect(() => {
     if (!session) return;
     const isVoiceNote = session.source === 'voice_note';
+    const skipsAnon = session.source === 'science' || session.source === 'audio_livre';
     if (session.status === 'transcribing') {
       const t = setTimeout(() => {
         const seeded = seedPipeline(session);
-        const updated: Session = { ...seeded, status: 'anonymizing' };
+        const nextStatus: SessionStatus = skipsAnon ? 'extracting_topics' : 'anonymizing';
+        const updated: Session = { ...seeded, status: nextStatus };
         upsertSession(updated); setSession(updated);
       }, 1400);
       return () => clearTimeout(t);
     }
+
     if (session.status === 'anonymizing') {
       const t = setTimeout(() => {
         const updated: Session = { ...session, status: 'anonymization_review' };
@@ -284,6 +289,9 @@ export default function SessionDetail() {
                             <ContentPieceCard
                               key={p.id}
                               piece={p}
+                              topic={topic}
+                              brain={loadBrain()}
+                              sessionId={session.id}
                               onChange={(updated) => {
                                 const content = session.content!.map(c => c.id === updated.id ? updated : c);
                                 const s = { ...session, content }; upsertSession(s); setSession(s);
@@ -295,6 +303,7 @@ export default function SessionDetail() {
                             />
                           ))}
                         </div>
+
                       </div>
                     );
                   })}

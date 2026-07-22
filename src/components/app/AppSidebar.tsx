@@ -10,7 +10,10 @@ import {
   Settings,
   CheckSquare,
   Brain as BrainIcon,
+  Send,
+  Radio,
 } from 'lucide-react';
+
 import {
   Sidebar,
   SidebarContent,
@@ -31,15 +34,19 @@ const createItems = [
   { title: 'Gravar consulta', url: '/app/record', icon: Mic },
   { title: 'Upload de áudio', url: '/app/new/upload', icon: Upload },
   { title: 'Voice Note', url: '/app/new/voice-note', icon: MessageCircle },
+  { title: 'Áudio livre', url: '/app/new/audio-livre', icon: Radio },
   { title: 'Science to Content', url: '/app/new/science', icon: FlaskConical },
 ];
+
 
 const workItems = [
   { title: 'Dashboard', url: '/app', icon: LayoutDashboard, end: true },
   { title: 'Consultas', url: '/app/consultas', icon: ListChecks },
   { title: 'Aprovações', url: '/app/approvals', icon: CheckSquare },
+  { title: 'Fila de publicação', url: '/app/publish-queue', icon: Send },
   { title: 'Biblioteca', url: '/app/library', icon: Library },
 ];
+
 
 const accountItems = [
   { title: 'Brain', url: '/app/brain', icon: BrainIcon },
