@@ -65,7 +65,6 @@ export default function Recording() {
       const url = URL.createObjectURL(blob);
       streamRef.current?.getTracks().forEach(t => t.stop());
       const session = createBlankSession('recording', duration, url);
-      session.title = `Consulta de ${new Date().toLocaleDateString('pt-BR')}`;
       upsertSession(session);
       nav(`/app/session/${session.id}`);
     };

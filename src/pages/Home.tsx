@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Mic, Upload, MessageCircle, Newspaper, FlaskConical, ArrowRight, Clock } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Mic, Upload, MessageCircle, FlaskConical, ArrowRight, Clock } from 'lucide-react';
 import { loadSessions, loadProfile } from '@/lib/storage';
 import type { SessionStatus } from '@/types/session';
 
@@ -16,10 +15,9 @@ const STATUS_LABEL: Record<SessionStatus, string> = {
 };
 
 const secondaryActions = [
-  { icon: Upload, label: 'Upload de áudio', hint: 'Em breve' },
-  { icon: MessageCircle, label: 'Voice Note', hint: 'Em breve' },
-  { icon: FlaskConical, label: 'Science to Content', hint: 'Em breve' },
-  { icon: Newspaper, label: 'News to Content', hint: 'Em breve' },
+  { icon: Upload, label: 'Upload de áudio', hint: 'MP3, M4A, WAV, WebM', to: '/app/new/upload' },
+  { icon: MessageCircle, label: 'Voice Note', hint: 'Insight de 30–90s', to: '/app/new/voice-note' },
+  { icon: FlaskConical, label: 'Science to Content', hint: 'Abstract, notícia, diretriz', to: '/app/new/science' },
 ];
 
 const fmtDate = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -41,18 +39,22 @@ export default function Home() {
             <div className="inline-flex h-20 w-20 rounded-full bg-gold-gradient items-center justify-center mb-6 group-hover:scale-105 transition">
               <Mic className="h-9 w-9 text-primary-foreground" />
             </div>
-            <div className="font-serif text-3xl md:text-4xl mb-2">Iniciar Consulta</div>
+            <div className="font-serif text-3xl md:text-4xl mb-2">Gravar consulta ao vivo</div>
             <div className="text-muted-foreground">Aperte, grave, encerre. A gente cuida do resto.</div>
           </div>
         </Link>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
           {secondaryActions.map(a => (
-            <button key={a.label} disabled className="border border-border/60 rounded-lg p-4 text-left opacity-50 cursor-not-allowed">
-              <a.icon className="h-4 w-4 text-primary mb-2" />
-              <div className="text-sm font-medium">{a.label}</div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">{a.hint}</div>
-            </button>
+            <Link
+              key={a.label}
+              to={a.to}
+              className="border border-border/60 rounded-lg p-5 text-left hover:border-primary/50 hover:bg-primary/5 transition block group"
+            >
+              <a.icon className="h-5 w-5 text-primary mb-3" />
+              <div className="text-sm font-medium mb-1">{a.label}</div>
+              <div className="text-xs text-muted-foreground">{a.hint}</div>
+            </Link>
           ))}
         </div>
       </section>
@@ -65,7 +67,7 @@ export default function Home() {
 
         {sessions.length === 0 ? (
           <div className="border border-dashed border-border rounded-xl p-12 text-center text-muted-foreground">
-            Nenhuma consulta ainda. Aperte <span className="text-primary">Iniciar Consulta</span> quando estiver pronto.
+            Nenhuma consulta ainda. Escolha uma forma de começar acima.
           </div>
         ) : (
           <div className="space-y-2">
@@ -78,6 +80,8 @@ export default function Home() {
                       <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {fmtDur(s.durationSec)}</span>
                       <span>·</span>
                       <span>{fmtDate(s.createdAt)}</span>
+                      <span>·</span>
+                      <span className="uppercase tracking-wider text-[10px]">{s.source.replace('_', ' ')}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">

@@ -1,4 +1,4 @@
-import type { Session, PIIFinding, Topic, ContentPiece, ContentFormat, CFMResult, DoctorProfile } from '@/types/session';
+import type { Session, PIIFinding, Topic, ContentPiece, ContentFormat, CFMResult, DoctorProfile, SessionSource } from '@/types/session';
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
 
@@ -29,8 +29,20 @@ const DEMO_TOPICS: Topic[] = [
   { id: uid(), title: 'Plano de saúde x consulta particular: como decidir', summary: 'Comparativo honesto sobre tempo de autorização, continuidade do cuidado e custo real.', funnelStage: 'C2', included: false },
 ];
 
-const CONTENT_TEMPLATES: Record<ContentFormat, (topic: Topic, profile: DoctorProfile | null) => string> = {
-  reel: (t) => `🎬 REEL — 45s
+const VOICE_NOTE_DEMO_TRANSCRIPT = `Nota rápida: acabei de atender um caso que quero comentar. Paciente jovem, atleta, chegou achando que precisava operar o ombro por causa de uma dor de 6 semanas. Fizemos avaliação funcional e, na verdade, é um quadro de sobrecarga por overtraining. Vou de fisioterapia dirigida por 8 semanas antes de considerar qualquer coisa mais invasiva. Fica o lembrete: dor no ombro em atleta jovem raramente é cirúrgico de primeira.`;
+
+const VOICE_NOTE_DEMO_ANON = `Nota rápida: acabei de atender um caso que quero comentar. Paciente jovem, atleta, chegou achando que precisava operar o ombro por causa de uma dor de 6 semanas. Fizemos avaliação funcional e, na verdade, é um quadro de sobrecarga por overtraining. Vou de fisioterapia dirigida por 8 semanas antes de considerar qualquer coisa mais invasiva. Fica o lembrete: dor no ombro em atleta jovem raramente é cirúrgico de primeira.`;
+
+const VOICE_NOTE_TOPIC: Topic = {
+  id: 'vn',
+  title: 'Dor no ombro em atleta jovem: nem sempre é cirurgia',
+  summary: 'Quadros de sobrecarga respondem bem a fisioterapia dirigida antes de considerar procedimento invasivo.',
+  funnelStage: 'C1',
+  included: true,
+};
+
+const CONTENT_TEMPLATES: Record<ContentFormat, (topic: Topic, profile: DoctorProfile | null, science?: Session['science']) => string> = {
+  reel: (t, _p, sci) => `🎬 REEL — 45s
 
 [0-3s] Gancho: "Se você sente ${t.title.toLowerCase()}, esse vídeo é pra você."
 [3-15s] Problema: contexto rápido do sintoma e por que ele aparece.
@@ -38,8 +50,8 @@ const CONTENT_TEMPLATES: Record<ContentFormat, (topic: Topic, profile: DoctorPro
 [30-40s] O que fazer agora (2 passos práticos).
 [40-45s] CTA: "Salva esse vídeo e compartilha com quem precisa."
 
-Trilha: instrumental calmo. Corte a cada 3 segundos.`,
-  carousel: (t) => `📱 CARROSSEL — 7 slides
+Trilha: instrumental calmo. Corte a cada 3 segundos.${sci ? `\n\nFonte citada em tela: ${sci.reference}` : ''}`,
+  carousel: (t, _p, sci) => `📱 CARROSSEL — 7 slides
 
 Slide 1 — Capa: "${t.title}"
 Slide 2 — O sintoma que a maioria ignora.
@@ -47,8 +59,8 @@ Slide 3 — Por que isso acontece (explicação didática).
 Slide 4 — Mito x verdade.
 Slide 5 — ${t.summary}
 Slide 6 — 3 passos práticos hoje.
-Slide 7 — Quando procurar um especialista + CTA suave.`,
-  caption: (t) => `📝 LEGENDA IG
+Slide 7 — Quando procurar um especialista + CTA suave.${sci ? `\n\nSlide fonte: "Baseado em: ${sci.reference}"` : ''}`,
+  caption: (t, _p, sci) => `📝 LEGENDA IG
 
 ${t.title}.
 
@@ -56,8 +68,8 @@ ${t.summary}
 
 Não é toda dor que precisa de bisturi. Boa parte responde a mudanças simples de rotina — desde que a gente entenda o que está por trás.
 
-Se esse conteúdo faz sentido, comenta aqui embaixo o que mais te confunde sobre o tema. Vou responder um a um.`,
-  linkedin: (t) => `💼 POST LINKEDIN
+Se esse conteúdo faz sentido, comenta aqui embaixo o que mais te confunde sobre o tema. Vou responder um a um.${sci ? `\n\n📚 Baseado em: ${sci.reference}` : ''}`,
+  linkedin: (t, _p, sci) => `💼 POST LINKEDIN
 
 ${t.title}
 
@@ -70,7 +82,7 @@ Três coisas mudaram nos últimos anos:
 2. Protocolos de fisioterapia mais direcionados.
 3. Uso racional de exames de imagem.
 
-O ponto: cirurgia é ferramenta, não solução automática. E parte do trabalho médico é traduzir isso.`,
+O ponto: cirurgia é ferramenta, não solução automática. E parte do trabalho médico é traduzir isso.${sci ? `\n\nReferência: ${sci.reference}` : ''}`,
 };
 
 const RISKY_TERMS = ['cura garantida', '100%', 'sem risco', 'milagre', 'infalível', 'melhor do brasil'];
@@ -88,21 +100,27 @@ function scoreCFM(body: string): CFMResult {
   return { score: Math.max(0, Math.min(100, score)), flags };
 }
 
-export function generateContentFor(topic: Topic, formats: ContentFormat[], profile: DoctorProfile | null): ContentPiece[] {
+export function generateContentFor(topic: Topic, formats: ContentFormat[], profile: DoctorProfile | null, science?: Session['science']): ContentPiece[] {
   return formats.map(format => {
-    const body = CONTENT_TEMPLATES[format](topic, profile);
+    const body = CONTENT_TEMPLATES[format](topic, profile, science);
     return { id: uid(), topicId: topic.id, format, body, cfm: scoreCFM(body), approved: false };
   });
 }
 
 export const rescoreContent = (piece: ContentPiece): ContentPiece => ({ ...piece, cfm: scoreCFM(piece.body) });
 
-export function createBlankSession(source: Session['source'], durationSec = 0, audioUrl?: string): Session {
+export function createBlankSession(source: SessionSource, durationSec = 0, audioUrl?: string): Session {
+  const titles: Record<SessionSource, string> = {
+    recording: `Consulta de ${new Date().toLocaleDateString('pt-BR')}`,
+    upload: `Consulta enviada — ${new Date().toLocaleDateString('pt-BR')}`,
+    voice_note: `Voice Note — ${new Date().toLocaleDateString('pt-BR')}`,
+    science: `Science to Content — ${new Date().toLocaleDateString('pt-BR')}`,
+  };
   return {
     id: uid(),
     createdAt: new Date().toISOString(),
     source,
-    title: 'Consulta sem título',
+    title: titles[source],
     durationSec,
     status: 'transcribing',
     audioUrl,
@@ -110,12 +128,42 @@ export function createBlankSession(source: Session['source'], durationSec = 0, a
 }
 
 export function seedPipeline(s: Session): Session {
+  // Voice notes get the shorter transcript and 1 pre-included topic
+  if (s.source === 'voice_note') {
+    return {
+      ...s,
+      rawTranscript: VOICE_NOTE_DEMO_TRANSCRIPT,
+      anonymizedTranscript: VOICE_NOTE_DEMO_ANON,
+      piiFindings: [],
+      topics: [{ ...VOICE_NOTE_TOPIC, id: uid() }],
+    };
+  }
   return {
     ...s,
     rawTranscript: DEMO_TRANSCRIPT,
     anonymizedTranscript: DEMO_ANONYMIZED,
     piiFindings: DEMO_PII,
     topics: DEMO_TOPICS.map(t => ({ ...t, id: uid() })),
+  };
+}
+
+/** Science: seed 1 topic derived from the pasted text; skip anonymization */
+export function seedScience(s: Session, text: string, reference: string, kind: NonNullable<Session['science']>['kind']): Session {
+  const firstSentence = text.split(/[.!?]/)[0].trim().slice(0, 90);
+  const topic: Topic = {
+    id: uid(),
+    title: firstSentence || 'Novo achado clínico',
+    summary: text.slice(0, 260).trim() + (text.length > 260 ? '…' : ''),
+    funnelStage: 'C1',
+    included: true,
+  };
+  return {
+    ...s,
+    rawTranscript: text,
+    anonymizedTranscript: text,
+    piiFindings: [],
+    topics: [topic],
+    science: { reference, kind, originalText: text },
   };
 }
 

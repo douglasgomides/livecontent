@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import type { Session, SessionStatus, ContentFormat, Topic } from '@/types/session';
 import { getSession, upsertSession, loadProfile } from '@/lib/storage';
@@ -7,9 +7,9 @@ import AnonymizationReview from '@/components/session/AnonymizationReview';
 import TopicsReview from '@/components/session/TopicsReview';
 import ContentPieceCard from '@/components/session/ContentPieceCard';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Check, Circle, Loader2, Instagram, Linkedin, MessageSquare, Sparkles } from 'lucide-react';
+import { ArrowLeft, Check, Circle, Loader2, Instagram, Linkedin, MessageSquare, Sparkles, FlaskConical, BookOpen } from 'lucide-react';
 
-const STAGES: { id: SessionStatus; label: string }[] = [
+const ALL_STAGES: { id: SessionStatus; label: string }[] = [
   { id: 'transcribing', label: 'Transcrição' },
   { id: 'anonymizing', label: 'Anonimização' },
   { id: 'anonymization_review', label: 'Revisão PII' },
@@ -26,15 +26,29 @@ const FORMATS: { id: ContentFormat; label: string; icon: any }[] = [
   { id: 'linkedin', label: 'LinkedIn', icon: Linkedin },
 ];
 
+function stagesFor(source: Session['source']): typeof ALL_STAGES {
+  if (source === 'science') {
+    return ALL_STAGES.filter(s => !['anonymizing', 'anonymization_review'].includes(s.id));
+  }
+  if (source === 'voice_note') {
+    return ALL_STAGES.filter(s => !['extracting_topics', 'topics_review'].includes(s.id));
+  }
+  return ALL_STAGES;
+}
+
 export default function SessionDetail() {
   const { id } = useParams();
   const nav = useNavigate();
   const [session, setSession] = useState<Session | null>(id ? getSession(id) || null : null);
   const [selectedFormats, setSelectedFormats] = useState<ContentFormat[]>(['reel', 'carousel', 'caption', 'linkedin']);
 
+  const stages = useMemo(() => session ? stagesFor(session.source) : ALL_STAGES, [session?.source]);
+
   // Auto-advance mocked pipeline
   useEffect(() => {
     if (!session) return;
+    const isVoiceNote = session.source === 'voice_note';
+
     if (session.status === 'transcribing') {
       const t = setTimeout(() => {
         const seeded = seedPipeline(session);
@@ -52,7 +66,7 @@ export default function SessionDetail() {
     }
     if (session.status === 'extracting_topics') {
       const t = setTimeout(() => {
-        const updated: Session = { ...session, status: 'topics_review' };
+        const updated: Session = { ...session, status: isVoiceNote ? 'generating_content' : 'topics_review' };
         upsertSession(updated); setSession(updated);
       }, 1000);
       return () => clearTimeout(t);
@@ -68,15 +82,26 @@ export default function SessionDetail() {
     );
   }
 
-  const currentIdx = STAGES.findIndex(s => s.id === session.status);
+  const currentIdx = stages.findIndex(s => s.id === session.status);
 
   const runGeneration = () => {
     const profile = loadProfile();
     const included = (session.topics || []).filter(t => t.included);
-    const pieces = included.flatMap((t: Topic) => generateContentFor(t, selectedFormats, profile));
+    // Voice note = force caption only
+    const formats = session.source === 'voice_note' ? (['caption'] as ContentFormat[]) : selectedFormats;
+    const pieces = included.flatMap((t: Topic) => generateContentFor(t, formats, profile, session.science));
     const updated: Session = { ...session, content: pieces, status: 'ready' };
     upsertSession(updated); setSession(updated);
   };
+
+  // Voice note skips topics review — auto-run generation once we hit that stage
+  useEffect(() => {
+    if (session?.source === 'voice_note' && session.status === 'generating_content' && !session.content) {
+      const t = setTimeout(runGeneration, 800);
+      return () => clearTimeout(t);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.status, session?.source]);
 
   return (
     <div className="space-y-8 pb-24 md:pb-8">
@@ -86,14 +111,28 @@ export default function SessionDetail() {
         </Link>
         <h1 className="font-serif text-3xl md:text-4xl">{session.title}</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          {new Date(session.createdAt).toLocaleString('pt-BR')} · {Math.floor(session.durationSec/60)}min {(session.durationSec%60).toString().padStart(2,'0')}s
+          {new Date(session.createdAt).toLocaleString('pt-BR')}
+          {session.durationSec > 0 && <> · {Math.floor(session.durationSec/60)}min {(session.durationSec%60).toString().padStart(2,'0')}s</>}
+          {' · '}<span className="uppercase tracking-wider text-[10px]">{session.source.replace('_', ' ')}</span>
         </p>
+        {session.audioUrl && (
+          <audio controls src={session.audioUrl} className="mt-3 w-full max-w-md" />
+        )}
+        {session.science && (
+          <div className="mt-3 border border-primary/30 bg-primary/5 rounded-lg p-3 flex items-start gap-2 max-w-2xl">
+            <FlaskConical className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+            <div className="text-xs">
+              <div className="text-primary uppercase tracking-widest mb-0.5">Baseado em fonte científica</div>
+              <div className="text-muted-foreground">{session.science.reference}</div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Pipeline steps */}
       <div className="border border-border/60 rounded-lg p-4 overflow-x-auto">
         <div className="flex items-center gap-2 min-w-max">
-          {STAGES.map((s, i) => {
+          {stages.map((s, i) => {
             const done = i < currentIdx || session.status === 'ready';
             const active = i === currentIdx && session.status !== 'ready';
             return (
@@ -106,7 +145,7 @@ export default function SessionDetail() {
                   {done ? <Check className="h-3.5 w-3.5" /> : active ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Circle className="h-3 w-3" />}
                 </div>
                 <span className={`text-xs whitespace-nowrap ${active ? 'text-primary' : done ? 'text-foreground' : 'text-muted-foreground'}`}>{s.label}</span>
-                {i < STAGES.length - 1 && <div className={`h-px w-6 ${done ? 'bg-success' : 'bg-border'}`} />}
+                {i < stages.length - 1 && <div className={`h-px w-6 ${done ? 'bg-success' : 'bg-border'}`} />}
               </div>
             );
           })}
@@ -130,7 +169,7 @@ export default function SessionDetail() {
         <TopicsReview session={session} onConfirm={() => setSession(getSession(session.id) || null)} />
       )}
 
-      {session.status === 'generating_content' && (
+      {session.status === 'generating_content' && session.source !== 'voice_note' && (
         <div className="space-y-6">
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -159,6 +198,13 @@ export default function SessionDetail() {
               Gerar conteúdo
             </Button>
           </div>
+        </div>
+      )}
+
+      {session.status === 'generating_content' && session.source === 'voice_note' && (
+        <div className="border border-border/60 rounded-xl p-12 text-center">
+          <BookOpen className="h-8 w-8 text-primary mx-auto mb-4" />
+          <p className="text-lg">Transformando em post…</p>
         </div>
       )}
 

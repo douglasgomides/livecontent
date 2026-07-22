@@ -8,6 +8,9 @@ import Onboarding from "./pages/Onboarding";
 import AppShell from "./components/app/AppShell";
 import Home from "./pages/Home";
 import Recording from "./pages/Recording";
+import UploadAudio from "./pages/UploadAudio";
+import VoiceNote from "./pages/VoiceNote";
+import ScienceToContent from "./pages/ScienceToContent";
 import SessionDetail from "./pages/SessionDetail";
 import Library from "./pages/Library";
 import Settings from "./pages/Settings";
@@ -34,6 +37,9 @@ const App = () => (
           <Route path="/app" element={<RequireOnboarded><AppShell /></RequireOnboarded>}>
             <Route index element={<Home />} />
             <Route path="record" element={<Recording />} />
+            <Route path="new/upload" element={<UploadAudio />} />
+            <Route path="new/voice-note" element={<VoiceNote />} />
+            <Route path="new/science" element={<ScienceToContent />} />
             <Route path="session/:id" element={<SessionDetail />} />
             <Route path="library" element={<Library />} />
             <Route path="settings" element={<Settings />} />
