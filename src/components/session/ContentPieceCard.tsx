@@ -1,17 +1,11 @@
 import { useState } from 'react';
-import type { ContentPiece, ContentFormat } from '@/types/session';
+import type { ContentPiece } from '@/types/session';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { rescoreContent } from '@/lib/mockPipeline';
-import { Copy, CheckCircle2, AlertTriangle, ShieldAlert, RefreshCw } from 'lucide-react';
+import { FORMAT_LABEL, FORMAT_ICON, EXPORT_MODE } from '@/lib/contentFormats';
+import { Copy, CheckCircle2, AlertTriangle, ShieldAlert, RefreshCw, Download, Send } from 'lucide-react';
 import { toast } from 'sonner';
-
-const FORMAT_LABEL: Record<ContentFormat, string> = {
-  reel: 'Reel Instagram',
-  carousel: 'Carrossel Instagram',
-  caption: 'Legenda Instagram',
-  linkedin: 'Post LinkedIn',
-};
 
 export default function ContentPieceCard({ piece, onChange, onApprove }: {
   piece: ContentPiece;
@@ -22,6 +16,8 @@ export default function ContentPieceCard({ piece, onChange, onApprove }: {
   const cfm = piece.cfm;
   const blocked = cfm.flags.some(f => f.severity === 'block');
   const warned = cfm.flags.some(f => f.severity === 'warning');
+  const Icon = FORMAT_ICON[piece.format];
+  const exportMode = EXPORT_MODE[piece.format];
 
   const rescore = () => {
     const updated = rescoreContent({ ...piece, body });
@@ -31,21 +27,39 @@ export default function ContentPieceCard({ piece, onChange, onApprove }: {
 
   const copy = () => {
     navigator.clipboard.writeText(body);
-    toast.success('Copiado para a área de transferência');
+    toast.success('Copiado');
+  };
+
+  const download = () => {
+    const ext = piece.format === 'website' ? 'html' : 'md';
+    const blob = new Blob([body], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${piece.format}-${piece.id}.${ext}`; a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Baixado');
+  };
+
+  const preparePublish = () => {
+    toast.info('Publicação preparada. Conecte sua conta para publicar.', {
+      description: `${FORMAT_LABEL[piece.format]} pronto no formato do canal.`,
+    });
   };
 
   return (
     <div className="border border-border/60 rounded-lg overflow-hidden bg-card">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
-        <div className="flex items-center gap-3">
-          <span className="text-xs uppercase tracking-widest text-primary">{FORMAT_LABEL[piece.format]}</span>
+        <div className="flex items-center gap-2 min-w-0">
+          <Icon className="h-4 w-4 text-primary shrink-0" />
+          <span className="text-xs uppercase tracking-widest text-primary truncate">{FORMAT_LABEL[piece.format]}</span>
           <ScoreBadge score={cfm.score} blocked={blocked} warned={warned} />
         </div>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="sm" onClick={rescore}><RefreshCw className="h-3.5 w-3.5 mr-1" /> Rescan</Button>
-          <Button variant="ghost" size="sm" onClick={copy}><Copy className="h-3.5 w-3.5 mr-1" /> Copiar</Button>
         </div>
       </div>
+
+      {piece.meta && <MetaBlock meta={piece.meta} />}
 
       <Textarea value={body} onChange={e => setBody(e.target.value)} rows={12} className="border-0 rounded-none focus-visible:ring-0 font-mono text-xs" />
 
@@ -62,7 +76,18 @@ export default function ContentPieceCard({ piece, onChange, onApprove }: {
         ))}
       </div>
 
-      <div className="px-4 py-3 border-t border-border/60 flex justify-end">
+      <div className="px-4 py-3 border-t border-border/60 flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" onClick={copy}><Copy className="h-3.5 w-3.5 mr-1" /> Copiar</Button>
+          {exportMode === 'download' && (
+            <Button variant="ghost" size="sm" onClick={download}><Download className="h-3.5 w-3.5 mr-1" /> Baixar</Button>
+          )}
+          {piece.approved && exportMode === 'publish' && (
+            <Button variant="ghost" size="sm" onClick={preparePublish}>
+              <Send className="h-3.5 w-3.5 mr-1" /> Preparar publicação
+            </Button>
+          )}
+        </div>
         <Button
           size="sm"
           disabled={blocked}
@@ -73,6 +98,29 @@ export default function ContentPieceCard({ piece, onChange, onApprove }: {
           {piece.approved ? <><CheckCircle2 className="h-4 w-4 mr-2" /> Aprovado</> : blocked ? 'Bloqueado pelo CFM' : 'Aprovar peça'}
         </Button>
       </div>
+    </div>
+  );
+}
+
+function MetaBlock({ meta }: { meta: NonNullable<ContentPiece['meta']> }) {
+  const rows: [string, string][] = [];
+  if (meta.title) rows.push(['Título', meta.title]);
+  if (meta.metaDescription) rows.push(['Meta desc.', meta.metaDescription]);
+  if (meta.duration) rows.push(['Duração', meta.duration]);
+  if (meta.cta) rows.push(['CTA', meta.cta]);
+  if (meta.thumbnailHint) rows.push(['Capa', meta.thumbnailHint]);
+  if (meta.tags?.length) rows.push(['Tags', meta.tags.join(', ')]);
+  if (meta.hashtags?.length) rows.push(['Hashtags', meta.hashtags.join(' ')]);
+  if (meta.timestamps?.length) rows.push(['Timestamps', meta.timestamps.map(t => `${t.time} ${t.label}`).join(' · ')]);
+  if (!rows.length) return null;
+  return (
+    <div className="px-4 py-3 bg-secondary/40 border-b border-border/60 text-xs space-y-1">
+      {rows.map(([k, v]) => (
+        <div key={k} className="flex gap-2">
+          <span className="text-muted-foreground w-20 shrink-0">{k}</span>
+          <span className="text-foreground flex-1 min-w-0 break-words">{v}</span>
+        </div>
+      ))}
     </div>
   );
 }
