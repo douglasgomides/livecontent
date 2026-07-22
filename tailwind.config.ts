@@ -77,6 +77,13 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+      },
+      backgroundImage: {
+        'gold-gradient': 'linear-gradient(135deg, hsl(43 55% 54%) 0%, hsl(43 70% 65%) 100%)',
+      },
+      boxShadow: {
+        'gold': '0 0 30px -8px hsl(43 55% 54% / 0.4)',
       },
       keyframes: {
         "accordion-down": {
