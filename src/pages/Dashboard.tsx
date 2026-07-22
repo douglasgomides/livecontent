@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
-import { Mic, Upload, MessageCircle, FlaskConical, Radio, ArrowRight, Clock, FileCheck2, Shield, Brain as BrainIcon } from 'lucide-react';
+import { Mic, Upload, MessageCircle, FlaskConical, Radio, ArrowRight, Clock, FileCheck2, Shield, Brain as BrainIcon, CalendarDays } from 'lucide-react';
 import { loadSessions, loadProfile } from '@/lib/storage';
 import { loadBrain, getCompleteness } from '@/lib/brainStorage';
+import { loadSchedule, upcoming } from '@/lib/scheduleStorage';
+import { CHANNEL_LABEL } from '@/lib/contentFormats';
 import type { SessionStatus } from '@/types/session';
 
 
@@ -99,6 +101,8 @@ export default function Dashboard() {
         <StatCard icon={FileCheck2} label="Peças aprovadas" value={approved} />
         <StatCard icon={Shield} label="Score CFM médio" value={avgCfm || '—'} />
       </section>
+
+      <UpcomingCard />
 
       <section>
         <div className="flex items-baseline justify-between mb-4">
