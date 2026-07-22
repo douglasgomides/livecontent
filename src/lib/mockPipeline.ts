@@ -148,7 +148,7 @@ export function seedPipeline(s: Session): Session {
 }
 
 /** Science: seed 1 topic derived from the pasted text; skip anonymization */
-export function seedScience(s: Session, text: string, reference: string, kind: Session['science'] extends infer T ? T extends { kind: infer K } ? K : never : never): Session {
+export function seedScience(s: Session, text: string, reference: string, kind: NonNullable<Session['science']>['kind']): Session {
   const firstSentence = text.split(/[.!?]/)[0].trim().slice(0, 90);
   const topic: Topic = {
     id: uid(),
