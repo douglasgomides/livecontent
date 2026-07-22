@@ -18,6 +18,7 @@ import Approvals from "./pages/Approvals";
 import PublishQueue from "./pages/PublishQueue";
 import AudioLivre from "./pages/AudioLivre";
 import BrainPage from "./pages/Brain";
+import CalendarPage from "./pages/Calendar";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -53,7 +54,9 @@ const App = () => (
             <Route path="library" element={<Library />} />
             <Route path="approvals" element={<Approvals />} />
             <Route path="publish-queue" element={<PublishQueue />} />
+            <Route path="calendar" element={<CalendarPage />} />
             <Route path="brain" element={<BrainPage />} />
+
 
             <Route path="settings" element={<Settings />} />
           </Route>

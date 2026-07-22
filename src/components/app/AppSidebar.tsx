@@ -12,6 +12,7 @@ import {
   Brain as BrainIcon,
   Send,
   Radio,
+  CalendarDays,
 } from 'lucide-react';
 
 import {
@@ -43,6 +44,7 @@ const workItems = [
   { title: 'Dashboard', url: '/app', icon: LayoutDashboard, end: true },
   { title: 'Consultas', url: '/app/consultas', icon: ListChecks },
   { title: 'Aprovações', url: '/app/approvals', icon: CheckSquare },
+  { title: 'Calendário', url: '/app/calendar', icon: CalendarDays },
   { title: 'Fila de publicação', url: '/app/publish-queue', icon: Send },
   { title: 'Biblioteca', url: '/app/library', icon: Library },
 ];

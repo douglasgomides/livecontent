@@ -1,90 +1,80 @@
-# Um input → conteúdo pronto pra vários canais
+## 1. Nova promessa da Landing
 
-Meta: qualquer input (consulta, áudio livre, aula, WhatsApp, palestra, texto) vira um pacote multi-canal com **texto + arte renderizada + prompts pra ferramentas externas**, e o médico só marca em quais canais quer publicar.
+Reposicionar de "uma semana de conteúdo" pra **máquina de conteúdo sempre ligada**, com a consulta como player principal e vários outros inputs orbitando.
 
-## 1. Novos inputs
+**Nova headline**
+> Sua máquina de conteúdo médico. Sempre ligada.
+> Grave consultas, palestras, áudios de WhatsApp, aulas — e transforme em posts, Reels, carrosséis, blog, YouTube, podcast. Todo dia, sem parar de atender.
 
-- **Voice Note livre** (expandir o atual): tirar o limite de 90s, adicionar campo "tema/ângulo" opcional, mandar pro pipeline completo (não mais só 1 legenda).
-- **Novo card "Áudio livre / Aula / Palestra"** (`/app/new/audio-livre`): grava OU faz upload de áudio longo (aula, palestra, WhatsApp, conversa). Pula anonimização (não é paciente), vai direto pra extração de temas + geração multi-canal.
-- Dashboard passa a mostrar 5 cards de input: Consulta · Upload · Voice Note rápido · **Áudio livre** · Science.
+**Sub-copy curta:** "A consulta é o player principal. Palestra, aula, áudio solto, link do YouTube, Reel salvo — tudo vira conteúdo pronto, revisado eticamente, distribuído em vários canais."
 
-## 2. Artes visuais renderizadas no app (sem custo de IA)
+**Nova seção "Tudo vira conteúdo"** (grid de 8 chips com ícone + label curta):
+- Consulta gravada (destacado como principal)
+- Áudio livre / voice note
+- Aula ou palestra
+- Áudio de WhatsApp
+- Conversa gravada com colega
+- Link do YouTube (transcrição)
+- Link de Reel / TikTok (transcrição)
+- Artigo / abstract científico
 
-Cada formato visual ganha um **renderer HTML/Canvas** que usa a camada **Brand da Brain** (cor primária, cor de fundo, fonte, logo/monograma, CTA padrão):
+**Nova seção "Sai em todos os canais"** (grid horizontal):
+Reel · Carrossel · Stories · Post estático · Blog · YouTube · TikTok · Podcast · Google Meu Negócio · Doctoralia · LinkedIn · Site
 
-| Formato | Renderer |
-|---|---|
-| Post estático IG | 1080×1080, título grande + rodapé com @ do médico |
-| Carrossel IG | 5-8 slides 1080×1350, capa + slides de conteúdo + slide CTA |
-| Stories IG | 3-5 telas 1080×1920 com sticker sugerido |
-| Capa YouTube | 1280×720 com título + estilo definido |
-| Capa Reel/TikTok | 1080×1920 com hook em destaque |
-| Post LinkedIn | Imagem 1200×627 opcional |
-| GMB / Blog | Sem arte — só texto |
+**Fluxo em 4 passos** (mantém o formato atual, muda o texto):
+1. Capture — de qualquer fonte de áudio ou link.
+2. Anonimize — PII fora antes de qualquer geração.
+3. Multiplique — 1 input vira 10+ peças em canais diferentes.
+4. Publique — aprove e mande, ou baixe arte pronta.
 
-- Preview ao vivo dentro do `ContentPieceCard` (via `<canvas>` ou HTML+html2canvas).
-- Botão **"Baixar PNG"** por slide + **"Baixar tudo (.zip)"** pro carrossel.
-- Botão **"Editar arte"** abre um drawer com cor/título/fonte editáveis (herda da Brand).
-- Sem IA de imagem nessa fase — templates só. (Botão futuro "Gerar com IA" fica marcado como próximo passo.)
+**CTA principal:** "Ligar a máquina" (em vez de "Começar agora").
 
-## 3. Aba "Prompts externos" em cada peça
+**Rodapé:** manter linha de compliance.
 
-Cada `ContentPiece` ganha uma aba lateral com prompts prontos pra copiar, gerados a partir do próprio conteúdo:
+Observação: os inputs "link YouTube", "link Reel/TikTok", "áudio de WhatsApp" e "conversa gravada" entram como **promessa na landing**, mas na v1 do app são cobertos pelos inputs que já existem (Upload de áudio aceita arquivo de WhatsApp; Áudio Livre cobre palestra/aula/conversa). Transcrição direta de link fica como "em breve" — não invento fluxo novo que não existe.
 
-- **Sora / Runway / Kling** → prompt de vídeo (cena, câmera, duração).
-- **Notebook LM** → briefing de podcast com fontes e tom.
-- **Midjourney / Nano Banana** → prompt de capa/thumb no estilo da marca.
-- **HeyGen / D-ID** → roteiro pra avatar falando o texto.
-- **ElevenLabs** → texto limpo pronto pra TTS + sugestão de voz.
+## 2. Calendário editorial
 
-Cada prompt tem botão "Copiar" e um link direto pra ferramenta.
+Nova página `/app/calendar` (item novo na sidebar, grupo Trabalho, entre Aprovações e Fila de publicação).
 
-## 4. Central de Publicação (evolução da Central de Aprovações)
+**Fonte de dados:** peças (`ContentPiece`) de todas as sessões + fila (`PublishJob`) do `publishQueue`. Sem backend — tudo do `localStorage`.
 
-`/app/approvals` vira **Aprovar → Publicar** em duas etapas visuais:
+**Modelo de agendamento:**
+- Nova estrutura `scheduledPosts` em `localStorage` (`src/lib/scheduleStorage.ts`) com `{ id, pieceId, sessionId, channel, format, title, scheduledFor: ISO, status: 'planned' | 'ready' | 'published' }`.
+- Peça aprovada pode ser arrastada/atribuída a um dia+horário; peça publicada (via fila) aparece automaticamente marcada como `published` naquele dia.
 
-```text
-┌──────────────────────────────────────────────┐
-│ Peça aprovada: "5 sinais que…"               │
-│ Publicar em:                                 │
-│  [✓] Instagram (Reel + Carrossel + Stories) │
-│  [✓] LinkedIn                                │
-│  [ ] YouTube                                 │
-│  [✓] Blog do site                            │
-│  [✓] Google Meu Negócio                      │
-│  [ ] TikTok                                  │
-│  [ Publicar selecionados ]                   │
-└──────────────────────────────────────────────┘
-```
+**Views:**
+- **Mês** (padrão desktop): grid 7×5, cada célula mostra até 3 chips coloridos por canal (Reel = coral, Carrossel = dourado, Blog = creme escuro, etc.), com contador "+N" se passar. Clique no dia abre drawer lateral com a lista completa.
+- **Semana** (padrão mobile — viewport atual é 428px): lista vertical de 7 dias, cada dia como cartão com peças empilhadas.
+- Toggle Mês / Semana no topo.
 
-- Cada canal marcado entra numa **fila** (`publishQueue` no localStorage) com status `queued → publishing → published | needs_connection | failed`.
-- Estrutura de "adapter por canal" (`src/lib/publishers/*.ts`) com interface `PublishAdapter { channel, prepare(piece), publish(piece) }`. Nessa fase todos os adapters retornam `needs_connection` com CTA "Conectar conta", **exceto**:
-  - Blog / Site / Doctoralia → gera `.md`/`.html` pra download real.
-  - GMB → copia texto + abre painel do GMB.
-- Nova página `/app/publish-queue` mostra a fila com filtros por status e botão "Reenviar".
+**Ações:**
+- **Agendar peça:** botão "Agendar" em cada `ContentPieceCard` (aba Publicar já existe — adiciona ação "Agendar pra…" com date+time picker shadcn) e botão "+ Agendar peça" em cada dia do calendário (abre modal listando peças aprovadas não agendadas).
+- **Mover:** clique num item agendado abre popover com "Mover pra outro dia", "Publicar agora" (empurra pro `publishQueue`), "Desagendar", "Abrir peça".
+- **Sugestão de horário:** heurística simples por canal (Instagram/TikTok 12h e 19h; LinkedIn 8h; YouTube 18h; Blog/GMB 10h) — pré-preenche o time picker.
 
-## 5. Recomendação automática de canais
+**Widgets no topo da página:**
+- "Esta semana": X agendadas · Y publicadas · Z aprovadas sem data.
+- Filtro por canal (multi-select).
+- Botão "Auto-preencher semana" — pega peças aprovadas sem data, distribui nos próximos 7 dias respeitando 1–2 por dia por canal usando os horários sugeridos.
 
-Ao terminar a geração, o sistema mostra **"Combo recomendado pra este tema"** baseado em heurísticas (ex: tema educacional → Reel + Carrossel + Blog + GMB; tema comercial → Reel + Stories + LinkedIn; caso clínico anonimizado → Carrossel + Blog + YouTube). 1 clique marca tudo.
+**Dashboard:** novo card "Próximas 7 publicações" mostrando as 7 mais próximas agendadas, com link "Ver calendário".
 
 ## Escopo técnico
 
-- `src/types/session.ts` — `ContentPiece.artwork?: { previewUrl, slides?, editableFields }`, `ContentPiece.externalPrompts?: Record<string,string>`, novo `PublishJob`.
-- `src/lib/artRenderer/` — renderers HTML por formato usando Brand da Brain.
-- `src/lib/externalPrompts.ts` — funções puras que geram prompt pra cada tool externo a partir de `piece + brain`.
-- `src/lib/publishers/` — adapters por canal (mock estruturado, fácil de plugar API depois).
-- `src/lib/publishQueue.ts` — fila em localStorage + hook `usePublishQueue`.
-- `src/pages/AudioLivre.tsx` — nova página de input.
-- `src/pages/VoiceNote.tsx` — remover limite de 90s, adicionar modo "completo".
-- `src/pages/PublishQueue.tsx` — nova página.
-- `src/pages/Approvals.tsx` — adicionar seletor de canais + botão publicar em lote.
-- `src/components/session/ContentPieceCard.tsx` — abas Texto · Arte · Prompts externos · Publicar.
-- `src/components/session/ArtworkPreview.tsx` + `ArtworkEditor.tsx`.
-- `src/lib/mockPipeline.ts` — `generateContentFor` passa a produzir também `artwork` e `externalPrompts`.
-- `AppSidebar` — item "Fila de publicação" no grupo Trabalho.
+- `src/pages/Landing.tsx` — reescrever hero, adicionar seções "Tudo vira conteúdo" e "Sai em todos os canais", trocar CTA.
+- `index.html` — atualizar `<title>` e `<meta description>` pra bater com a nova promessa.
+- `src/types/session.ts` — nova interface `ScheduledPost`.
+- `src/lib/scheduleStorage.ts` — CRUD + `useSchedule` hook, sync automático com `publishQueue` (quando job vira `published`, marca schedule como `published`).
+- `src/pages/Calendar.tsx` — página nova com views Mês/Semana, drawer de dia, modal de agendamento.
+- `src/components/calendar/MonthGrid.tsx`, `WeekList.tsx`, `DayDrawer.tsx`, `ScheduleModal.tsx`.
+- `src/components/session/PiecePublish.tsx` — adicionar botão "Agendar" ao lado de "Enviar pra fila".
+- `src/pages/Dashboard.tsx` — card "Próximas publicações".
+- `src/components/app/AppSidebar.tsx` — item "Calendário" (ícone `CalendarDays`), grupo Trabalho.
+- `src/App.tsx` — rota `/app/calendar`.
 
-## Fora de escopo (fica pra próxima fase)
+## Fora de escopo
 
-- Geração real de imagem via IA (Midjourney/Nano Banana dentro do app).
-- Chamadas reais de API pra IG/LinkedIn/YouTube/TikTok — a estrutura de adapter fica pronta.
-- Geração real de vídeo/áudio — só entregamos o prompt pronto.
+- Transcrição real de link do YouTube/Reel/TikTok (fica como promessa; implementação real depende de API).
+- Publicação automática no horário agendado (frontend puro não roda cron; agendar = marcar no calendário e lembrar o médico. Botão "Publicar agora" empurra pra fila manualmente).
+- Sincronização com Google Calendar / iCal.
