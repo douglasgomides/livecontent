@@ -15,8 +15,10 @@ import ScienceToContent from "./pages/ScienceToContent";
 import SessionDetail from "./pages/SessionDetail";
 import Library from "./pages/Library";
 import Approvals from "./pages/Approvals";
+import BrainPage from "./pages/Brain";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+
 import { loadProfile } from "./lib/storage";
 
 const queryClient = new QueryClient();
@@ -46,6 +48,8 @@ const App = () => (
             <Route path="session/:id" element={<SessionDetail />} />
             <Route path="library" element={<Library />} />
             <Route path="approvals" element={<Approvals />} />
+            <Route path="brain" element={<BrainPage />} />
+
             <Route path="settings" element={<Settings />} />
           </Route>
           <Route path="*" element={<NotFound />} />

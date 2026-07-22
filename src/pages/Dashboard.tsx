@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
-import { Mic, Upload, MessageCircle, FlaskConical, ArrowRight, Clock, FileCheck2, Shield } from 'lucide-react';
+import { Mic, Upload, MessageCircle, FlaskConical, ArrowRight, Clock, FileCheck2, Shield, Brain as BrainIcon } from 'lucide-react';
 import { loadSessions, loadProfile } from '@/lib/storage';
+import { loadBrain, getCompleteness } from '@/lib/brainStorage';
 import type { SessionStatus } from '@/types/session';
+
 
 const STATUS_LABEL: Record<SessionStatus, string> = {
   recording: 'Gravando',
@@ -43,12 +45,26 @@ export default function Dashboard() {
 
   const recent = sessions.slice(0, 3);
 
+  const brainComp = getCompleteness(loadBrain());
+
   return (
     <div className="space-y-10">
       <section>
         <p className="text-primary text-xs tracking-[0.3em] uppercase mb-2">Bem-vindo, {firstName}</p>
         <h1 className="font-serif text-4xl md:text-5xl">Uma consulta vira uma semana de conteúdo.</h1>
       </section>
+
+      {brainComp.total < 40 && (
+        <Link to="/app/brain" className="flex items-center gap-3 border border-primary/40 bg-primary/5 rounded-lg p-4 hover:bg-primary/10 transition">
+          <BrainIcon className="h-5 w-5 text-primary shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="font-medium text-sm">Complete sua Brain pra melhorar a geração</div>
+            <div className="text-xs text-muted-foreground">Está em {brainComp.total}%. Cada camada preenchida deixa as peças mais suas.</div>
+          </div>
+          <ArrowRight className="h-4 w-4 text-primary shrink-0" />
+        </Link>
+      )}
+
 
       <section>
         <h2 className="font-serif text-2xl mb-4">Começar agora</h2>

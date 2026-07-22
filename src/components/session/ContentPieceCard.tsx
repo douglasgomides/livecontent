@@ -59,7 +59,19 @@ export default function ContentPieceCard({ piece, onChange, onApprove }: {
         </div>
       </div>
 
+      {piece.brainSignals && (piece.brainSignals.pillar || piece.brainSignals.usedTraits.length > 0) && (
+        <div className="px-4 py-2 border-b border-border/60 flex flex-wrap gap-1.5 text-[11px]">
+          {piece.brainSignals.pillar && (
+            <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary">Pilar: {piece.brainSignals.pillar}</span>
+          )}
+          {piece.brainSignals.usedTraits.map((t, i) => (
+            <span key={i} className="px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">{t}</span>
+          ))}
+        </div>
+      )}
+
       {piece.meta && <MetaBlock meta={piece.meta} />}
+
 
       <Textarea value={body} onChange={e => setBody(e.target.value)} rows={12} className="border-0 rounded-none focus-visible:ring-0 font-mono text-xs" />
 

@@ -1,5 +1,7 @@
 import type { Session, PIIFinding, Topic, ContentPiece, ContentFormat, CFMResult, DoctorProfile, SessionSource } from '@/types/session';
+import type { Brain } from '@/types/brain';
 import { FORMAT_CHANNEL } from './contentFormats';
+
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
 
@@ -325,21 +327,58 @@ function scoreCFM(body: string): CFMResult {
   return { score: Math.max(0, Math.min(100, score)), flags };
 }
 
-export function generateContentFor(topic: Topic, formats: ContentFormat[], profile: DoctorProfile | null, science?: Session['science']): ContentPiece[] {
+function applyBrand(body: string, brain?: Brain | null): { body: string; usedTraits: string[] } {
+  const traits: string[] = [];
+  if (!brain) return { body, usedTraits: traits };
+  let out = body;
+  // Replace banned words
+  brain.brand.wordsNo.filter(Boolean).forEach(w => {
+    const re = new RegExp(`\\b${w.trim()}\\b`, 'gi');
+    if (re.test(out)) { out = out.replace(re, '____'); traits.push(`removeu "${w}"`); }
+  });
+  // Append default CTA if not already present
+  if (brain.brand.defaultCTA?.trim() && !out.toLowerCase().includes(brain.brand.defaultCTA.toLowerCase().slice(0, 12))) {
+    out += `\n\n${brain.brand.defaultCTA.trim()}`;
+    traits.push('CTA da marca');
+  }
+  // Signal tone
+  if (brain.doctor.tone) traits.push(`tom ${brain.doctor.tone}`);
+  return { body: out, usedTraits: traits };
+}
+
+function pickPillar(topic: Topic, brain?: Brain | null): string | undefined {
+  if (!brain) return;
+  const pillars = brain.brand.pillars.filter(Boolean);
+  if (!pillars.length) return;
+  const hash = topic.title.length + topic.summary.length;
+  return pillars[hash % pillars.length];
+}
+
+export function generateContentFor(
+  topic: Topic,
+  formats: ContentFormat[],
+  profile: DoctorProfile | null,
+  science?: Session['science'],
+  brain?: Brain | null,
+): ContentPiece[] {
   return formats.map(format => {
     const draft = TEMPLATES[format](topic, profile, science);
+    const applied = applyBrand(draft.body, brain);
+    const pillar = pickPillar(topic, brain);
     return {
       id: uid(),
       topicId: topic.id,
       format,
       channel: FORMAT_CHANNEL[format],
-      body: draft.body,
+      body: applied.body,
       meta: draft.meta,
-      cfm: scoreCFM(draft.body),
+      cfm: scoreCFM(applied.body),
       approved: false,
+      brainSignals: brain ? { pillar, usedTraits: applied.usedTraits } : undefined,
     };
   });
 }
+
 
 export const rescoreContent = (piece: ContentPiece): ContentPiece => ({ ...piece, cfm: scoreCFM(piece.body) });
 
