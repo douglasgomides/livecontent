@@ -36,7 +36,8 @@ const App = () => (
           <Route path="/" element={<Landing />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/app" element={<RequireOnboarded><AppShell /></RequireOnboarded>}>
-            <Route index element={<Home />} />
+            <Route index element={<Dashboard />} />
+            <Route path="consultas" element={<Consultas />} />
             <Route path="record" element={<Recording />} />
             <Route path="new/upload" element={<UploadAudio />} />
             <Route path="new/voice-note" element={<VoiceNote />} />
