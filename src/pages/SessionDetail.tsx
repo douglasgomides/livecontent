@@ -8,7 +8,9 @@ import TopicsReview from '@/components/session/TopicsReview';
 import ContentPieceCard from '@/components/session/ContentPieceCard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ArrowLeft, Check, Circle, Loader2, Instagram, Linkedin, MessageSquare, Sparkles, FlaskConical, BookOpen, FileText } from 'lucide-react';
+import FormatPicker from '@/components/session/FormatPicker';
+import { RECOMMENDED_FORMATS } from '@/lib/contentFormats';
+import { ArrowLeft, Check, Circle, Loader2, Sparkles, FlaskConical, BookOpen, FileText } from 'lucide-react';
 
 const ALL_STAGES: { id: SessionStatus; label: string }[] = [
   { id: 'transcribing', label: 'Transcrição' },
@@ -18,13 +20,6 @@ const ALL_STAGES: { id: SessionStatus; label: string }[] = [
   { id: 'topics_review', label: 'Revisão de temas' },
   { id: 'generating_content', label: 'Geração' },
   { id: 'ready', label: 'Pronto' },
-];
-
-const FORMATS: { id: ContentFormat; label: string; icon: any }[] = [
-  { id: 'reel', label: 'Reel', icon: Instagram },
-  { id: 'carousel', label: 'Carrossel', icon: Instagram },
-  { id: 'caption', label: 'Legenda IG', icon: MessageSquare },
-  { id: 'linkedin', label: 'LinkedIn', icon: Linkedin },
 ];
 
 function stagesFor(source: Session['source']): typeof ALL_STAGES {
