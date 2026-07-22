@@ -6,7 +6,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Landing from "./pages/Landing";
 import Onboarding from "./pages/Onboarding";
 import AppShell from "./components/app/AppShell";
-import Home from "./pages/Home";
+import Dashboard from "./pages/Dashboard";
+import Consultas from "./pages/Consultas";
 import Recording from "./pages/Recording";
 import UploadAudio from "./pages/UploadAudio";
 import VoiceNote from "./pages/VoiceNote";
@@ -35,7 +36,8 @@ const App = () => (
           <Route path="/" element={<Landing />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/app" element={<RequireOnboarded><AppShell /></RequireOnboarded>}>
-            <Route index element={<Home />} />
+            <Route index element={<Dashboard />} />
+            <Route path="consultas" element={<Consultas />} />
             <Route path="record" element={<Recording />} />
             <Route path="new/upload" element={<UploadAudio />} />
             <Route path="new/voice-note" element={<VoiceNote />} />

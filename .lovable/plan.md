@@ -1,63 +1,90 @@
-## Fase 2 — Inputs alternativos
+# Reorganização do Consulta Creator
 
-Hoje só existe um caminho de entrada: **gravar ao vivo**. Esta fase adiciona três novos pontos de partida que caem no mesmo pipeline (anonimização → temas → geração → CFM), sem tocar em nada da Fase 1.
+Foco: deixar a ferramenta mais clara e navegável, sem adicionar features novas. Fase 3 fica pausada.
 
-### O que muda para o médico
+## 1. Navegação — sidebar persistente
 
-Na tela **Home**, o botão "Iniciar Consulta" vira um bloco de **4 formas de criar**:
+Hoje o `AppShell` tem um header simples com links. Vou trocar por um layout com **sidebar shadcn colapsável** (ícone-only quando fechada), mantendo header fino só com trigger + perfil.
 
-1. **Gravar consulta ao vivo** (já existe)
-2. **Upload de áudio** — arrasta um `.mp3`, `.m4a`, `.wav`, `.webm` de uma consulta já gravada (ex.: gravador do celular, Zoom, WhatsApp exportado)
-3. **Voice Note (30–90s)** — grava um áudio curto de insight solto ("acabei de atender um caso curioso de…") e vira **1 post único**, sem passar por temas
-4. **Science to Content** — cola o texto de um abstract, notícia, diretriz ou PDF (parseado no cliente) → gera conteúdo autoral em cima daquilo, atribuindo a fonte
+Grupos do menu:
 
-Todos os quatro caminhos abrem a mesma `SessionDetail` e seguem o mesmo pipeline visual — a diferença fica apenas em quais estágios rodam.
+- **Criar** (destaque dourado no topo)
+  - Gravar consulta
+  - Upload de áudio
+  - Voice Note
+  - Science to Content
+- **Trabalho**
+  - Consultas (antiga Home, virou lista dedicada)
+  - Biblioteca de conteúdo
+- **Conta**
+  - Ajustes
 
-### Diferenças por tipo de entrada
+A rota `/app` passa a ser um **Dashboard** enxuto (visão geral + atalhos), separando "página inicial" de "lista de consultas".
+
+## 2. Home → Dashboard + Consultas
+
+Hoje a Home mistura 4 cartões de entrada + lista de consultas num scroll longo.
+
+Divisão:
+
+- **`/app` — Dashboard**
+  - Bloco "Começar agora" com os 4 cartões de entrada (grid 2×2, compacto).
+  - 3 stat cards: consultas no mês, peças aprovadas, score CFM médio.
+  - "Últimas 3 consultas" com link "Ver todas".
+- **`/app/consultas` — Lista completa**
+  - Busca por título/tema.
+  - Filtros: fonte (gravação/upload/voice/science), status (em processamento/pronta/aprovada), período.
+  - Ordenação (mais recente, mais peças, maior score).
+  - Cards com progresso do pipeline e contagem de peças.
+
+## 3. SessionDetail — layout em 3 zonas
+
+Hoje é um scroll único misturando pipeline, player, revisões e peças. Reorganizar em **layout com abas + coluna lateral fixa**:
 
 ```text
-Gravação ao vivo → transcribing → anonymization_review → topics_review → generating_content → ready
-Upload de áudio  → transcribing → anonymization_review → topics_review → generating_content → ready
-Voice Note       → transcribing → anonymization_review → generating_content(1 peça)         → ready
-Science          → (sem anonim.) → topics_review(1 tema pré-preenchido) → generating_content → ready
+┌─────────────────────────────────────────────┐
+│ Header sessão: título · fonte · data · CFM  │
+├──────────────────────────┬──────────────────┤
+│ Abas:                    │ Lateral fixa:    │
+│  1. Pipeline             │ • Player áudio   │
+│  2. Transcrição          │ • Metadados      │
+│  3. Anonimização         │ • Ações rápidas  │
+│  4. Temas                │   (exportar,     │
+│  5. Conteúdo gerado      │    duplicar,     │
+│                          │    arquivar)     │
+└──────────────────────────┴──────────────────┘
 ```
 
-Voice Note pula a revisão de temas porque o próprio áudio JÁ é o tema. Science pula a anonimização porque a fonte é pública — em vez disso mostra um selo "Baseado em: [fonte]" que sai em toda peça gerada.
+- Aba ativa segue o estágio atual do pipeline automaticamente.
+- Aba "Conteúdo gerado" agrupa peças por tema, com badges de status (rascunho/aprovada/publicada).
+- Voice Note e Science escondem abas que não se aplicam (sem duplicar lógica — só filtro por `source`).
 
-### Novas telas / componentes
+## 4. Biblioteca — organização real
 
-- **`Home`** — refatorada para mostrar os 4 cartões de entrada em grid, com o "Gravar" em destaque dourado e os outros três em creme secundário.
-- **`UploadAudio.tsx`** — dropzone com `<input type="file">`, preview do nome + duração, validação de formato/tamanho (≤ 50 MB, mock local). Cria sessão com `source: 'upload'`.
-- **`VoiceNote.tsx`** — variante enxuta da tela de gravação: timer com limite 90s, para automaticamente, sem consentimento longo (já é o médico falando sozinho).
-- **`ScienceToContent.tsx`** — textarea grande + campos "Fonte" (link/DOI) e "Tipo" (abstract, notícia, diretriz). Botão "Processar" cria sessão com `source: 'science'`.
+Hoje é lista plana de todas as peças.
 
-### Ajustes no pipeline mockado
+Nova estrutura:
 
-- `createBlankSession(source, ...)` já aceita source — aproveitar.
-- Adicionar `seedPipelineFromText(session, text)` que pula anonimização quando `source === 'science'` e usa o texto colado como base do primeiro tema.
-- Em `SessionDetail`, ler `session.source` e:
-  - **science** → começar em `topics_review` já com 1 tema pré-preenchido a partir do texto; anonimização não aparece no stepper.
-  - **voice_note** → após anonimização, ir direto para `generating_content` fixando 1 formato = `caption` (ou o que o médico escolher no cartão).
+- Topo: **filtros persistentes** (formato, status, tema, consulta de origem, período).
+- Alternar visualização: **grid** (default) ou **lista compacta**.
+- Agrupamento opcional: por consulta, por tema, ou por formato.
+- Card da peça mostra: formato, tema, consulta de origem (clicável), score CFM, status.
+- Ação em massa: selecionar múltiplas → exportar/aprovar.
 
-### Detalhes técnicos
+## Detalhes técnicos
 
-- Áudio de upload fica em memória via `URL.createObjectURL` (sem storage — sem Cloud). Mostrado num `<audio controls>` na SessionDetail.
-- Voice Note reusa o `MediaRecorder` do `Recording.tsx`, extraído para um hook `useAudioRecorder(maxSec?)`.
-- Science não precisa de parser de PDF nessa fase — só texto colado. PDF fica para depois se pedirem.
-- Nenhuma peça nova de UI shadcn precisa ser instalada.
+- Trocar `AppShell` para usar `SidebarProvider` + `Sidebar collapsible="icon"` + `SidebarTrigger` no header (conforme knowledge shadcn-sidebar).
+- Criar `src/components/app/AppSidebar.tsx` com os 3 grupos e `NavLink` marcando ativo.
+- Novas rotas em `App.tsx`:
+  - `/app` → novo `Dashboard.tsx` (extraído da Home atual).
+  - `/app/consultas` → nova `Consultas.tsx` (lista + filtros movidos da Home).
+  - Home.tsx removida; Recording/Upload/VoiceNote/Science permanecem nas rotas atuais.
+- `SessionDetail.tsx` refatorada com `Tabs` do shadcn e grid `lg:grid-cols-[1fr_320px]`. Lógica do pipeline/estado atual preservada, só reorganizada visualmente.
+- `Library.tsx` ganha componentes internos `LibraryFilters` e `LibraryGrid`/`LibraryList`; filtros no estado local (sem persistência agora).
+- Nada de mudança em `mockPipeline.ts`, `storage.ts` ou tipos — só apresentação/navegação.
 
-### Fora do escopo desta fase
+## Fora de escopo
 
-- Parsing de PDF do lado cliente (adicionar depois se necessário)
-- Transcrição real (fica no mock até você cadastrar as APIs)
-- Novos formatos de saída, Brain Builder, integrações externas — Fases 3 e 4
-
-### Ordem de implementação
-
-1. Extrair hook `useAudioRecorder` do `Recording.tsx`
-2. Novo `Home` com 4 cartões de entrada
-3. `UploadAudio.tsx` + rota `/app/new/upload`
-4. `VoiceNote.tsx` + rota `/app/new/voice-note`
-5. `ScienceToContent.tsx` + rota `/app/new/science`
-6. Ajustar `SessionDetail` para respeitar `source` nos estágios
-7. Ajustar `mockPipeline` para os fluxos alternativos
+- Fase 3 (Brain Builder, formatos extras).
+- Novas integrações ou mudanças no motor CFM.
+- Persistência de filtros/preferências de visualização.
