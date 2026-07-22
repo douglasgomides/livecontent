@@ -8,6 +8,7 @@ import {
   ListChecks,
   Library,
   Settings,
+  CheckSquare,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -34,6 +35,7 @@ const createItems = [
 const workItems = [
   { title: 'Dashboard', url: '/app', icon: LayoutDashboard, end: true },
   { title: 'Consultas', url: '/app/consultas', icon: ListChecks },
+  { title: 'Aprovações', url: '/app/approvals', icon: CheckSquare },
   { title: 'Biblioteca', url: '/app/library', icon: Library },
 ];
 

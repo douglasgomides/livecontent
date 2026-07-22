@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { loadSessions } from '@/lib/storage';
-import { Instagram, Linkedin, MessageSquare, ArrowRight, Search, LayoutGrid, List } from 'lucide-react';
+import { ArrowRight, Search, LayoutGrid, List } from 'lucide-react';
 import type { ContentFormat } from '@/types/session';
+import { FORMAT_LABEL as LABELS, FORMAT_ICON as ICONS } from '@/lib/contentFormats';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -12,9 +13,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-
-const ICONS = { reel: Instagram, carousel: Instagram, caption: MessageSquare, linkedin: Linkedin } as const;
-const LABELS: Record<ContentFormat, string> = { reel: 'Reel', carousel: 'Carrossel', caption: 'Legenda', linkedin: 'LinkedIn' };
 
 export default function Library() {
   const sessions = loadSessions();

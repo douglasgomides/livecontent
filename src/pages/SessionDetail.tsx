@@ -8,7 +8,9 @@ import TopicsReview from '@/components/session/TopicsReview';
 import ContentPieceCard from '@/components/session/ContentPieceCard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ArrowLeft, Check, Circle, Loader2, Instagram, Linkedin, MessageSquare, Sparkles, FlaskConical, BookOpen, FileText } from 'lucide-react';
+import FormatPicker from '@/components/session/FormatPicker';
+import { RECOMMENDED_FORMATS } from '@/lib/contentFormats';
+import { ArrowLeft, Check, Circle, Loader2, Sparkles, FlaskConical, BookOpen, FileText } from 'lucide-react';
 
 const ALL_STAGES: { id: SessionStatus; label: string }[] = [
   { id: 'transcribing', label: 'Transcrição' },
@@ -18,13 +20,6 @@ const ALL_STAGES: { id: SessionStatus; label: string }[] = [
   { id: 'topics_review', label: 'Revisão de temas' },
   { id: 'generating_content', label: 'Geração' },
   { id: 'ready', label: 'Pronto' },
-];
-
-const FORMATS: { id: ContentFormat; label: string; icon: any }[] = [
-  { id: 'reel', label: 'Reel', icon: Instagram },
-  { id: 'carousel', label: 'Carrossel', icon: Instagram },
-  { id: 'caption', label: 'Legenda IG', icon: MessageSquare },
-  { id: 'linkedin', label: 'LinkedIn', icon: Linkedin },
 ];
 
 function stagesFor(source: Session['source']): typeof ALL_STAGES {
@@ -47,7 +42,7 @@ export default function SessionDetail() {
   const { id } = useParams();
   const nav = useNavigate();
   const [session, setSession] = useState<Session | null>(id ? getSession(id) || null : null);
-  const [selectedFormats, setSelectedFormats] = useState<ContentFormat[]>(['reel', 'carousel', 'caption', 'linkedin']);
+  const [selectedFormats, setSelectedFormats] = useState<ContentFormat[]>(RECOMMENDED_FORMATS);
   const [tab, setTab] = useState<TabId>(() => session ? defaultTabFor(session) : 'pipeline');
 
   const stages = useMemo(() => session ? stagesFor(session.source) : ALL_STAGES, [session?.source]);
@@ -250,23 +245,9 @@ export default function SessionDetail() {
                       <Sparkles className="h-5 w-5 text-primary" />
                       <h2 className="font-serif text-2xl">Formatos</h2>
                     </div>
-                    <p className="text-muted-foreground text-sm">Escolha em quais formatos gerar cada tema selecionado.</p>
+                    <p className="text-muted-foreground text-sm">Escolha em quais formatos gerar cada tema selecionado — de post curto a artigo de blog, roteiro de YouTube ou post do Google Meu Negócio.</p>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {FORMATS.map(f => {
-                      const active = selectedFormats.includes(f.id);
-                      return (
-                        <button
-                          key={f.id}
-                          onClick={() => setSelectedFormats(sel => active ? sel.filter(x => x !== f.id) : [...sel, f.id])}
-                          className={`border rounded-lg p-4 text-left transition ${active ? 'border-primary bg-primary/5' : 'border-border/60 hover:border-primary/50'}`}
-                        >
-                          <f.icon className={`h-4 w-4 mb-2 ${active ? 'text-primary' : 'text-muted-foreground'}`} />
-                          <div className="font-medium text-sm">{f.label}</div>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <FormatPicker selected={selectedFormats} onChange={setSelectedFormats} />
                   <div className="flex justify-end">
                     <Button onClick={runGeneration} disabled={!selectedFormats.length} className="bg-gold-gradient text-primary-foreground gold-shadow">
                       Gerar conteúdo

@@ -10,7 +10,14 @@ export type SessionStatus =
 
 export type SessionSource = 'recording' | 'upload' | 'voice_note' | 'science';
 
-export type ContentFormat = 'reel' | 'carousel' | 'caption' | 'linkedin';
+export type ContentFormat =
+  | 'reel' | 'carousel' | 'caption' | 'stories' | 'linkedin'
+  | 'blog' | 'youtube' | 'tiktok' | 'podcast'
+  | 'gmb' | 'doctoralia' | 'website';
+
+export type ContentChannel =
+  | 'instagram' | 'linkedin' | 'youtube' | 'tiktok'
+  | 'blog' | 'gmb' | 'doctoralia' | 'website' | 'podcast';
 
 export interface PIIFinding {
   original: string;
@@ -35,9 +42,20 @@ export interface ContentPiece {
   id: string;
   topicId: string;
   format: ContentFormat;
+  channel: ContentChannel;
   body: string;
   cfm: CFMResult;
   approved: boolean;
+  meta?: {
+    title?: string;
+    metaDescription?: string;
+    tags?: string[];
+    hashtags?: string[];
+    timestamps?: { time: string; label: string }[];
+    thumbnailHint?: string;
+    duration?: string;
+    cta?: string;
+  };
 }
 
 export interface ScienceSource {
