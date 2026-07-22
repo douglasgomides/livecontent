@@ -1,6 +1,9 @@
 import type { Session, PIIFinding, Topic, ContentPiece, ContentFormat, CFMResult, DoctorProfile, SessionSource } from '@/types/session';
 import type { Brain } from '@/types/brain';
 import { FORMAT_CHANNEL } from './contentFormats';
+import { buildArtwork } from './artRenderer';
+import { buildExternalPrompts } from './externalPrompts';
+
 
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
@@ -365,7 +368,7 @@ export function generateContentFor(
     const draft = TEMPLATES[format](topic, profile, science);
     const applied = applyBrand(draft.body, brain);
     const pillar = pickPillar(topic, brain);
-    return {
+    const piece: ContentPiece = {
       id: uid(),
       topicId: topic.id,
       format,
@@ -376,7 +379,11 @@ export function generateContentFor(
       approved: false,
       brainSignals: brain ? { pillar, usedTraits: applied.usedTraits } : undefined,
     };
+    piece.artwork = buildArtwork(piece, topic, brain);
+    piece.externalPrompts = buildExternalPrompts(piece, topic, brain);
+    return piece;
   });
+
 }
 
 
