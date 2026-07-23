@@ -89,8 +89,10 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
         <Link to="/app" className="flex items-center gap-2 px-2 py-2">
-          <div className="h-7 w-7 rounded-sm bg-gold-gradient shrink-0" />
-          {!collapsed && <span className="font-serif text-lg truncate">Consulta Creator</span>}
+          <div className="h-7 w-7 rounded-sm bg-gold-gradient shrink-0 flex items-center justify-center">
+            <div className="h-1.5 w-1.5 rounded-[1px] bg-background" />
+          </div>
+          {!collapsed && <span className="font-mono text-[11px] tracking-[0.2em] uppercase truncate">Consulta<span className="text-primary">/</span>Creator</span>}
         </Link>
       </SidebarHeader>
 
