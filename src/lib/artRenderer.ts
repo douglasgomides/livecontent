@@ -93,9 +93,10 @@ function ensureFonts(): Promise<void> {
       const anyDoc = document as any;
       if (anyDoc.fonts?.load) {
         await Promise.all([
-          anyDoc.fonts.load('700 96px "Instrument Serif"'),
-          anyDoc.fonts.load('400 32px Inter'),
-          anyDoc.fonts.load('600 28px Inter'),
+          anyDoc.fonts.load('700 96px "Syne"'),
+          anyDoc.fonts.load('800 96px "Syne"'),
+          anyDoc.fonts.load('400 32px "Plus Jakarta Sans"'),
+          anyDoc.fonts.load('600 28px "Plus Jakarta Sans"'),
         ]);
       }
     } catch { /* noop */ }
@@ -113,8 +114,8 @@ export function renderSlideToPng(slide: ArtworkSlide, artwork: Artwork, brain?: 
   const bg = brand?.colorBackground || '#0A0A0A';
   const primary = brand?.colorPrimary || '#C9A84C';
   const text = brand?.colorText || '#F5F0E8';
-  const serif = '"Instrument Serif", Georgia, serif';
-  const sans = 'Inter, system-ui, sans-serif';
+  const serif = '"Syne", "Plus Jakarta Sans", system-ui, sans-serif';
+  const sans = '"Plus Jakarta Sans", Inter, system-ui, sans-serif';
 
   const W = artwork.width;
   const H = artwork.height;
@@ -158,7 +159,7 @@ export function renderSlideToPng(slide: ArtworkSlide, artwork: Artwork, brain?: 
   ctx.fillStyle = text;
   const isBigTitle = slide.kind === 'cover' || slide.kind === 'story';
   const titleSize = Math.round(W * (isBigTitle ? 0.098 : 0.075));
-  ctx.font = `400 ${titleSize}px ${serif}`;
+  ctx.font = `${isBigTitle ? 800 : 700} ${titleSize}px ${serif}`;
   const titleY = Math.round(H * 0.22);
   const titleEndY = wrapText(ctx, slide.title || '', padX, titleY, contentW, titleSize * 1.05);
 
