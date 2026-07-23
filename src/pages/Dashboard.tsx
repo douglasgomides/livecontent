@@ -55,8 +55,8 @@ export default function Dashboard() {
   return (
     <div className="space-y-10">
       <section>
-        <p className="text-primary text-xs tracking-[0.3em] uppercase mb-2">Bem-vindo, {firstName}</p>
-        <h1 className="font-serif text-4xl md:text-5xl">Uma consulta vira uma semana de conteúdo.</h1>
+        <p className="t-eyebrow mb-3">Bem-vindo, {firstName}</p>
+        <h1 className="t-h1">Uma consulta vira uma semana de conteúdo.</h1>
       </section>
 
       {brainComp.total < 40 && (
