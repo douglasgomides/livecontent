@@ -88,8 +88,8 @@ export default function Dashboard() {
                 <e.icon className={`h-5 w-5 ${e.primary ? 'text-primary-foreground' : 'text-primary'}`} />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="font-medium">{e.title}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">{e.hint}</div>
+                <div className="text-sm font-semibold">{e.title}</div>
+                <div className="t-micro text-muted-foreground mt-1">{e.hint}</div>
               </div>
               <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition shrink-0 mt-3" />
             </Link>
