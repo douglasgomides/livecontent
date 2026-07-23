@@ -396,6 +396,7 @@ export function createBlankSession(source: SessionSource, durationSec = 0, audio
     voice_note: `Voice Note — ${new Date().toLocaleDateString('pt-BR')}`,
     science: `Science to Content — ${new Date().toLocaleDateString('pt-BR')}`,
     audio_livre: `Áudio livre — ${new Date().toLocaleDateString('pt-BR')}`,
+    link: `Link — ${new Date().toLocaleDateString('pt-BR')}`,
   };
 
   return {
@@ -419,11 +420,11 @@ export function seedPipeline(s: Session): Session {
       topics: [{ ...VOICE_NOTE_TOPIC, id: uid() }],
     };
   }
-  if (s.source === 'audio_livre') {
+  if (s.source === 'audio_livre' || s.source === 'link') {
     return {
       ...s,
-      rawTranscript: VOICE_NOTE_DEMO_TRANSCRIPT,
-      anonymizedTranscript: VOICE_NOTE_DEMO_TRANSCRIPT,
+      rawTranscript: s.rawTranscript || VOICE_NOTE_DEMO_TRANSCRIPT,
+      anonymizedTranscript: s.rawTranscript || VOICE_NOTE_DEMO_TRANSCRIPT,
       piiFindings: [],
       topics: DEMO_TOPICS.map(t => ({ ...t, id: uid() })),
     };

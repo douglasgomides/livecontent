@@ -7,14 +7,14 @@ import {
 import { loadProfile } from '@/lib/storage';
 
 const inputs = [
-  { label: 'Consulta gravada', tag: 'PRIMARY_STREAM', icon: Mic, primary: true },
-  { label: 'Palestra / aula', tag: 'LONGFORM_AUDIO', icon: Radio },
-  { label: 'Áudio WhatsApp', tag: '.OGG / .M4A', icon: MessageCircle },
-  { label: 'Conversa colega', tag: 'FIELD_RECORD', icon: Upload },
-  { label: 'Link YouTube', tag: 'URL_INGEST', icon: Youtube },
-  { label: 'Reel salvo', tag: 'SOCIAL_CLIP', icon: Instagram },
-  { label: 'Voice note', tag: 'QUICK_INSIGHT', icon: Link2 },
-  { label: 'Artigo científico', tag: 'DOC_PARSE', icon: FlaskConical },
+  { label: 'Consulta gravada', hint: 'Ao vivo no consultório', icon: Mic, primary: true },
+  { label: 'Palestra ou aula', hint: 'Gravação longa no app', icon: Radio },
+  { label: 'Link do YouTube', hint: 'Cole a URL, extrai temas', icon: Youtube },
+  { label: 'Reel salvo', hint: 'Instagram, TikTok', icon: Instagram },
+  { label: 'Áudio WhatsApp', hint: '.ogg / .m4a', icon: MessageCircle },
+  { label: 'Conversa colega', hint: 'Discussão de caso', icon: Upload },
+  { label: 'Voice note', hint: 'Insight rápido', icon: Link2 },
+  { label: 'Artigo científico', hint: 'Abstract, diretriz', icon: FlaskConical },
 ];
 
 const outputs = [
@@ -26,17 +26,17 @@ const outputs = [
   { icon: Youtube, label: 'YouTube' },
   { icon: Music, label: 'TikTok' },
   { icon: Mic, label: 'Podcast' },
-  { icon: MapPin, label: 'GMB' },
+  { icon: MapPin, label: 'Google' },
   { icon: Stethoscope, label: 'Doctoralia' },
   { icon: Linkedin, label: 'LinkedIn' },
   { icon: Globe, label: 'Site' },
 ];
 
 const steps = [
-  { id: '01', title: 'Captura de sinal', text: 'Áudio, link ou documento entram no pipeline com metadados preservados.', active: true },
+  { id: '01', title: 'Captura', text: 'Áudio, link ou documento entram com metadados preservados.' },
   { id: '02', title: 'Anonimização & extração', text: 'PII fora. Temas, argumentos e voz do paciente estruturados.' },
-  { id: '03', title: 'Geração multicanal', text: 'Um input vira 10+ peças, cada canal com formato e tom próprios.' },
-  { id: '04', title: 'Aprovação & distribuição', text: 'Score CFM, calendário editorial, sync direto com a sua stack.' },
+  { id: '03', title: 'Geração multicanal', text: 'Um input vira mais de 10 peças — cada canal com formato próprio.' },
+  { id: '04', title: 'Aprovação & distribuição', text: 'Score CFM, calendário editorial, fila de publicação.' },
 ];
 
 export default function Landing() {
@@ -44,151 +44,143 @@ export default function Landing() {
   const cta = p?.onboarded ? '/app' : '/onboarding';
 
   return (
-    <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
-      {/* Grid backdrop */}
-      <div className="absolute inset-0 grid-fade pointer-events-none" />
-
-      {/* Top telemetry bar */}
-      <div className="relative z-10 border-b border-border/60">
-        <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.2em]">
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            <span className="text-foreground">System · Online</span>
-            <span className="text-muted-foreground hidden sm:inline">· 12 agentes ativos</span>
-          </div>
-          <div className="text-muted-foreground italic">v2.0 · LAT 12ms</div>
-        </div>
-      </div>
-
+    <div className="min-h-screen premium-bg text-foreground relative">
       {/* Nav */}
       <header className="relative z-10 max-w-6xl mx-auto px-6 py-6 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="h-7 w-7 rounded-sm bg-gold-gradient flex items-center justify-center">
-            <div className="h-2 w-2 rounded-[1px] bg-background" />
+          <div className="h-9 w-9 rounded-md bg-gold-gradient flex items-center justify-center shadow-gold-sm">
+            <span className="font-serif text-primary-foreground leading-none">C</span>
           </div>
-          <span className="font-mono text-sm tracking-widest uppercase">Consulta<span className="text-primary">/</span>Creator</span>
+          <span className="font-serif text-lg tracking-tight">Consulta Creator</span>
         </div>
         <Link to={cta}>
-          <Button variant="ghost" size="sm" className="font-mono text-xs uppercase tracking-widest">Entrar</Button>
+          <Button variant="ghost" size="sm" className="text-sm">Entrar</Button>
         </Link>
       </header>
 
       {/* Hero */}
-      <main className="relative z-10 max-w-4xl mx-auto px-6 pt-14 pb-16">
-        <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 rounded-sm px-2.5 py-1 mb-8 font-mono text-[10px] uppercase tracking-[0.25em] text-primary">
-          <span className="w-1 h-1 rounded-full bg-primary animate-pulse" />
-          OP_MODE · Autopilot
+      <main className="relative z-10 max-w-4xl mx-auto px-6 pt-16 pb-20 text-center">
+        <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 rounded-full px-3.5 py-1 mb-8 text-xs text-primary">
+          <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+          Sempre ligada. Sempre sua.
         </div>
-        <h1 className="text-[2.75rem] sm:text-6xl md:text-7xl font-extrabold leading-[0.95] tracking-tight uppercase">
-          Máquina de <span className="text-primary">conteúdo</span>
-          <br />sempre ligada.
+        <h1 className="font-serif text-5xl sm:text-7xl md:text-[5.5rem] leading-[1.02] tracking-tight">
+          Sua máquina de<br />
+          <span className="italic text-primary">conteúdo médico.</span>
         </h1>
-        <p className="mt-8 font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground max-w-2xl">
-          &gt; Pipeline agêntico que transforma áudio bruto em ativos multi-canal de alta conversão.
-        </p>
-        <p className="mt-4 text-base text-muted-foreground max-w-2xl leading-relaxed">
-          Grave consultas, palestras, áudios de WhatsApp, aulas — e transforme em Reels, carrosséis,
-          blog, YouTube, podcast, GMB e Doctoralia. Todo dia, sem parar de atender.
+        <p className="mt-8 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+          Grave consultas, palestras e áudios — ou cole um link do YouTube. A ferramenta transforma
+          em Reels, carrosséis, blog, vídeos, podcast e posts prontos para publicar.
         </p>
 
-        <div className="mt-10 flex flex-wrap items-center gap-3">
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
           <Link to={cta}>
-            <Button size="lg" className="h-12 px-6 bg-foreground text-background hover:bg-primary hover:text-primary-foreground rounded-sm font-mono text-xs uppercase tracking-[0.25em]">
-              Initialize Protocol <ArrowRight className="ml-2 h-4 w-4" />
+            <Button size="lg" className="h-12 px-8 bg-gold-gradient text-primary-foreground hover:opacity-90 shadow-gold rounded-md font-medium text-base">
+              Começar agora <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>
-          <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-            Session · 49B-X77_PROD
-          </div>
+          <Link to="/app/new/link">
+            <Button size="lg" variant="outline" className="h-12 px-6 border-border/60 text-base">
+              <Link2 className="mr-2 h-4 w-4" /> Colar um link
+            </Button>
+          </Link>
         </div>
       </main>
 
-      {/* Inputs grid */}
-      <section className="relative z-10 max-w-5xl mx-auto px-6 pb-20">
-        <div className="flex items-end justify-between border-b border-border/60 pb-2 mb-5">
-          <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-primary">[ Input Sources ]</span>
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">08 nodes</span>
+      <div className="gold-hairline max-w-4xl mx-auto" />
+
+      {/* Inputs */}
+      <section className="relative z-10 max-w-5xl mx-auto px-6 py-20">
+        <div className="text-center mb-10">
+          <p className="text-xs uppercase tracking-[0.25em] text-primary mb-3">Entradas</p>
+          <h2 className="font-serif text-3xl md:text-4xl">Enquanto você respira, ela produz.</h2>
+          <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
+            A consulta é a estrela, mas tudo que sai da sua voz vira conteúdo — inclusive links.
+          </p>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {inputs.map(i => (
             <div
               key={i.label}
-              className={`border rounded-sm p-3.5 flex flex-col gap-3 relative transition-colors ${
+              className={`border rounded-xl p-5 transition ${
                 i.primary
-                  ? 'border-primary/50 bg-primary/[0.07]'
-                  : 'border-border/70 bg-card/40 hover:border-border'
+                  ? 'border-primary/40 bg-primary/[0.06] shadow-gold-sm'
+                  : 'border-border/60 bg-card/40 hover:border-primary/40'
               }`}
             >
-              <div className="flex items-center justify-between">
-                <div className={`h-7 w-7 rounded-sm flex items-center justify-center ${i.primary ? 'bg-primary/15' : 'bg-secondary'}`}>
-                  <i.icon className={`h-3.5 w-3.5 ${i.primary ? 'text-primary' : 'text-muted-foreground'}`} />
-                </div>
-                {i.primary && <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />}
+              <div className={`h-10 w-10 rounded-lg flex items-center justify-center mb-3 ${
+                i.primary ? 'bg-gold-gradient' : 'bg-secondary'
+              }`}>
+                <i.icon className={`h-4 w-4 ${i.primary ? 'text-primary-foreground' : 'text-primary'}`} />
               </div>
-              <div>
-                <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">{i.tag}</div>
-                <div className="text-xs font-bold uppercase tracking-tight mt-1 text-foreground">{i.label}</div>
-              </div>
+              <div className="font-medium text-sm">{i.label}</div>
+              <div className="text-xs text-muted-foreground mt-1">{i.hint}</div>
             </div>
           ))}
         </div>
       </section>
 
+      <div className="gold-hairline max-w-4xl mx-auto" />
+
       {/* Pipeline */}
-      <section className="relative z-10 max-w-3xl mx-auto px-6 pb-24">
-        <div className="flex items-end justify-between border-b border-border/60 pb-2 mb-8">
-          <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-primary">[ Agent Pipeline ]</span>
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">04 stages</span>
+      <section className="relative z-10 max-w-3xl mx-auto px-6 py-20">
+        <div className="text-center mb-12">
+          <p className="text-xs uppercase tracking-[0.25em] text-primary mb-3">Como funciona</p>
+          <h2 className="font-serif text-3xl md:text-4xl">Quatro passos. Zero fricção.</h2>
         </div>
 
         <div className="relative flex flex-col gap-8">
-          <div className="absolute left-4 top-2 bottom-2 w-px bg-border" />
+          <div className="absolute left-5 top-3 bottom-3 w-px bg-border/60" />
           {steps.map(s => (
             <div key={s.id} className="flex items-start gap-5 relative">
-              <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-mono text-[10px] z-10 shrink-0 ${
-                s.active
-                  ? 'border-primary bg-background text-primary shadow-[0_0_16px_hsl(var(--primary)/0.35)]'
-                  : 'border-border bg-card text-muted-foreground'
-              }`}>
+              <div className="w-10 h-10 rounded-full border border-primary/40 bg-background flex items-center justify-center font-serif text-primary text-sm z-10 shrink-0 shadow-gold-sm">
                 {s.id}
               </div>
-              <div className="pt-1">
-                <div className="text-sm font-bold uppercase tracking-tight text-foreground mb-1">{s.title}</div>
-                <div className="text-xs text-muted-foreground leading-relaxed max-w-md">{s.text}</div>
+              <div className="pt-1.5">
+                <div className="font-serif text-xl text-foreground mb-1">{s.title}</div>
+                <div className="text-sm text-muted-foreground leading-relaxed max-w-md">{s.text}</div>
               </div>
             </div>
           ))}
         </div>
       </section>
 
+      <div className="gold-hairline max-w-4xl mx-auto" />
+
       {/* Outputs */}
-      <section className="relative z-10 max-w-5xl mx-auto px-6 pb-24">
-        <div className="flex items-end justify-between border-b border-border/60 pb-2 mb-5">
-          <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-primary">[ Active Artifacts ]</span>
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">12 canais</span>
+      <section className="relative z-10 max-w-5xl mx-auto px-6 py-20">
+        <div className="text-center mb-10">
+          <p className="text-xs uppercase tracking-[0.25em] text-primary mb-3">Saídas</p>
+          <h2 className="font-serif text-3xl md:text-4xl">Um input. A internet inteira.</h2>
+          <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
+            Cada peça sai com formato, tom e arte próprios do canal.
+          </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2.5 justify-center">
           {outputs.map(o => (
             <div
               key={o.label}
-              className="flex items-center gap-2 border border-border/70 bg-card/40 rounded-sm px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest text-foreground"
+              className="flex items-center gap-2 border border-border/60 bg-card/40 rounded-full px-4 py-2 text-sm text-foreground"
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-              <o.icon className="h-3.5 w-3.5 text-muted-foreground" />
+              <o.icon className="h-3.5 w-3.5 text-primary" />
               <span>{o.label}</span>
             </div>
           ))}
         </div>
+
+        <div className="mt-16 text-center">
+          <Link to={cta}>
+            <Button size="lg" className="h-12 px-8 bg-gold-gradient text-primary-foreground hover:opacity-90 shadow-gold rounded-md font-medium">
+              Começar agora <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
       </section>
 
-      <footer className="relative z-10 border-t border-border/60">
-        <div className="max-w-6xl mx-auto px-6 py-6 flex flex-wrap items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-          <div>Authorized access only · Compliance-by-design</div>
-          <div className="flex gap-4">
-            <span>ENC · AES-256</span>
-            <span>CFM · Auto-review</span>
-            <span>PII · Stripped</span>
-          </div>
+      <footer className="relative z-10 border-t border-border/50">
+        <div className="max-w-6xl mx-auto px-6 py-8 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+          <div>Anonimização de PII · Score CFM · Compliance-by-design</div>
+          <div className="font-serif text-sm text-foreground/80">Consulta Creator</div>
         </div>
       </footer>
     </div>
