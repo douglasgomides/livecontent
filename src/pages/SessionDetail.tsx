@@ -27,7 +27,7 @@ const ALL_STAGES: { id: SessionStatus; label: string }[] = [
 function stagesFor(source: Session['source']): typeof ALL_STAGES {
   if (source === 'science') return ALL_STAGES.filter(s => !['anonymizing', 'anonymization_review'].includes(s.id));
   if (source === 'voice_note') return ALL_STAGES.filter(s => !['extracting_topics', 'topics_review'].includes(s.id));
-  if (source === 'audio_livre') return ALL_STAGES.filter(s => !['anonymizing', 'anonymization_review'].includes(s.id));
+  if (source === 'audio_livre' || source === 'link') return ALL_STAGES.filter(s => !['anonymizing', 'anonymization_review'].includes(s.id));
   return ALL_STAGES;
 }
 
@@ -60,7 +60,7 @@ export default function SessionDetail() {
   useEffect(() => {
     if (!session) return;
     const isVoiceNote = session.source === 'voice_note';
-    const skipsAnon = session.source === 'science' || session.source === 'audio_livre';
+    const skipsAnon = session.source === 'science' || session.source === 'audio_livre' || session.source === 'link';
     if (session.status === 'transcribing') {
       const t = setTimeout(() => {
         const seeded = seedPipeline(session);
