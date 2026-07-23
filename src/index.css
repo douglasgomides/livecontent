@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,50 +6,51 @@
 
 @layer base {
   :root {
-    /* Consulta Creator — Preto / Dourado / Creme */
-    --background: 0 0% 4%;
-    --foreground: 40 33% 93%;
+    /* Consulta Creator — Operator Console (zinc + emerald) */
+    --background: 240 10% 4%;
+    --foreground: 240 5% 96%;
 
-    --card: 0 0% 7%;
-    --card-foreground: 40 33% 93%;
+    --card: 240 6% 8%;
+    --card-foreground: 240 5% 96%;
 
-    --popover: 0 0% 9%;
-    --popover-foreground: 40 33% 93%;
+    --popover: 240 6% 10%;
+    --popover-foreground: 240 5% 96%;
 
-    --primary: 43 55% 54%;
-    --primary-foreground: 0 0% 5%;
+    /* Primary = emerald accent (agentic signal color) */
+    --primary: 158 64% 52%;
+    --primary-foreground: 240 10% 4%;
 
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 40 33% 93%;
+    --secondary: 240 5% 12%;
+    --secondary-foreground: 240 5% 96%;
 
-    --muted: 0 0% 14%;
-    --muted-foreground: 40 15% 65%;
+    --muted: 240 5% 14%;
+    --muted-foreground: 240 5% 55%;
 
-    --accent: 43 70% 65%;
-    --accent-foreground: 0 0% 5%;
+    --accent: 160 84% 39%;
+    --accent-foreground: 240 10% 4%;
 
     --destructive: 0 72% 51%;
-    --destructive-foreground: 40 33% 93%;
+    --destructive-foreground: 240 5% 96%;
 
-    --success: 142 60% 45%;
-    --success-foreground: 0 0% 5%;
+    --success: 158 64% 52%;
+    --success-foreground: 240 10% 4%;
     --warning: 38 92% 55%;
-    --warning-foreground: 0 0% 5%;
+    --warning-foreground: 240 10% 4%;
 
-    --border: 0 0% 15%;
-    --input: 0 0% 12%;
-    --ring: 43 55% 54%;
+    --border: 240 4% 16%;
+    --input: 240 5% 12%;
+    --ring: 158 64% 52%;
 
-    --radius: 0.5rem;
+    --radius: 0.375rem;
 
-    --sidebar-background: 0 0% 5%;
-    --sidebar-foreground: 40 33% 93%;
-    --sidebar-primary: 43 55% 54%;
-    --sidebar-primary-foreground: 0 0% 5%;
-    --sidebar-accent: 0 0% 10%;
-    --sidebar-accent-foreground: 40 33% 93%;
-    --sidebar-border: 0 0% 12%;
-    --sidebar-ring: 43 55% 54%;
+    --sidebar-background: 240 10% 4%;
+    --sidebar-foreground: 240 5% 80%;
+    --sidebar-primary: 158 64% 52%;
+    --sidebar-primary-foreground: 240 10% 4%;
+    --sidebar-accent: 240 6% 10%;
+    --sidebar-accent-foreground: 240 5% 96%;
+    --sidebar-border: 240 4% 14%;
+    --sidebar-ring: 158 64% 52%;
   }
 
   .dark { color-scheme: dark; }
@@ -60,17 +61,38 @@
     @apply bg-background text-foreground font-sans antialiased;
     font-feature-settings: "ss01", "cv11";
   }
-  h1, h2, h3, .font-serif { font-family: 'Cormorant Garamond', Georgia, serif; }
+  /* Headings: precise, engineered — Inter extrabold with tight tracking */
+  h1, h2, h3, .font-serif {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .font-mono, code, kbd, pre, samp {
+    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
 }
 
 @layer utilities {
+  /* Legacy "gold" utilities remapped to primary (emerald) so existing markup keeps working */
   .text-gold { color: hsl(var(--primary)); }
   .bg-gold { background-color: hsl(var(--primary)); }
   .border-gold { border-color: hsl(var(--primary)); }
-  .gold-shadow { box-shadow: 0 0 40px -10px hsl(var(--primary) / 0.35); }
+  .gold-shadow { box-shadow: 0 0 32px -8px hsl(var(--primary) / 0.45); }
+
+  /* Grid background — engineered operator console */
   .grain {
     background-image:
-      radial-gradient(circle at 20% 10%, hsl(43 55% 54% / 0.06), transparent 40%),
-      radial-gradient(circle at 80% 90%, hsl(43 70% 65% / 0.04), transparent 40%);
+      linear-gradient(to right, hsl(240 4% 12% / 1) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(240 4% 12% / 1) 1px, transparent 1px);
+    background-size: 24px 24px;
   }
+  .grid-fade {
+    background-image:
+      linear-gradient(to right, hsl(240 4% 12%) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(240 4% 12%) 1px, transparent 1px);
+    background-size: 24px 24px;
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 55%, transparent 100%);
+            mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 55%, transparent 100%);
+  }
+  .mono { font-family: 'Geist Mono', ui-monospace, monospace; }
 }
