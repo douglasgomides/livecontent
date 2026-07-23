@@ -188,6 +188,19 @@ function StatCard({ icon: Icon, label, value }: { icon: any; label: string; valu
   );
 }
 
+function FlowCard({ to, icon: Icon, label, value, tone }: { to: string; icon: any; label: string; value: number; tone: 'primary' | 'warning' | 'danger' }) {
+  const toneCls = tone === 'warning' ? 'text-warning' : tone === 'danger' ? 'text-destructive' : 'text-primary';
+  const borderCls = value > 0 ? (tone === 'warning' ? 'border-warning/40' : tone === 'danger' ? 'border-destructive/40' : 'border-primary/40') : 'border-border/60';
+  return (
+    <Link to={to} className={`border ${borderCls} rounded-lg p-4 hover:bg-primary/5 transition block`}>
+      <div className="flex items-center gap-2 t-eyebrow text-muted-foreground mb-2">
+        <Icon className={`h-3.5 w-3.5 ${value > 0 ? toneCls : ''}`} /> {label}
+      </div>
+      <div className={`t-numeric ${value > 0 ? toneCls : 'text-muted-foreground'}`}>{value}</div>
+    </Link>
+  );
+}
+
 function UpcomingCard() {
   const items = upcoming(loadSchedule(), 7);
   if (!items.length) return null;
