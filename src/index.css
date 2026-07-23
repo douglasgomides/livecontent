@@ -59,12 +59,14 @@
   html { color-scheme: dark; }
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    font-feature-settings: 'ss01', 'cv11';
   }
   h1, h2, h3, h4, .font-serif {
-    font-family: 'Instrument Serif', 'Times New Roman', serif;
-    font-weight: 400;
-    letter-spacing: -0.01em;
+    font-family: 'Syne', 'Plus Jakarta Sans', system-ui, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    font-style: normal;
   }
   .font-mono, code, kbd, pre, samp {
     font-family: ui-monospace, 'SF Mono', 'Menlo', monospace;
