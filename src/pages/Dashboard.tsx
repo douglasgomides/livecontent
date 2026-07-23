@@ -164,9 +164,9 @@ function UpcomingCard() {
   if (!items.length) return null;
   return (
     <section>
-      <div className="flex items-baseline justify-between mb-4">
-        <h2 className="font-serif text-2xl">Próximas publicações</h2>
-        <Link to="/app/calendar" className="text-sm text-primary hover:underline flex items-center gap-1">
+      <div className="flex items-baseline justify-between mb-5">
+        <h2 className="t-h2">Próximas publicações</h2>
+        <Link to="/app/calendar" className="text-sm font-medium text-primary hover:underline flex items-center gap-1">
           <CalendarDays className="h-3.5 w-3.5" /> Ver calendário
         </Link>
       </div>
@@ -175,12 +175,12 @@ function UpcomingCard() {
           <Link key={it.id} to={`/app/session/${it.sessionId}`} className="block border border-border/60 rounded-lg p-3 hover:border-primary/50 transition">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <div className="text-sm font-medium truncate">{it.title}</div>
-                <div className="text-[11px] text-muted-foreground mt-0.5">
+                <div className="text-sm font-semibold truncate">{it.title}</div>
+                <div className="t-micro text-muted-foreground mt-1">
                   {CHANNEL_LABEL[it.channel]}
                 </div>
               </div>
-              <div className="text-xs text-primary shrink-0">
+              <div className="t-micro font-semibold text-primary shrink-0">
                 {new Date(it.scheduledFor).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
               </div>
             </div>
