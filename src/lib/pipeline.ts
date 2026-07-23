@@ -209,57 +209,17 @@ Gere o conteúdo agora no formato solicitado. Aplique todas as regras.
 `.trim();
 }
 
-export async function generateContentFor(
+export function generateContentFor(
   topic: Topic,
   formats: ContentFormat[],
   profile: any,
   science?: Session['science'],
   brain?: Brain | null,
-  transcript?: string,
-): Promise<ContentPiece[]> {
-  // Enquanto AI_ENABLED=false, delega ao mock (mantém comportamento atual).
-  if (!AI_ENABLED) {
-    return mockGenerateContentFor(topic, formats, profile, science, brain);
-  }
-
-  const results = await Promise.allSettled(
-    formats.map(async (format): Promise<ContentPiece> => {
-      const system = [BASE_RULES, FORMAT_SYSTEM[format]].join('\n\n');
-      const user = buildUserMessage(topic, format, transcript, brain);
-
-      let body: string;
-      try {
-        body = await callClaude(system, user);
-      } catch {
-        body = `[Geração offline]\n\nTema: ${topic.title}\nFormato: ${format}\n\n${topic.summary}`;
-      }
-
-      const { body: brandedBody, usedTraits } = applyBrand(body, brain);
-
-      const piece: ContentPiece = {
-        id: uid(),
-        topicId: topic.id,
-        format,
-        channel: FORMAT_CHANNEL[format],
-        body: brandedBody,
-        cfm: scoreCFM(brandedBody),
-        approved: false,
-        brainSignals: brain
-          ? { pillar: pickPillar(topic, brain), usedTraits }
-          : undefined,
-      };
-
-      piece.artwork = buildArtwork(piece, topic, brain);
-      piece.externalPrompts = buildExternalPrompts(piece, topic, brain);
-      if (science) piece.meta = { ...piece.meta, tags: [science.reference] };
-
-      return piece;
-    }),
-  );
-
-  return results
-    .filter((r): r is PromiseFulfilledResult<ContentPiece> => r.status === 'fulfilled')
-    .map(r => r.value);
+  _transcript?: string,
+): ContentPiece[] {
+  // AI_ENABLED=false: delega ao mock (síncrono). Quando ativar o backend,
+  // trocar assinatura para async e usar callClaude + applyBrand + scoreCFM.
+  return mockGenerateContentFor(topic, formats, profile, science, brain);
 }
 
 // ─── Transcrição / Anonimização / Tópicos ───────────────────────────────────
