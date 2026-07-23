@@ -46,11 +46,21 @@ export default function Dashboard() {
 
   const allPieces = sessions.flatMap(s => s.content || []);
   const approved = allPieces.filter(p => p.approved).length;
+  const pendingApproval = allPieces.filter(p => !p.approved && !p.rejected && !p.cfm.flags.some(f => f.severity === 'block')).length;
+  const blockedCfm = allPieces.filter(p => !p.rejected && p.cfm.flags.some(f => f.severity === 'block')).length;
   const avgCfm = allPieces.length
     ? Math.round(allPieces.reduce((a, p) => a + p.cfm.score, 0) / allPieces.length)
     : 0;
 
+  const jobs = loadJobs();
+  const queueOpen = jobs.filter(j => j.status !== 'published' && j.status !== 'failed').length;
+  const scheduled = loadSchedule();
+  const now = new Date();
+  const weekEnd = new Date(now); weekEnd.setDate(weekEnd.getDate() + 7);
+  const scheduledThisWeek = scheduled.filter(s => s.status !== 'published' && new Date(s.scheduledFor) <= weekEnd).length;
+
   const recent = sessions.slice(0, 3);
+
 
   const brainComp = getCompleteness(loadBrain());
 
