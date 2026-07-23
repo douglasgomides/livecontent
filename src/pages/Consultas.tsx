@@ -29,6 +29,7 @@ const SOURCE_LABEL: Record<SessionSource, string> = {
   voice_note: 'Voice Note',
   science: 'Science',
   audio_livre: 'Áudio livre',
+  link: 'Link',
 };
 
 
