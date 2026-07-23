@@ -115,7 +115,24 @@ export default function Dashboard() {
         <StatCard icon={Shield} label="Score CFM médio" value={avgCfm || '—'} />
       </section>
 
+      {(pendingApproval > 0 || queueOpen > 0 || scheduledThisWeek > 0 || blockedCfm > 0) && (
+        <section>
+          <div className="flex items-baseline justify-between mb-5">
+            <h2 className="t-h2">Saúde do fluxo</h2>
+            <span className="t-micro text-muted-foreground">Do rascunho ao publicado</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <FlowCard to="/app/approvals" icon={Inbox} label="Pendentes" value={pendingApproval} tone="warning" />
+            <FlowCard to="/app/approvals" icon={Shield} label="Bloqueadas CFM" value={blockedCfm} tone="danger" />
+            <FlowCard to="/app/calendar" icon={CalendarDays} label="Agendadas 7d" value={scheduledThisWeek} tone="primary" />
+            <FlowCard to="/app/queue" icon={Send} label="Na fila" value={queueOpen} tone="primary" />
+          </div>
+        </section>
+      )}
+
       <UpcomingCard />
+
+
 
       <section>
         <div className="flex items-baseline justify-between mb-5">
