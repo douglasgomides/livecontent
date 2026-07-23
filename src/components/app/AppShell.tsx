@@ -13,7 +13,7 @@ export default function AppShell() {
           <header className="h-16 flex items-center justify-between border-b border-border/50 bg-background/70 backdrop-blur-xl sticky top-0 z-30 px-4">
             <div className="flex items-center gap-3">
               <SidebarTrigger />
-              <span className="font-serif text-lg text-foreground/90">Consulta Creator</span>
+              <span className="font-serif font-semibold text-base text-foreground/90">Consulta Creator</span>
             </div>
             <Link to="/app/record">
               <Button size="sm" className="bg-gold-gradient text-primary-foreground hover:opacity-90 shadow-gold-sm rounded-md font-medium">
