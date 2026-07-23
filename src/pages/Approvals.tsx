@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { loadSessions, upsertSession } from '@/lib/storage';
-import { FORMAT_LABEL, FORMAT_ICON, CHANNEL_LABEL } from '@/lib/contentFormats';
+import { FORMAT_LABEL, FORMAT_ICON, CHANNEL_LABEL, FORMAT_CHANNEL } from '@/lib/contentFormats';
 import type { ContentChannel, ContentPiece, Session, SessionSource, RejectReason } from '@/types/session';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,6 +19,22 @@ import { enqueueJobs, recommendedChannelsForPiece } from '@/lib/publishQueue';
 import { REJECT_LABEL } from '@/lib/pieceStatus';
 
 type Row = { session: Session; piece: ContentPiece; topicTitle: string };
+
+const normalizePiece = (piece: ContentPiece): ContentPiece => {
+  const format = piece.format ?? 'caption';
+  return {
+    ...piece,
+    format,
+    channel: piece.channel ?? FORMAT_CHANNEL[format] ?? 'instagram',
+    body: typeof piece.body === 'string' ? piece.body : '',
+    cfm: {
+      score: typeof piece.cfm?.score === 'number' ? piece.cfm.score : 0,
+      flags: Array.isArray(piece.cfm?.flags) ? piece.cfm.flags : [],
+    },
+    approved: Boolean(piece.approved),
+    rejected: Boolean(piece.rejected),
+  };
+};
 
 const SOURCE_LABEL: Record<SessionSource, string> = {
   recording: 'Consulta',
@@ -40,9 +56,9 @@ export default function Approvals() {
   const refresh = () => setSessions(loadSessions());
 
   const rows: Row[] = useMemo(() =>
-    sessions.flatMap(s => (s.content || []).map(piece => {
-      const topic = s.topics?.find(t => t.id === piece.topicId);
-      const safePiece: ContentPiece = { ...piece, cfm: piece.cfm ?? { score: 0, flags: [] } };
+    sessions.flatMap(s => (Array.isArray(s.content) ? s.content : []).map(piece => {
+      const safePiece = normalizePiece(piece);
+      const topic = (Array.isArray(s.topics) ? s.topics : []).find(t => t.id === safePiece.topicId);
       return { session: s, piece: safePiece, topicTitle: topic?.title || '—' };
     })), [sessions]);
 
@@ -60,13 +76,14 @@ export default function Approvals() {
     filtered.forEach(r => {
       const key = r.piece.channel;
       if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(r);
+      const group = map.get(key);
+      if (group) group.push(r);
     });
     return Array.from(map.entries());
   }, [filtered]);
 
   const patchPiece = (row: Row, patch: Partial<ContentPiece>) => {
-    const content = row.session.content!.map(c => c.id === row.piece.id ? { ...c, ...patch } : c);
+    const content = (row.session.content ?? []).map(c => c.id === row.piece.id ? { ...c, ...patch } : c);
     upsertSession({ ...row.session, content });
     refresh();
   };
@@ -98,7 +115,8 @@ export default function Approvals() {
     const map = new Map(sessions.map(s => [s.id, { ...s, content: s.content ? [...s.content] : [] }]));
     filtered.forEach(row => {
       if (row.piece.channel !== ch) return;
-      const s = map.get(row.session.id)!;
+      const s = map.get(row.session.id);
+      if (!s) return;
       s.content = s.content.map(c => c.id === row.piece.id ? { ...c, approved: true } : c);
       n++;
     });
