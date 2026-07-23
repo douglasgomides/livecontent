@@ -125,20 +125,20 @@ export default function Landing() {
       {/* Pipeline */}
       <section className="relative z-10 max-w-3xl mx-auto px-6 py-20">
         <div className="text-center mb-12">
-          <p className="text-xs uppercase tracking-[0.25em] text-primary mb-3">Como funciona</p>
-          <h2 className="font-serif text-3xl md:text-4xl">Quatro passos. Zero fricção.</h2>
+          <p className="t-eyebrow mb-4">Como funciona</p>
+          <h2 className="t-h2">Quatro passos. Zero fricção.</h2>
         </div>
 
         <div className="relative flex flex-col gap-8">
           <div className="absolute left-5 top-3 bottom-3 w-px bg-border/60" />
           {steps.map(s => (
             <div key={s.id} className="flex items-start gap-5 relative">
-              <div className="w-10 h-10 rounded-full border border-primary/40 bg-background flex items-center justify-center font-serif text-primary text-sm z-10 shrink-0 shadow-gold-sm">
+              <div className="w-10 h-10 rounded-full border border-primary/40 bg-background flex items-center justify-center text-primary text-xs font-semibold z-10 shrink-0 shadow-gold-sm">
                 {s.id}
               </div>
-              <div className="pt-1.5">
-                <div className="font-serif text-xl text-foreground mb-1">{s.title}</div>
-                <div className="text-sm text-muted-foreground leading-relaxed max-w-md">{s.text}</div>
+              <div className="pt-1">
+                <div className="t-h3 text-foreground mb-1.5">{s.title}</div>
+                <div className="t-body text-muted-foreground max-w-md">{s.text}</div>
               </div>
             </div>
           ))}
@@ -149,10 +149,10 @@ export default function Landing() {
 
       {/* Outputs */}
       <section className="relative z-10 max-w-5xl mx-auto px-6 py-20">
-        <div className="text-center mb-10">
-          <p className="text-xs uppercase tracking-[0.25em] text-primary mb-3">Saídas</p>
-          <h2 className="font-serif text-3xl md:text-4xl">Um input. A internet inteira.</h2>
-          <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
+        <div className="text-center mb-12">
+          <p className="t-eyebrow mb-4">Saídas</p>
+          <h2 className="t-h2">Um input. A internet inteira.</h2>
+          <p className="mt-4 t-body text-muted-foreground max-w-xl mx-auto">
             Cada peça sai com formato, tom e arte próprios do canal.
           </p>
         </div>
@@ -160,7 +160,7 @@ export default function Landing() {
           {outputs.map(o => (
             <div
               key={o.label}
-              className="flex items-center gap-2 border border-border/60 bg-card/40 rounded-full px-4 py-2 text-sm text-foreground"
+              className="flex items-center gap-2 border border-border/60 bg-card/40 rounded-full px-4 py-2 text-sm font-medium text-foreground"
             >
               <o.icon className="h-3.5 w-3.5 text-primary" />
               <span>{o.label}</span>
@@ -170,7 +170,7 @@ export default function Landing() {
 
         <div className="mt-16 text-center">
           <Link to={cta}>
-            <Button size="lg" className="h-12 px-8 bg-gold-gradient text-primary-foreground hover:opacity-90 shadow-gold rounded-md font-medium">
+            <Button size="lg" className="h-12 px-8 bg-gold-gradient text-primary-foreground hover:opacity-90 shadow-gold rounded-md font-semibold text-sm">
               Começar agora <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>
@@ -178,9 +178,9 @@ export default function Landing() {
       </section>
 
       <footer className="relative z-10 border-t border-border/50">
-        <div className="max-w-6xl mx-auto px-6 py-8 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+        <div className="max-w-6xl mx-auto px-6 py-8 flex flex-wrap items-center justify-between gap-3 t-micro text-muted-foreground">
           <div>Anonimização de PII · Score CFM · Compliance-by-design</div>
-          <div className="font-serif text-sm text-foreground/80">Consulta Creator</div>
+          <div className="font-serif font-semibold text-sm text-foreground/80">Consulta Creator</div>
         </div>
       </footer>
     </div>
