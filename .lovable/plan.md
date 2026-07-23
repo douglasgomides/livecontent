@@ -1,52 +1,76 @@
 ## Objetivo
-Trocar `mockPipeline.ts` pelo novo `src/lib/pipeline.ts` fornecido, mantendo o app 100% frontend. Como não há backend agora, as chamadas Claude/Whisper ficam **atrás de uma flag** e caem em **fallback mock determinístico** sempre — pronto para você plugar a API quando decidir o backend.
+Transformar o pós-geração de "3 páginas separadas que não conversam" em um **fluxo linear com estado explícito**: peça nasce rascunho → aprova → agenda → publica → arquiva. Cada tela mostra o que é responsabilidade dela e as transições são um clique.
 
-## Ajustes necessários no arquivo colado
+## Estado atual (o que já funciona)
+- `Approvals.tsx`: agrupa pendentes por canal, aprova em lote por canal, lista bloqueadas CFM.
+- `Calendar.tsx`: 473 linhas, mês/semana, agendamento manual e auto-preenchimento — o mais completo.
+- `PublishQueue.tsx`: board de status simples, marcar publicado manual.
+- `Library.tsx`: arquivo geral.
 
-O código veio com problemas que impedem compilar/rodar; corrijo tudo ao portar:
+## Lacunas que este plano resolve
+1. **Aprovar não empurra pra frente.** Aprovar em Approvals não sugere agendar nem envia pra fila. Cada peça fica órfã.
+2. **Peça bloqueada CFM não pode ser editada.** Só link "abrir consulta". Fricção alta.
+3. **Fila e Calendário são desconectados.** Peça agendada não aparece na fila; peça na fila não tem data.
+4. **Rejeitar não existe.** Só aprovar ou ignorar. Sem sinal negativo pra melhoria futura da Brain.
+5. **Nenhuma visão consolidada por peça.** Não dá pra ver "onde está esta peça no fluxo" sem entrar na consulta.
 
-### 1. TypeScript quebrado
-- `Record` sem tipo genérico → `Record<ContentFormat, string>`, `Record<Topic['funnelStage'], string>`.
-- Retornos `Promise` sem genérico → `Promise<ContentPiece[]>`, `Promise<string>`, `Promise<Topic[]>`.
-- `PromiseFulfilledResult` sem genérico → `PromiseFulfilledResult<ContentPiece>`.
+## Mudanças
 
-### 2. Segurança / viabilidade
-- Chamada direta a `api.anthropic.com` do browser **não funciona** (CORS bloqueia) e vazaria chave. Envolvo `callClaude` numa checagem `AI_ENABLED` (constante `false` por padrão). Enquanto `false`, nunca faz fetch — vai direto ao fallback.
-- Removo `VITE_OPENAI_API_KEY` do `transcribeAudio`. Enquanto `AI_ENABLED=false`, retorna uma transcrição-placeholder (igual ao mock atual).
-- Adiciono um comentário no topo explicando exatamente o que trocar quando você tiver backend (Lovable Cloud ou proxy próprio): substituir `callClaude`/`transcribeAudio` por chamadas ao seu endpoint. **Não** desmarcar `AI_ENABLED` direto no browser.
-- Corrijo o id do modelo para um valor válido comentado (`claude-sonnet-4-5` como referência); irrelevante enquanto flag está desligada, mas evita confusão futura.
+### 1. Modelo de estado unificado (`src/types/session.ts` + `src/lib/storage.ts`)
+Adicionar campo `pipelineStatus` em `ContentPiece`:
+```
+draft | approved | scheduled | published | rejected | blocked
+```
+Derivado de: `approved`, `cfm.flags.severity==='block'`, entrada no `scheduleStorage`, entrada em `publishQueue`. Helper `getPieceStatus(piece, session)` centraliza a leitura — nenhum campo novo persistido inicialmente, só derivação.
 
-### 3. Templates com HTML/estruturas cortadas
-O prompt de `website` veio com o HTML "chupado" pelo formatter (tags perdidas). Reescrevo o template usando placeholders `<h1>{titulo}</h1>` etc., mantendo a intenção original.
+Adicionar `rejectedReason?: string` opcional em `ContentPiece` para capturar motivo.
 
-### 4. Compatibilidade com o app atual
-- Mantenho a re-exportação `createBlankSession, seedPipeline, seedScience` do `mockPipeline` (o novo arquivo já faz isso).
-- `generateContentFor` mantém a **mesma assinatura** que o `SessionDetail.tsx` já usa (`topic, formats, profile, science, brain, transcript`).
-- `rescoreContent` é exportado.
-- `scoreCFM` novo é mais rigoroso que o atual — pode reprovar peças que hoje passam. Aceitável (é o objetivo).
+### 2. `Approvals.tsx` — turbinar
+- **Rejeitar peça** com motivo curto (dropdown: "fora de tom", "assunto sensível", "não gostei do gancho", "outro"). Armazena em `rejectedReason` e marca `approved: false` permanentemente (some da fila de pendentes).
+- **Editar inline**: botão "Editar" abre `Textarea` com `piece.body` no próprio card, sem sair da página. Salvar re-roda `scoreCFM` (via `rescoreContent`) — libera peças CFM-bloqueadas sem obrigar navegação.
+- **Aprovar + agendar** (ação secundária): aprovar já cria entrada no `scheduleStorage` com slot sugerido da próxima semana. Toast informa o horário.
+- **Aprovar + enfileirar**: aprovar + criar `PublishJob`. Combinável com agendar.
+- **Filtro adicional**: por origem (Consulta, Voice note, Audio livre, Link) além de canal.
+- **Preview expandido**: click no card abre `Dialog` com body completo + artwork thumbnail + flags CFM detalhadas.
 
-## Passos de implementação
+### 3. `PublishQueue.tsx` — ligar ao Calendário
+- Cada job mostra `scheduledFor` quando existir (badge de data).
+- Botão "Copiar tudo" por job: monta clipboard com body + prompts externos + link da arte gerada.
+- Ação nova: "Agendar" quando job não tem data (abre mini date-picker inline).
+- Ação nova: "Marcar como falhou" com motivo curto — muda pra `failed` + `message`.
+- Auto-transition: quando `scheduledFor <= now`, badge muda pra "pronto pra sair" (vermelho suave).
 
-1. **Criar `src/lib/pipeline.ts`** com o conteúdo colado, aplicando as correções 1–3 acima e a flag `AI_ENABLED = false`.
-2. **Trocar imports** nos consumidores que hoje puxam de `@/lib/mockPipeline`:
-   - `src/pages/SessionDetail.tsx` (usa `generateContentFor`, `seedPipeline`, `rescoreContent`).
-   - Buscar outros usos com `rg "from '@/lib/mockPipeline'"` e migrar somente os que precisam das novas funções (transcrição/anonimização/extração de tópicos), mantendo o resto no `mockPipeline` via re-export.
-3. **Manter `mockPipeline.ts` intocado** — `pipeline.ts` importa dele. Nada quebra.
-4. **Não** adiciono variáveis `VITE_*` nem instalo SDKs — projeto continua puramente client-side.
+### 4. `Calendar.tsx` — reflection do estado
+- Peça no calendário mostra pastilha de status (agendada, publicada, falhou) puxando de `publishQueue`.
+- Click em peça agendada oferece "Marcar publicada" direto (cria/atualiza job).
+- Filtro por status no toolbar.
+
+### 5. Nova página `/app/piece/:id` (opcional dentro do plano)
+Rota que centraliza uma única peça: body, arte, prompts externos, status, histórico (aprovada em X, agendada Y, publicada Z). Substitui a necessidade de "abrir consulta" pra editar uma peça isolada. Se cortar escopo, faz `Dialog` no lugar (mais simples, escolho `Dialog` como default).
+
+### 6. Dashboard — bloco de saúde do fluxo
+Cards novos:
+- Rascunhos aguardando aprovação
+- Aprovados sem agendamento
+- Agendados nos próximos 7 dias
+- Bloqueados CFM (com link direto pra editar)
 
 ## Fora de escopo
-- Backend/edge functions/Lovable Cloud.
-- Ativar chamadas reais para Claude/Whisper (fica pronto para o próximo turno quando você decidir o backend).
-- Mudanças de UI, prompts do Brain Builder ou visual.
+- Publicar de verdade em IG/LinkedIn/etc (fica pra fase de integrações).
+- Aprendizado da Brain a partir de rejeições (só armazenar motivo por enquanto).
+- Analytics de performance pós-publicação.
+- Alterar `mockPipeline` / `pipeline.ts`.
 
 ## Verificação
 - `tsgo --noEmit` limpo.
-- Fluxo de gravar → transcrição → anonimização → tópicos → gerar conteúdo continua funcionando (via fallback mock, idêntico ao comportamento atual).
-- `scoreCFM` novo aplicado às peças geradas — checar 1 peça no `SessionDetail` para ver as flags novas.
+- Fluxo teste: gerar consulta mock → aprovar 3 peças → agendar 2 na semana → ver as 3 no Publish Queue → 2 com data, 1 sem → marcar 1 publicada no Calendar → refletir em Queue e Dashboard.
+- Rejeitar 1 peça com motivo → some da fila de pendentes, aparece no `SessionDetail`.
+- Editar peça CFM-bloqueada em Approvals → CFM re-score → peça libera.
 
-## Como ativar depois (nota para você)
-Quando decidir o backend, o único ponto de troca é:
-- `callClaude` → `fetch('/api/ai/claude', ...)` (ou edge function Lovable Cloud).
-- `transcribeAudio` → `fetch('/api/ai/transcribe', ...)`.
-- Setar `AI_ENABLED = true`.
-Nenhum outro arquivo do app precisa mudar.
+## Ordem de implementação
+1. `getPieceStatus` helper + tipo `PipelineStatus` (base para o resto).
+2. Approvals: rejeitar + editar inline + preview dialog.
+3. Approvals: aprovar+agendar / aprovar+enfileirar.
+4. PublishQueue: badges de data + agendar inline + copy-all.
+5. Calendar: status badges + marcar publicada.
+6. Dashboard: bloco de saúde do fluxo.
