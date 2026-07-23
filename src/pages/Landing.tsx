@@ -49,9 +49,9 @@ export default function Landing() {
       <header className="relative z-10 max-w-6xl mx-auto px-6 py-6 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="h-9 w-9 rounded-md bg-gold-gradient flex items-center justify-center shadow-gold-sm">
-            <span className="font-serif text-primary-foreground leading-none">C</span>
+            <span className="font-serif font-bold text-primary-foreground leading-none">C</span>
           </div>
-          <span className="font-serif text-lg tracking-tight">Consulta Creator</span>
+          <span className="font-serif font-semibold text-base tracking-tight">Consulta Creator</span>
         </div>
         <Link to={cta}>
           <Button variant="ghost" size="sm" className="text-sm">Entrar</Button>
@@ -60,27 +60,27 @@ export default function Landing() {
 
       {/* Hero */}
       <main className="relative z-10 max-w-4xl mx-auto px-6 pt-16 pb-20 text-center">
-        <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 rounded-full px-3.5 py-1 mb-8 text-xs text-primary">
+        <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 rounded-full px-3.5 py-1 mb-10 t-micro text-primary uppercase tracking-[0.24em] font-semibold">
           <span className="w-1.5 h-1.5 rounded-full bg-primary" />
           Sempre ligada. Sempre sua.
         </div>
-        <h1 className="font-serif text-5xl sm:text-7xl md:text-[5.5rem] leading-[1.02] tracking-tight font-bold">
+        <h1 className="t-display">
           Sua máquina de<br />
           <span className="text-primary">conteúdo médico.</span>
         </h1>
-        <p className="mt-8 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+        <p className="mt-8 t-lead max-w-2xl mx-auto">
           Grave consultas, palestras e áudios — ou cole um link do YouTube. A ferramenta transforma
           em Reels, carrosséis, blog, vídeos, podcast e posts prontos para publicar.
         </p>
 
         <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
           <Link to={cta}>
-            <Button size="lg" className="h-12 px-8 bg-gold-gradient text-primary-foreground hover:opacity-90 shadow-gold rounded-md font-medium text-base">
+            <Button size="lg" className="h-12 px-8 bg-gold-gradient text-primary-foreground hover:opacity-90 shadow-gold rounded-md font-semibold text-sm">
               Começar agora <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>
           <Link to="/app/new/link">
-            <Button size="lg" variant="outline" className="h-12 px-6 border-border/60 text-base">
+            <Button size="lg" variant="outline" className="h-12 px-6 border-border/60 text-sm font-medium">
               <Link2 className="mr-2 h-4 w-4" /> Colar um link
             </Button>
           </Link>
