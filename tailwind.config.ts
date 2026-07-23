@@ -70,12 +70,13 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        serif: ['"Instrument Serif"', 'Times New Roman', 'serif'],
+        sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
+        serif: ['Syne', '"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        display: ['Syne', '"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
         mono: ['ui-monospace', 'SF Mono', 'Menlo', 'monospace'],
       },
       backgroundImage: {
-        'gold-gradient': 'linear-gradient(135deg, #E8C87A 0%, #C9A84C 50%, #8B7328 100%)',
+        'gold-gradient': 'linear-gradient(180deg, hsl(42 55% 54%) 0%, hsl(42 55% 54%) 100%)',
       },
       boxShadow: {
         'gold': '0 20px 60px -20px hsl(42 55% 54% / 0.4)',
