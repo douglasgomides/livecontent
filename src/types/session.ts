@@ -54,6 +54,10 @@ export interface Artwork {
 
 export type ExternalPromptTool = 'sora' | 'runway' | 'notebook_lm' | 'midjourney' | 'heygen' | 'elevenlabs';
 
+export type PipelineStatus = 'draft' | 'approved' | 'scheduled' | 'published' | 'rejected' | 'blocked';
+
+export type RejectReason = 'off_tone' | 'sensitive' | 'weak_hook' | 'wrong_channel' | 'other';
+
 export interface ContentPiece {
   id: string;
   topicId: string;
@@ -62,6 +66,9 @@ export interface ContentPiece {
   body: string;
   cfm: CFMResult;
   approved: boolean;
+  rejected?: boolean;
+  rejectedReason?: RejectReason;
+  rejectedNote?: string;
   meta?: {
     title?: string;
     metaDescription?: string;
