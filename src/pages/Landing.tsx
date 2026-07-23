@@ -64,9 +64,9 @@ export default function Landing() {
           <span className="w-1.5 h-1.5 rounded-full bg-primary" />
           Sempre ligada. Sempre sua.
         </div>
-        <h1 className="font-serif text-5xl sm:text-7xl md:text-[5.5rem] leading-[1.02] tracking-tight">
+        <h1 className="font-serif text-5xl sm:text-7xl md:text-[5.5rem] leading-[1.02] tracking-tight font-bold">
           Sua máquina de<br />
-          <span className="italic text-primary">conteúdo médico.</span>
+          <span className="text-primary">conteúdo médico.</span>
         </h1>
         <p className="mt-8 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
           Grave consultas, palestras e áudios — ou cole um link do YouTube. A ferramenta transforma
