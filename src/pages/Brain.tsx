@@ -9,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { toast } from 'sonner';
 import { loadBrain, saveBrain, getCompleteness } from '@/lib/brainStorage';
-import { generateContentFor } from '@/lib/mockPipeline';
+import { generateContentFor } from '@/lib/pipeline';
 import { loadProfile } from '@/lib/storage';
 import type { Brain, DoctorLayer, PatientLayer, BrandLayer } from '@/types/brain';
 import type { Topic } from '@/types/session';

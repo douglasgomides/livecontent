@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { upsertSession } from '@/lib/storage';
-import { createBlankSession } from '@/lib/mockPipeline';
+import { createBlankSession } from '@/lib/pipeline';
 import { toast } from 'sonner';
 
 const ACCEPTED = ['audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/m4a', 'audio/x-m4a', 'audio/wav', 'audio/wave', 'audio/webm', 'audio/ogg'];

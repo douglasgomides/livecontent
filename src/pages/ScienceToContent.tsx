@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { upsertSession } from '@/lib/storage';
-import { createBlankSession, seedScience } from '@/lib/mockPipeline';
+import { createBlankSession, seedScience } from '@/lib/pipeline';
 
 type Kind = 'abstract' | 'news' | 'guideline' | 'other';
 

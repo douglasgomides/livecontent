@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import type { Session, SessionStatus, ContentFormat, Topic } from '@/types/session';
 import { getSession, upsertSession, loadProfile } from '@/lib/storage';
-import { seedPipeline, generateContentFor } from '@/lib/mockPipeline';
+import { seedPipeline, generateContentFor } from '@/lib/pipeline';
 import { loadBrain } from '@/lib/brainStorage';
 
 import AnonymizationReview from '@/components/session/AnonymizationReview';

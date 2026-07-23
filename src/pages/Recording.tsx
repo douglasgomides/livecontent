@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Mic, Pause, Play, Square, AlertTriangle, CheckCircle2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { upsertSession } from '@/lib/storage';
-import { createBlankSession } from '@/lib/mockPipeline';
+import { createBlankSession } from '@/lib/pipeline';
 
 type Status = 'consent' | 'ready' | 'recording' | 'paused';
 
