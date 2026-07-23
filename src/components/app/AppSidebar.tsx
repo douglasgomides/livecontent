@@ -88,10 +88,10 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border">
         <Link to="/app" className="flex items-center gap-2.5 px-2 py-2.5">
           <div className="h-8 w-8 rounded-md bg-gold-gradient shrink-0 flex items-center justify-center shadow-gold-sm">
-            <span className="font-serif text-primary-foreground text-base leading-none">C</span>
+            <span className="font-serif font-bold text-primary-foreground text-sm leading-none">C</span>
           </div>
           {!collapsed && (
-            <span className="font-serif text-base tracking-tight truncate text-foreground">Consulta Creator</span>
+            <span className="font-serif font-bold text-[15px] tracking-tight truncate text-foreground">Consulta Creator</span>
           )}
         </Link>
       </SidebarHeader>

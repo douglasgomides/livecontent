@@ -55,8 +55,8 @@ export default function Dashboard() {
   return (
     <div className="space-y-10">
       <section>
-        <p className="text-primary text-xs tracking-[0.3em] uppercase mb-2">Bem-vindo, {firstName}</p>
-        <h1 className="font-serif text-4xl md:text-5xl">Uma consulta vira uma semana de conteúdo.</h1>
+        <p className="t-eyebrow mb-3">Bem-vindo, {firstName}</p>
+        <h1 className="t-h1">Uma consulta vira uma semana de conteúdo.</h1>
       </section>
 
       {brainComp.total < 40 && (
@@ -72,7 +72,7 @@ export default function Dashboard() {
 
 
       <section>
-        <h2 className="font-serif text-2xl mb-4">Começar agora</h2>
+        <h2 className="t-h2 mb-5">Começar agora</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {entries.map(e => (
             <Link
@@ -88,8 +88,8 @@ export default function Dashboard() {
                 <e.icon className={`h-5 w-5 ${e.primary ? 'text-primary-foreground' : 'text-primary'}`} />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="font-medium">{e.title}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">{e.hint}</div>
+                <div className="text-sm font-semibold">{e.title}</div>
+                <div className="t-micro text-muted-foreground mt-1">{e.hint}</div>
               </div>
               <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition shrink-0 mt-3" />
             </Link>
@@ -106,10 +106,10 @@ export default function Dashboard() {
       <UpcomingCard />
 
       <section>
-        <div className="flex items-baseline justify-between mb-4">
-          <h2 className="font-serif text-2xl">Últimas consultas</h2>
+        <div className="flex items-baseline justify-between mb-5">
+          <h2 className="t-h2">Últimas consultas</h2>
           {sessions.length > 0 && (
-            <Link to="/app/consultas" className="text-sm text-primary hover:underline">
+            <Link to="/app/consultas" className="text-sm font-medium text-primary hover:underline">
               Ver todas ({sessions.length})
             </Link>
           )}
@@ -125,15 +125,15 @@ export default function Dashboard() {
               <Link key={s.id} to={`/app/session/${s.id}`} className="block border border-border/60 rounded-lg p-4 hover:border-primary/50 transition group">
                 <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0">
-                    <div className="font-medium truncate">{s.title}</div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                    <div className="text-sm font-semibold truncate">{s.title}</div>
+                    <div className="flex items-center gap-3 t-micro text-muted-foreground mt-1.5">
                       {s.durationSec > 0 && <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {fmtDur(s.durationSec)}</span>}
                       <span>{fmtDate(s.createdAt)}</span>
-                      <span className="uppercase tracking-wider text-[10px]">{s.source.replace('_', ' ')}</span>
+                      <span className="uppercase tracking-wider font-semibold">{s.source.replace('_', ' ')}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className={`text-xs px-2 py-1 rounded-full ${s.status === 'ready' ? 'bg-success/15 text-success' : 'bg-primary/10 text-primary'}`}>
+                    <span className={`t-micro font-semibold px-2 py-1 rounded-full ${s.status === 'ready' ? 'bg-success/15 text-success' : 'bg-primary/10 text-primary'}`}>
                       {STATUS_LABEL[s.status]}
                     </span>
                     <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition" />
@@ -151,10 +151,10 @@ export default function Dashboard() {
 function StatCard({ icon: Icon, label, value }: { icon: any; label: string; value: number | string }) {
   return (
     <div className="border border-border/60 rounded-lg p-5">
-      <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground mb-2">
+      <div className="flex items-center gap-2 t-eyebrow text-muted-foreground mb-3" style={{ color: 'hsl(var(--muted-foreground))' }}>
         <Icon className="h-3.5 w-3.5" /> {label}
       </div>
-      <div className="font-serif text-3xl">{value}</div>
+      <div className="t-numeric">{value}</div>
     </div>
   );
 }
@@ -164,9 +164,9 @@ function UpcomingCard() {
   if (!items.length) return null;
   return (
     <section>
-      <div className="flex items-baseline justify-between mb-4">
-        <h2 className="font-serif text-2xl">Próximas publicações</h2>
-        <Link to="/app/calendar" className="text-sm text-primary hover:underline flex items-center gap-1">
+      <div className="flex items-baseline justify-between mb-5">
+        <h2 className="t-h2">Próximas publicações</h2>
+        <Link to="/app/calendar" className="text-sm font-medium text-primary hover:underline flex items-center gap-1">
           <CalendarDays className="h-3.5 w-3.5" /> Ver calendário
         </Link>
       </div>
@@ -175,12 +175,12 @@ function UpcomingCard() {
           <Link key={it.id} to={`/app/session/${it.sessionId}`} className="block border border-border/60 rounded-lg p-3 hover:border-primary/50 transition">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <div className="text-sm font-medium truncate">{it.title}</div>
-                <div className="text-[11px] text-muted-foreground mt-0.5">
+                <div className="text-sm font-semibold truncate">{it.title}</div>
+                <div className="t-micro text-muted-foreground mt-1">
                   {CHANNEL_LABEL[it.channel]}
                 </div>
               </div>
-              <div className="text-xs text-primary shrink-0">
+              <div className="t-micro font-semibold text-primary shrink-0">
                 {new Date(it.scheduledFor).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
               </div>
             </div>

@@ -49,9 +49,9 @@ export default function Landing() {
       <header className="relative z-10 max-w-6xl mx-auto px-6 py-6 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="h-9 w-9 rounded-md bg-gold-gradient flex items-center justify-center shadow-gold-sm">
-            <span className="font-serif text-primary-foreground leading-none">C</span>
+            <span className="font-serif font-bold text-primary-foreground leading-none">C</span>
           </div>
-          <span className="font-serif text-lg tracking-tight">Consulta Creator</span>
+          <span className="font-serif font-semibold text-base tracking-tight">Consulta Creator</span>
         </div>
         <Link to={cta}>
           <Button variant="ghost" size="sm" className="text-sm">Entrar</Button>
@@ -60,27 +60,27 @@ export default function Landing() {
 
       {/* Hero */}
       <main className="relative z-10 max-w-4xl mx-auto px-6 pt-16 pb-20 text-center">
-        <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 rounded-full px-3.5 py-1 mb-8 text-xs text-primary">
+        <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 rounded-full px-3.5 py-1 mb-10 t-micro text-primary uppercase tracking-[0.24em] font-semibold">
           <span className="w-1.5 h-1.5 rounded-full bg-primary" />
           Sempre ligada. Sempre sua.
         </div>
-        <h1 className="font-serif text-5xl sm:text-7xl md:text-[5.5rem] leading-[1.02] tracking-tight font-bold">
+        <h1 className="t-display">
           Sua máquina de<br />
           <span className="text-primary">conteúdo médico.</span>
         </h1>
-        <p className="mt-8 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+        <p className="mt-8 t-lead max-w-2xl mx-auto">
           Grave consultas, palestras e áudios — ou cole um link do YouTube. A ferramenta transforma
           em Reels, carrosséis, blog, vídeos, podcast e posts prontos para publicar.
         </p>
 
         <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
           <Link to={cta}>
-            <Button size="lg" className="h-12 px-8 bg-gold-gradient text-primary-foreground hover:opacity-90 shadow-gold rounded-md font-medium text-base">
+            <Button size="lg" className="h-12 px-8 bg-gold-gradient text-primary-foreground hover:opacity-90 shadow-gold rounded-md font-semibold text-sm">
               Começar agora <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>
           <Link to="/app/new/link">
-            <Button size="lg" variant="outline" className="h-12 px-6 border-border/60 text-base">
+            <Button size="lg" variant="outline" className="h-12 px-6 border-border/60 text-sm font-medium">
               <Link2 className="mr-2 h-4 w-4" /> Colar um link
             </Button>
           </Link>
@@ -91,10 +91,10 @@ export default function Landing() {
 
       {/* Inputs */}
       <section className="relative z-10 max-w-5xl mx-auto px-6 py-20">
-        <div className="text-center mb-10">
-          <p className="text-xs uppercase tracking-[0.25em] text-primary mb-3">Entradas</p>
-          <h2 className="font-serif text-3xl md:text-4xl">Enquanto você respira, ela produz.</h2>
-          <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
+        <div className="text-center mb-12">
+          <p className="t-eyebrow mb-4">Entradas</p>
+          <h2 className="t-h2">Enquanto você respira, ela produz.</h2>
+          <p className="mt-4 t-body text-muted-foreground max-w-xl mx-auto">
             A consulta é a estrela, mas tudo que sai da sua voz vira conteúdo — inclusive links.
           </p>
         </div>
@@ -113,8 +113,8 @@ export default function Landing() {
               }`}>
                 <i.icon className={`h-4 w-4 ${i.primary ? 'text-primary-foreground' : 'text-primary'}`} />
               </div>
-              <div className="font-medium text-sm">{i.label}</div>
-              <div className="text-xs text-muted-foreground mt-1">{i.hint}</div>
+              <div className="text-sm font-semibold">{i.label}</div>
+              <div className="t-micro text-muted-foreground mt-1">{i.hint}</div>
             </div>
           ))}
         </div>
@@ -125,20 +125,20 @@ export default function Landing() {
       {/* Pipeline */}
       <section className="relative z-10 max-w-3xl mx-auto px-6 py-20">
         <div className="text-center mb-12">
-          <p className="text-xs uppercase tracking-[0.25em] text-primary mb-3">Como funciona</p>
-          <h2 className="font-serif text-3xl md:text-4xl">Quatro passos. Zero fricção.</h2>
+          <p className="t-eyebrow mb-4">Como funciona</p>
+          <h2 className="t-h2">Quatro passos. Zero fricção.</h2>
         </div>
 
         <div className="relative flex flex-col gap-8">
           <div className="absolute left-5 top-3 bottom-3 w-px bg-border/60" />
           {steps.map(s => (
             <div key={s.id} className="flex items-start gap-5 relative">
-              <div className="w-10 h-10 rounded-full border border-primary/40 bg-background flex items-center justify-center font-serif text-primary text-sm z-10 shrink-0 shadow-gold-sm">
+              <div className="w-10 h-10 rounded-full border border-primary/40 bg-background flex items-center justify-center text-primary text-xs font-semibold z-10 shrink-0 shadow-gold-sm">
                 {s.id}
               </div>
-              <div className="pt-1.5">
-                <div className="font-serif text-xl text-foreground mb-1">{s.title}</div>
-                <div className="text-sm text-muted-foreground leading-relaxed max-w-md">{s.text}</div>
+              <div className="pt-1">
+                <div className="t-h3 text-foreground mb-1.5">{s.title}</div>
+                <div className="t-body text-muted-foreground max-w-md">{s.text}</div>
               </div>
             </div>
           ))}
@@ -149,10 +149,10 @@ export default function Landing() {
 
       {/* Outputs */}
       <section className="relative z-10 max-w-5xl mx-auto px-6 py-20">
-        <div className="text-center mb-10">
-          <p className="text-xs uppercase tracking-[0.25em] text-primary mb-3">Saídas</p>
-          <h2 className="font-serif text-3xl md:text-4xl">Um input. A internet inteira.</h2>
-          <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
+        <div className="text-center mb-12">
+          <p className="t-eyebrow mb-4">Saídas</p>
+          <h2 className="t-h2">Um input. A internet inteira.</h2>
+          <p className="mt-4 t-body text-muted-foreground max-w-xl mx-auto">
             Cada peça sai com formato, tom e arte próprios do canal.
           </p>
         </div>
@@ -160,7 +160,7 @@ export default function Landing() {
           {outputs.map(o => (
             <div
               key={o.label}
-              className="flex items-center gap-2 border border-border/60 bg-card/40 rounded-full px-4 py-2 text-sm text-foreground"
+              className="flex items-center gap-2 border border-border/60 bg-card/40 rounded-full px-4 py-2 text-sm font-medium text-foreground"
             >
               <o.icon className="h-3.5 w-3.5 text-primary" />
               <span>{o.label}</span>
@@ -170,7 +170,7 @@ export default function Landing() {
 
         <div className="mt-16 text-center">
           <Link to={cta}>
-            <Button size="lg" className="h-12 px-8 bg-gold-gradient text-primary-foreground hover:opacity-90 shadow-gold rounded-md font-medium">
+            <Button size="lg" className="h-12 px-8 bg-gold-gradient text-primary-foreground hover:opacity-90 shadow-gold rounded-md font-semibold text-sm">
               Começar agora <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>
@@ -178,9 +178,9 @@ export default function Landing() {
       </section>
 
       <footer className="relative z-10 border-t border-border/50">
-        <div className="max-w-6xl mx-auto px-6 py-8 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+        <div className="max-w-6xl mx-auto px-6 py-8 flex flex-wrap items-center justify-between gap-3 t-micro text-muted-foreground">
           <div>Anonimização de PII · Score CFM · Compliance-by-design</div>
-          <div className="font-serif text-sm text-foreground/80">Consulta Creator</div>
+          <div className="font-serif font-semibold text-sm text-foreground/80">Consulta Creator</div>
         </div>
       </footer>
     </div>
