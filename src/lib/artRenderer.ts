@@ -93,9 +93,10 @@ function ensureFonts(): Promise<void> {
       const anyDoc = document as any;
       if (anyDoc.fonts?.load) {
         await Promise.all([
-          anyDoc.fonts.load('700 96px "Instrument Serif"'),
-          anyDoc.fonts.load('400 32px Inter'),
-          anyDoc.fonts.load('600 28px Inter'),
+          anyDoc.fonts.load('700 96px "Syne"'),
+          anyDoc.fonts.load('800 96px "Syne"'),
+          anyDoc.fonts.load('400 32px "Plus Jakarta Sans"'),
+          anyDoc.fonts.load('600 28px "Plus Jakarta Sans"'),
         ]);
       }
     } catch { /* noop */ }
