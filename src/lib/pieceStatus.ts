@@ -22,7 +22,7 @@ export const STATUS_META: Record<PipelineStatus, { label: string; cls: string }>
 /** Derive the effective pipeline status for a piece from all storages. */
 export function getPieceStatus(piece: ContentPiece): PipelineStatus {
   if (piece.rejected) return 'rejected';
-  if (piece.cfm.flags.some(f => f.severity === 'block')) return 'blocked';
+  if (piece.cfm?.flags?.some(f => f.severity === 'block')) return 'blocked';
   if (!piece.approved) return 'draft';
 
   const jobs = loadJobs();
