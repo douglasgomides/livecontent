@@ -22,11 +22,54 @@ const TONES: { id: DoctorProfile['tone']; label: string }[] = [
 export default function Settings() {
   const initial = loadProfile() || { name: '', specialty: '', idealPatient: '', tone: 'didactic' as const, onboarded: true };
   const [data, setData] = useState<DoctorProfile>(initial);
+  const [dataTick, setDataTick] = useState(0);
+
+  const stats = useMemo(() => {
+    const sessions = loadSessions();
+    let pieces = 0, blocked = 0, approved = 0;
+    sessions.forEach(s => (s.content ?? []).forEach(p => {
+      pieces++;
+      if (p.approved) approved++;
+      if (p.cfm.flags.some(f => f.severity === 'block')) blocked++;
+    }));
+    return { sessions: sessions.length, pieces, blocked, approved };
+  }, [dataTick]);
 
   const save = () => {
     saveProfile({ ...data, onboarded: true });
     toast.success('Ajustes salvos');
   };
+
+  const revalidate = () => {
+    const r = runMigrations({ force: true });
+    setDataTick(t => t + 1);
+    toast.success(`Dados revalidados`, {
+      description: `${r.sessions} sessões · ${r.pieces} peças · ${r.fixedPieces} corrigidas${r.dropped ? ` · ${r.dropped} descartadas` : ''}`,
+    });
+  };
+
+  const exportBackup = () => {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      sessions: loadSessions(),
+      profile: loadProfile(),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `consulta-creator-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const clearAll = () => {
+    if (!confirm('Apagar TODAS as sessões, peças e agendamentos locais? Esta ação não pode ser desfeita.')) return;
+    ['cc_sessions', 'cc_schema_version', 'cc_publish_jobs', 'cc_schedule'].forEach(k => localStorage.removeItem(k));
+    setDataTick(t => t + 1);
+    toast.success('Dados locais apagados');
+  };
+
 
   return (
     <div className="max-w-2xl space-y-8 pb-24 md:pb-8">
