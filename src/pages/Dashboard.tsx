@@ -72,7 +72,7 @@ export default function Dashboard() {
 
 
       <section>
-        <h2 className="font-serif text-2xl mb-4">Começar agora</h2>
+        <h2 className="t-h2 mb-5">Começar agora</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {entries.map(e => (
             <Link
