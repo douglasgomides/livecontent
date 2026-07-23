@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom';
-import { Mic, Upload, MessageCircle, FlaskConical, Radio, ArrowRight, Clock, FileCheck2, Shield, Brain as BrainIcon, CalendarDays, Link2 } from 'lucide-react';
+import { Mic, Upload, MessageCircle, FlaskConical, Radio, ArrowRight, Clock, FileCheck2, Shield, Brain as BrainIcon, CalendarDays, Link2, Inbox, Send, CheckCircle2 } from 'lucide-react';
 import { loadSessions, loadProfile } from '@/lib/storage';
 import { loadBrain, getCompleteness } from '@/lib/brainStorage';
 import { loadSchedule, upcoming } from '@/lib/scheduleStorage';
+import { loadJobs } from '@/lib/publishQueue';
 import { CHANNEL_LABEL } from '@/lib/contentFormats';
 import type { SessionStatus } from '@/types/session';
+
 
 
 const STATUS_LABEL: Record<SessionStatus, string> = {
@@ -44,11 +46,21 @@ export default function Dashboard() {
 
   const allPieces = sessions.flatMap(s => s.content || []);
   const approved = allPieces.filter(p => p.approved).length;
+  const pendingApproval = allPieces.filter(p => !p.approved && !p.rejected && !p.cfm.flags.some(f => f.severity === 'block')).length;
+  const blockedCfm = allPieces.filter(p => !p.rejected && p.cfm.flags.some(f => f.severity === 'block')).length;
   const avgCfm = allPieces.length
     ? Math.round(allPieces.reduce((a, p) => a + p.cfm.score, 0) / allPieces.length)
     : 0;
 
+  const jobs = loadJobs();
+  const queueOpen = jobs.filter(j => j.status !== 'published' && j.status !== 'failed').length;
+  const scheduled = loadSchedule();
+  const now = new Date();
+  const weekEnd = new Date(now); weekEnd.setDate(weekEnd.getDate() + 7);
+  const scheduledThisWeek = scheduled.filter(s => s.status !== 'published' && new Date(s.scheduledFor) <= weekEnd).length;
+
   const recent = sessions.slice(0, 3);
+
 
   const brainComp = getCompleteness(loadBrain());
 
@@ -103,7 +115,24 @@ export default function Dashboard() {
         <StatCard icon={Shield} label="Score CFM médio" value={avgCfm || '—'} />
       </section>
 
+      {(pendingApproval > 0 || queueOpen > 0 || scheduledThisWeek > 0 || blockedCfm > 0) && (
+        <section>
+          <div className="flex items-baseline justify-between mb-5">
+            <h2 className="t-h2">Saúde do fluxo</h2>
+            <span className="t-micro text-muted-foreground">Do rascunho ao publicado</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <FlowCard to="/app/approvals" icon={Inbox} label="Pendentes" value={pendingApproval} tone="warning" />
+            <FlowCard to="/app/approvals" icon={Shield} label="Bloqueadas CFM" value={blockedCfm} tone="danger" />
+            <FlowCard to="/app/calendar" icon={CalendarDays} label="Agendadas 7d" value={scheduledThisWeek} tone="primary" />
+            <FlowCard to="/app/queue" icon={Send} label="Na fila" value={queueOpen} tone="primary" />
+          </div>
+        </section>
+      )}
+
       <UpcomingCard />
+
+
 
       <section>
         <div className="flex items-baseline justify-between mb-5">
@@ -156,6 +185,19 @@ function StatCard({ icon: Icon, label, value }: { icon: any; label: string; valu
       </div>
       <div className="t-numeric">{value}</div>
     </div>
+  );
+}
+
+function FlowCard({ to, icon: Icon, label, value, tone }: { to: string; icon: any; label: string; value: number; tone: 'primary' | 'warning' | 'danger' }) {
+  const toneCls = tone === 'warning' ? 'text-warning' : tone === 'danger' ? 'text-destructive' : 'text-primary';
+  const borderCls = value > 0 ? (tone === 'warning' ? 'border-warning/40' : tone === 'danger' ? 'border-destructive/40' : 'border-primary/40') : 'border-border/60';
+  return (
+    <Link to={to} className={`border ${borderCls} rounded-lg p-4 hover:bg-primary/5 transition block`}>
+      <div className="flex items-center gap-2 t-eyebrow text-muted-foreground mb-2">
+        <Icon className={`h-3.5 w-3.5 ${value > 0 ? toneCls : ''}`} /> {label}
+      </div>
+      <div className={`t-numeric ${value > 0 ? toneCls : 'text-muted-foreground'}`}>{value}</div>
+    </Link>
   );
 }
 
