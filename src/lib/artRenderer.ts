@@ -114,8 +114,8 @@ export function renderSlideToPng(slide: ArtworkSlide, artwork: Artwork, brain?: 
   const bg = brand?.colorBackground || '#0A0A0A';
   const primary = brand?.colorPrimary || '#C9A84C';
   const text = brand?.colorText || '#F5F0E8';
-  const serif = '"Instrument Serif", Georgia, serif';
-  const sans = 'Inter, system-ui, sans-serif';
+  const serif = '"Syne", "Plus Jakarta Sans", system-ui, sans-serif';
+  const sans = '"Plus Jakarta Sans", Inter, system-ui, sans-serif';
 
   const W = artwork.width;
   const H = artwork.height;
