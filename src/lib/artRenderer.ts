@@ -159,7 +159,7 @@ export function renderSlideToPng(slide: ArtworkSlide, artwork: Artwork, brain?: 
   ctx.fillStyle = text;
   const isBigTitle = slide.kind === 'cover' || slide.kind === 'story';
   const titleSize = Math.round(W * (isBigTitle ? 0.098 : 0.075));
-  ctx.font = `400 ${titleSize}px ${serif}`;
+  ctx.font = `${isBigTitle ? 800 : 700} ${titleSize}px ${serif}`;
   const titleY = Math.round(H * 0.22);
   const titleEndY = wrapText(ctx, slide.title || '', padX, titleY, contentW, titleSize * 1.05);
 
