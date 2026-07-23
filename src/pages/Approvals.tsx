@@ -20,21 +20,6 @@ import { REJECT_LABEL } from '@/lib/pieceStatus';
 
 type Row = { session: Session; piece: ContentPiece; topicTitle: string };
 
-const normalizePiece = (piece: ContentPiece): ContentPiece => {
-  const format = piece.format ?? 'caption';
-  return {
-    ...piece,
-    format,
-    channel: piece.channel ?? FORMAT_CHANNEL[format] ?? 'instagram',
-    body: typeof piece.body === 'string' ? piece.body : '',
-    cfm: {
-      score: typeof piece.cfm?.score === 'number' ? piece.cfm.score : 0,
-      flags: Array.isArray(piece.cfm?.flags) ? piece.cfm.flags : [],
-    },
-    approved: Boolean(piece.approved),
-    rejected: Boolean(piece.rejected),
-  };
-};
 
 const SOURCE_LABEL: Record<SessionSource, string> = {
   recording: 'Consulta',
@@ -56,10 +41,9 @@ export default function Approvals() {
   const refresh = () => setSessions(loadSessions());
 
   const rows: Row[] = useMemo(() =>
-    sessions.flatMap(s => (Array.isArray(s.content) ? s.content : []).map(piece => {
-      const safePiece = normalizePiece(piece);
-      const topic = (Array.isArray(s.topics) ? s.topics : []).find(t => t.id === safePiece.topicId);
-      return { session: s, piece: safePiece, topicTitle: topic?.title || '—' };
+    sessions.flatMap(s => (s.content ?? []).map(piece => {
+      const topic = (s.topics ?? []).find(t => t.id === piece.topicId);
+      return { session: s, piece, topicTitle: topic?.title || '—' };
     })), [sessions]);
 
   const pending = rows.filter(r => !r.piece.approved && !r.piece.rejected && !r.piece.cfm.flags.some(f => f.severity === 'block'));

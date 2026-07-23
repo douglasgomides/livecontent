@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Brain as BrainIcon, ArrowRight } from 'lucide-react';
-import { loadProfile, saveProfile } from '@/lib/storage';
+import { Brain as BrainIcon, ArrowRight, Database, RefreshCw, Download, Trash2 } from 'lucide-react';
+import { loadProfile, saveProfile, loadSessions } from '@/lib/storage';
+import { runMigrations } from '@/lib/migrations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import type { DoctorProfile } from '@/types/session';
 import { toast } from 'sonner';
+
 
 
 const TONES: { id: DoctorProfile['tone']; label: string }[] = [
@@ -20,11 +22,54 @@ const TONES: { id: DoctorProfile['tone']; label: string }[] = [
 export default function Settings() {
   const initial = loadProfile() || { name: '', specialty: '', idealPatient: '', tone: 'didactic' as const, onboarded: true };
   const [data, setData] = useState<DoctorProfile>(initial);
+  const [dataTick, setDataTick] = useState(0);
+
+  const stats = useMemo(() => {
+    const sessions = loadSessions();
+    let pieces = 0, blocked = 0, approved = 0;
+    sessions.forEach(s => (s.content ?? []).forEach(p => {
+      pieces++;
+      if (p.approved) approved++;
+      if (p.cfm.flags.some(f => f.severity === 'block')) blocked++;
+    }));
+    return { sessions: sessions.length, pieces, blocked, approved };
+  }, [dataTick]);
 
   const save = () => {
     saveProfile({ ...data, onboarded: true });
     toast.success('Ajustes salvos');
   };
+
+  const revalidate = () => {
+    const r = runMigrations({ force: true });
+    setDataTick(t => t + 1);
+    toast.success(`Dados revalidados`, {
+      description: `${r.sessions} sessões · ${r.pieces} peças · ${r.fixedPieces} corrigidas${r.dropped ? ` · ${r.dropped} descartadas` : ''}`,
+    });
+  };
+
+  const exportBackup = () => {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      sessions: loadSessions(),
+      profile: loadProfile(),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `consulta-creator-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const clearAll = () => {
+    if (!confirm('Apagar TODAS as sessões, peças e agendamentos locais? Esta ação não pode ser desfeita.')) return;
+    ['cc_sessions', 'cc_schema_version', 'cc_publish_jobs', 'cc_schedule'].forEach(k => localStorage.removeItem(k));
+    setDataTick(t => t + 1);
+    toast.success('Dados locais apagados');
+  };
+
 
   return (
     <div className="max-w-2xl space-y-8 pb-24 md:pb-8">
@@ -73,6 +118,47 @@ export default function Settings() {
       </div>
 
       <Button onClick={save} className="bg-gold-gradient text-primary-foreground">Salvar</Button>
+
+      <div className="border-t border-border pt-8 space-y-4">
+        <div className="flex items-center gap-2">
+          <Database className="h-4 w-4 text-primary" />
+          <h2 className="font-serif text-2xl">Dados locais</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Tudo é salvo neste navegador. Use estas ferramentas se algo parecer inconsistente ou antes de trocar de dispositivo.
+        </p>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="border border-border rounded-lg p-3">
+            <div className="text-2xl font-medium">{stats.sessions}</div>
+            <div className="text-xs text-muted-foreground">sessões</div>
+          </div>
+          <div className="border border-border rounded-lg p-3">
+            <div className="text-2xl font-medium">{stats.pieces}</div>
+            <div className="text-xs text-muted-foreground">peças</div>
+          </div>
+          <div className="border border-border rounded-lg p-3">
+            <div className="text-2xl font-medium text-success">{stats.approved}</div>
+            <div className="text-xs text-muted-foreground">aprovadas</div>
+          </div>
+          <div className="border border-border rounded-lg p-3">
+            <div className="text-2xl font-medium text-destructive">{stats.blocked}</div>
+            <div className="text-xs text-muted-foreground">bloqueadas CFM</div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={revalidate}>
+            <RefreshCw className="h-3.5 w-3.5 mr-2" /> Revalidar dados
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportBackup}>
+            <Download className="h-3.5 w-3.5 mr-2" /> Exportar backup
+          </Button>
+          <Button variant="outline" size="sm" onClick={clearAll} className="text-destructive hover:text-destructive">
+            <Trash2 className="h-3.5 w-3.5 mr-2" /> Limpar tudo
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
