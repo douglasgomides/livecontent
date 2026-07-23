@@ -4,7 +4,7 @@ import type { Brain } from '@/types/brain';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { rescoreContent } from '@/lib/mockPipeline';
+import { rescoreContent } from '@/lib/pipeline';
 import { FORMAT_LABEL, FORMAT_ICON, EXPORT_MODE } from '@/lib/contentFormats';
 import { Copy, CheckCircle2, AlertTriangle, ShieldAlert, RefreshCw, Download } from 'lucide-react';
 import { toast } from 'sonner';

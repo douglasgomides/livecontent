@@ -4,7 +4,7 @@ import { Mic, Upload, ArrowLeft, Square, FileAudio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { upsertSession } from '@/lib/storage';
-import { createBlankSession } from '@/lib/mockPipeline';
+import { createBlankSession } from '@/lib/pipeline';
 
 type Mode = 'record' | 'upload';
 

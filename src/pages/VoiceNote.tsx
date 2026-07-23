@@ -4,7 +4,7 @@ import { Mic, ArrowLeft, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { upsertSession } from '@/lib/storage';
-import { createBlankSession } from '@/lib/mockPipeline';
+import { createBlankSession } from '@/lib/pipeline';
 
 export default function VoiceNote() {
   const nav = useNavigate();

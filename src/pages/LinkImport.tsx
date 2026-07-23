@@ -4,7 +4,7 @@ import { ArrowLeft, Link2, Youtube, Instagram, Music, Globe, Sparkles } from 'lu
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { upsertSession } from '@/lib/storage';
-import { createBlankSession } from '@/lib/mockPipeline';
+import { createBlankSession } from '@/lib/pipeline';
 
 type LinkKind = 'youtube' | 'reels' | 'tiktok' | 'article';
 
