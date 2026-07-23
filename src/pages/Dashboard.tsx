@@ -106,10 +106,10 @@ export default function Dashboard() {
       <UpcomingCard />
 
       <section>
-        <div className="flex items-baseline justify-between mb-4">
-          <h2 className="font-serif text-2xl">Últimas consultas</h2>
+        <div className="flex items-baseline justify-between mb-5">
+          <h2 className="t-h2">Últimas consultas</h2>
           {sessions.length > 0 && (
-            <Link to="/app/consultas" className="text-sm text-primary hover:underline">
+            <Link to="/app/consultas" className="text-sm font-medium text-primary hover:underline">
               Ver todas ({sessions.length})
             </Link>
           )}
