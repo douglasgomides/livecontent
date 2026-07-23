@@ -125,15 +125,15 @@ export default function Dashboard() {
               <Link key={s.id} to={`/app/session/${s.id}`} className="block border border-border/60 rounded-lg p-4 hover:border-primary/50 transition group">
                 <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0">
-                    <div className="font-medium truncate">{s.title}</div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                    <div className="text-sm font-semibold truncate">{s.title}</div>
+                    <div className="flex items-center gap-3 t-micro text-muted-foreground mt-1.5">
                       {s.durationSec > 0 && <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {fmtDur(s.durationSec)}</span>}
                       <span>{fmtDate(s.createdAt)}</span>
-                      <span className="uppercase tracking-wider text-[10px]">{s.source.replace('_', ' ')}</span>
+                      <span className="uppercase tracking-wider font-semibold">{s.source.replace('_', ' ')}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className={`text-xs px-2 py-1 rounded-full ${s.status === 'ready' ? 'bg-success/15 text-success' : 'bg-primary/10 text-primary'}`}>
+                    <span className={`t-micro font-semibold px-2 py-1 rounded-full ${s.status === 'ready' ? 'bg-success/15 text-success' : 'bg-primary/10 text-primary'}`}>
                       {STATUS_LABEL[s.status]}
                     </span>
                     <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition" />
