@@ -151,10 +151,10 @@ export default function Dashboard() {
 function StatCard({ icon: Icon, label, value }: { icon: any; label: string; value: number | string }) {
   return (
     <div className="border border-border/60 rounded-lg p-5">
-      <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground mb-2">
+      <div className="flex items-center gap-2 t-eyebrow text-muted-foreground mb-3" style={{ color: 'hsl(var(--muted-foreground))' }}>
         <Icon className="h-3.5 w-3.5" /> {label}
       </div>
-      <div className="font-serif text-3xl">{value}</div>
+      <div className="t-numeric">{value}</div>
     </div>
   );
 }
