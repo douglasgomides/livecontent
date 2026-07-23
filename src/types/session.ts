@@ -8,7 +8,7 @@ export type SessionStatus =
   | 'generating_content'
   | 'ready';
 
-export type SessionSource = 'recording' | 'upload' | 'voice_note' | 'science' | 'audio_livre';
+export type SessionSource = 'recording' | 'upload' | 'voice_note' | 'science' | 'audio_livre' | 'link';
 
 export type ContentFormat =
   | 'reel' | 'carousel' | 'caption' | 'stories' | 'linkedin'

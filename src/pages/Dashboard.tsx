@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Mic, Upload, MessageCircle, FlaskConical, Radio, ArrowRight, Clock, FileCheck2, Shield, Brain as BrainIcon, CalendarDays } from 'lucide-react';
+import { Mic, Upload, MessageCircle, FlaskConical, Radio, ArrowRight, Clock, FileCheck2, Shield, Brain as BrainIcon, CalendarDays, Link2 } from 'lucide-react';
 import { loadSessions, loadProfile } from '@/lib/storage';
 import { loadBrain, getCompleteness } from '@/lib/brainStorage';
 import { loadSchedule, upcoming } from '@/lib/scheduleStorage';
@@ -20,9 +20,10 @@ const STATUS_LABEL: Record<SessionStatus, string> = {
 
 const entries = [
   { icon: Mic, title: 'Gravar consulta', hint: 'Ao vivo, no consultório', to: '/app/record', primary: true },
+  { icon: Radio, title: 'Palestra / áudio livre', hint: 'Aula, evento, WhatsApp', to: '/app/new/audio-livre' },
+  { icon: Link2, title: 'Link (YouTube, artigo)', hint: 'Cole a URL, extrai temas', to: '/app/new/link' },
   { icon: Upload, title: 'Upload de áudio', hint: 'MP3, M4A, WAV, WebM', to: '/app/new/upload' },
   { icon: MessageCircle, title: 'Voice Note', hint: 'Insight rápido → 1 post', to: '/app/new/voice-note' },
-  { icon: Radio, title: 'Áudio livre', hint: 'Aula, palestra, WhatsApp', to: '/app/new/audio-livre' },
   { icon: FlaskConical, title: 'Science to Content', hint: 'Abstract, notícia, diretriz', to: '/app/new/science' },
 ];
 

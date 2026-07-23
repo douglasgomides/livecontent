@@ -13,6 +13,7 @@ import {
   Send,
   Radio,
   CalendarDays,
+  Link2,
 } from 'lucide-react';
 
 import {
@@ -33,12 +34,12 @@ import { loadBrain, getCompleteness } from '@/lib/brainStorage';
 
 const createItems = [
   { title: 'Gravar consulta', url: '/app/record', icon: Mic },
+  { title: 'Palestra / áudio livre', url: '/app/new/audio-livre', icon: Radio },
+  { title: 'Link (YouTube / artigo)', url: '/app/new/link', icon: Link2 },
   { title: 'Upload de áudio', url: '/app/new/upload', icon: Upload },
   { title: 'Voice Note', url: '/app/new/voice-note', icon: MessageCircle },
-  { title: 'Áudio livre', url: '/app/new/audio-livre', icon: Radio },
   { title: 'Science to Content', url: '/app/new/science', icon: FlaskConical },
 ];
-
 
 const workItems = [
   { title: 'Dashboard', url: '/app', icon: LayoutDashboard, end: true },
@@ -49,12 +50,10 @@ const workItems = [
   { title: 'Biblioteca', url: '/app/library', icon: Library },
 ];
 
-
 const accountItems = [
   { title: 'Brain', url: '/app/brain', icon: BrainIcon },
   { title: 'Ajustes', url: '/app/settings', icon: Settings },
 ];
-
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -84,21 +83,22 @@ export function AppSidebar() {
     );
   };
 
-
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
-        <Link to="/app" className="flex items-center gap-2 px-2 py-2">
-          <div className="h-7 w-7 rounded-sm bg-gold-gradient shrink-0 flex items-center justify-center">
-            <div className="h-1.5 w-1.5 rounded-[1px] bg-background" />
+        <Link to="/app" className="flex items-center gap-2.5 px-2 py-2.5">
+          <div className="h-8 w-8 rounded-md bg-gold-gradient shrink-0 flex items-center justify-center shadow-gold-sm">
+            <span className="font-serif text-primary-foreground text-base leading-none">C</span>
           </div>
-          {!collapsed && <span className="font-mono text-[11px] tracking-[0.2em] uppercase truncate">Consulta<span className="text-primary">/</span>Creator</span>}
+          {!collapsed && (
+            <span className="font-serif text-base tracking-tight truncate text-foreground">Consulta Creator</span>
+          )}
         </Link>
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-primary">Criar</SidebarGroupLabel>
+          <SidebarGroupLabel>Criar</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>{createItems.map(renderItem)}</SidebarMenu>
           </SidebarGroupContent>

@@ -17,6 +17,7 @@ import Library from "./pages/Library";
 import Approvals from "./pages/Approvals";
 import PublishQueue from "./pages/PublishQueue";
 import AudioLivre from "./pages/AudioLivre";
+import LinkImport from "./pages/LinkImport";
 import BrainPage from "./pages/Brain";
 import CalendarPage from "./pages/Calendar";
 import Settings from "./pages/Settings";
@@ -49,6 +50,7 @@ const App = () => (
             <Route path="new/upload" element={<UploadAudio />} />
             <Route path="new/voice-note" element={<VoiceNote />} />
             <Route path="new/audio-livre" element={<AudioLivre />} />
+            <Route path="new/link" element={<LinkImport />} />
             <Route path="new/science" element={<ScienceToContent />} />
             <Route path="session/:id" element={<SessionDetail />} />
             <Route path="library" element={<Library />} />
