@@ -118,6 +118,47 @@ export default function Settings() {
       </div>
 
       <Button onClick={save} className="bg-gold-gradient text-primary-foreground">Salvar</Button>
+
+      <div className="border-t border-border pt-8 space-y-4">
+        <div className="flex items-center gap-2">
+          <Database className="h-4 w-4 text-primary" />
+          <h2 className="font-serif text-2xl">Dados locais</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Tudo é salvo neste navegador. Use estas ferramentas se algo parecer inconsistente ou antes de trocar de dispositivo.
+        </p>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="border border-border rounded-lg p-3">
+            <div className="text-2xl font-medium">{stats.sessions}</div>
+            <div className="text-xs text-muted-foreground">sessões</div>
+          </div>
+          <div className="border border-border rounded-lg p-3">
+            <div className="text-2xl font-medium">{stats.pieces}</div>
+            <div className="text-xs text-muted-foreground">peças</div>
+          </div>
+          <div className="border border-border rounded-lg p-3">
+            <div className="text-2xl font-medium text-success">{stats.approved}</div>
+            <div className="text-xs text-muted-foreground">aprovadas</div>
+          </div>
+          <div className="border border-border rounded-lg p-3">
+            <div className="text-2xl font-medium text-destructive">{stats.blocked}</div>
+            <div className="text-xs text-muted-foreground">bloqueadas CFM</div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={revalidate}>
+            <RefreshCw className="h-3.5 w-3.5 mr-2" /> Revalidar dados
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportBackup}>
+            <Download className="h-3.5 w-3.5 mr-2" /> Exportar backup
+          </Button>
+          <Button variant="outline" size="sm" onClick={clearAll} className="text-destructive hover:text-destructive">
+            <Trash2 className="h-3.5 w-3.5 mr-2" /> Limpar tudo
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
