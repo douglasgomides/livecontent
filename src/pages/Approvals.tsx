@@ -41,10 +41,9 @@ export default function Approvals() {
   const refresh = () => setSessions(loadSessions());
 
   const rows: Row[] = useMemo(() =>
-    sessions.flatMap(s => (Array.isArray(s.content) ? s.content : []).map(piece => {
-      const safePiece = normalizePiece(piece);
-      const topic = (Array.isArray(s.topics) ? s.topics : []).find(t => t.id === safePiece.topicId);
-      return { session: s, piece: safePiece, topicTitle: topic?.title || '—' };
+    sessions.flatMap(s => (s.content ?? []).map(piece => {
+      const topic = (s.topics ?? []).find(t => t.id === piece.topicId);
+      return { session: s, piece, topicTitle: topic?.title || '—' };
     })), [sessions]);
 
   const pending = rows.filter(r => !r.piece.approved && !r.piece.rejected && !r.piece.cfm.flags.some(f => f.severity === 'block'));
