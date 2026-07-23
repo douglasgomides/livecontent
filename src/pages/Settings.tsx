@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Brain as BrainIcon, ArrowRight } from 'lucide-react';
-import { loadProfile, saveProfile } from '@/lib/storage';
+import { Brain as BrainIcon, ArrowRight, Database, RefreshCw, Download, Trash2 } from 'lucide-react';
+import { loadProfile, saveProfile, loadSessions } from '@/lib/storage';
+import { runMigrations } from '@/lib/migrations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import type { DoctorProfile } from '@/types/session';
 import { toast } from 'sonner';
+
 
 
 const TONES: { id: DoctorProfile['tone']; label: string }[] = [
