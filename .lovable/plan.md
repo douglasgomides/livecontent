@@ -1,59 +1,52 @@
-## Problema
-As fontes hoje pulam entre tamanhos sem uma escala clara: hero em `text-7xl/[5.5rem]`, mas seções internas caem para `text-3xl/4xl` sem respiro; subtítulos "eyebrow" e labels usam o mesmo `text-xs` que microcopy; parágrafos hero em `text-lg/xl` competem com títulos de seção; sidebar/header usam `text-base/lg` sem diferenciar marca de nav. Não há uma escala tipográfica definida, então a diferença entre H1, H2, H3 e corpo fica pequena demais em algumas telas e exagerada em outras.
+## Objetivo
+Trocar `mockPipeline.ts` pelo novo `src/lib/pipeline.ts` fornecido, mantendo o app 100% frontend. Como não há backend agora, as chamadas Claude/Whisper ficam **atrás de uma flag** e caem em **fallback mock determinístico** sempre — pronto para você plugar a API quando decidir o backend.
 
-## Escala proposta (Syne display + Plus Jakarta body)
+## Ajustes necessários no arquivo colado
 
-```text
-Display   clamp(3.5rem, 8vw, 6.5rem)  Syne 700  tracking -0.03em  leading 0.95
-H1        text-5xl md:text-6xl        Syne 700  tracking -0.025em leading 1.05
-H2        text-3xl md:text-4xl        Syne 600  tracking -0.02em  leading 1.1
-H3        text-xl md:text-2xl         Syne 600  tracking -0.015em
-H4        text-lg                     Syne 600
-Lead      text-lg md:text-xl          Jakarta 400  leading 1.6  muted
-Body      text-base (16px)            Jakarta 400  leading 1.6
-Small     text-sm                     Jakarta 500 (labels) / 400 (meta)
-Eyebrow   text-[11px] uppercase       Jakarta 600  tracking 0.28em  gold
-Micro     text-[11px]                 Jakarta 400  muted
-```
+O código veio com problemas que impedem compilar/rodar; corrijo tudo ao portar:
 
-Aplicada como classes utilitárias em `src/index.css` (`.t-display`, `.t-h1` … `.t-eyebrow`) para que o resto do app referencie tokens em vez de repetir combinações Tailwind.
+### 1. TypeScript quebrado
+- `Record` sem tipo genérico → `Record<ContentFormat, string>`, `Record<Topic['funnelStage'], string>`.
+- Retornos `Promise` sem genérico → `Promise<ContentPiece[]>`, `Promise<string>`, `Promise<Topic[]>`.
+- `PromiseFulfilledResult` sem genérico → `PromiseFulfilledResult<ContentPiece>`.
 
-## Mudanças
+### 2. Segurança / viabilidade
+- Chamada direta a `api.anthropic.com` do browser **não funciona** (CORS bloqueia) e vazaria chave. Envolvo `callClaude` numa checagem `AI_ENABLED` (constante `false` por padrão). Enquanto `false`, nunca faz fetch — vai direto ao fallback.
+- Removo `VITE_OPENAI_API_KEY` do `transcribeAudio`. Enquanto `AI_ENABLED=false`, retorna uma transcrição-placeholder (igual ao mock atual).
+- Adiciono um comentário no topo explicando exatamente o que trocar quando você tiver backend (Lovable Cloud ou proxy próprio): substituir `callClaude`/`transcribeAudio` por chamadas ao seu endpoint. **Não** desmarcar `AI_ENABLED` direto no browser.
+- Corrijo o id do modelo para um valor válido comentado (`claude-sonnet-4-5` como referência); irrelevante enquanto flag está desligada, mas evita confusão futura.
 
-### 1. Tokens tipográficos (`src/index.css`)
-- Adicionar `@layer components` com as classes acima e ajustar o bloco `h1..h4`/`.font-serif` para não fixar `font-weight: 700` — cada nível define o próprio peso.
-- Definir `body { font-size: 16px; line-height: 1.6 }` explicitamente.
+### 3. Templates com HTML/estruturas cortadas
+O prompt de `website` veio com o HTML "chupado" pelo formatter (tags perdidas). Reescrevo o template usando placeholders `<h1>{titulo}</h1>` etc., mantendo a intenção original.
 
-### 2. Landing (`src/pages/Landing.tsx`)
-- Hero H1: usar `.t-display` (uma linha só de escala, remove o `md:text-[5.5rem]` custom) e reduzir o parágrafo lead para `.t-lead`.
-- Section headings (`h2` de Entradas / Como funciona / Saídas): trocar para `.t-h2` e afastar do eyebrow com `mb-4`.
-- Eyebrows ("Entradas", "Como funciona", "Saídas"): `.t-eyebrow` unificado.
-- Cards de input: título `.t-body font-semibold`, hint `.t-small text-muted`.
-- Passos: número em `text-sm font-semibold` (não serif), título do passo `.t-h3`, texto `.t-body text-muted`.
-- Chips de output: `text-sm font-medium`.
-- Footer: microcopy `.t-micro`.
+### 4. Compatibilidade com o app atual
+- Mantenho a re-exportação `createBlankSession, seedPipeline, seedScience` do `mockPipeline` (o novo arquivo já faz isso).
+- `generateContentFor` mantém a **mesma assinatura** que o `SessionDetail.tsx` já usa (`topic, formats, profile, science, brain, transcript`).
+- `rescoreContent` é exportado.
+- `scoreCFM` novo é mais rigoroso que o atual — pode reprovar peças que hoje passam. Aceitável (é o objetivo).
 
-### 3. Dashboard (`src/pages/Dashboard.tsx`)
-- Saudação eyebrow → `.t-eyebrow`.
-- H1 "Uma consulta vira…" → `.t-h1` (hoje `text-4xl md:text-5xl` fica próximo demais dos H2 abaixo).
-- Section headings ("Começar agora", "Últimas consultas", "Próximas publicações") → `.t-h2` mas em variante menor: `text-2xl` fica, porém padroniza peso/tracking.
-- Métricas grandes (StatCard `text-3xl`) → mantém `.t-h2` compacto (`text-3xl` com Syne 600) para ficar abaixo dos títulos de seção só em peso, não em tamanho — evita competir com H1.
-- Metadados de consultas (`text-xs` + `text-[10px]`) → padronizar em `.t-micro` (11px) com uma variante `uppercase tracking-wider` para labels.
+## Passos de implementação
 
-### 4. Shell / Sidebar (`AppShell.tsx`, `AppSidebar.tsx`)
-- Header brand: `text-base font-semibold` em Syne (hoje `text-lg` compete com títulos de página).
-- Sidebar brand logo: manter `text-base`, mas peso 700.
-- Group labels ("Criar", "Trabalho", "Conta"): `.t-eyebrow` (garantindo consistência com a landing).
-- Nav items: `text-sm` Jakarta 500 (já está próximo, só normaliza).
-- Footer do sidebar (nome/especialidade): `.t-small` + `.t-micro muted`.
-
-### 5. Varredura leve
-- `rg` por `text-4xl`, `text-5xl`, `text-7xl`, `font-serif text-` para conferir Recording, SessionDetail, Onboarding, Brain, Calendar, Approvals, Library e alinhar títulos de página ao novo `.t-h1` sem redesenhar layout.
+1. **Criar `src/lib/pipeline.ts`** com o conteúdo colado, aplicando as correções 1–3 acima e a flag `AI_ENABLED = false`.
+2. **Trocar imports** nos consumidores que hoje puxam de `@/lib/mockPipeline`:
+   - `src/pages/SessionDetail.tsx` (usa `generateContentFor`, `seedPipeline`, `rescoreContent`).
+   - Buscar outros usos com `rg "from '@/lib/mockPipeline'"` e migrar somente os que precisam das novas funções (transcrição/anonimização/extração de tópicos), mantendo o resto no `mockPipeline` via re-export.
+3. **Manter `mockPipeline.ts` intocado** — `pipeline.ts` importa dele. Nada quebra.
+4. **Não** adiciono variáveis `VITE_*` nem instalo SDKs — projeto continua puramente client-side.
 
 ## Fora de escopo
-- Paleta, componentes, rotas, pipeline. Sem novas fontes.
-- Não altero copy, apenas tamanhos/pesos/tracking.
+- Backend/edge functions/Lovable Cloud.
+- Ativar chamadas reais para Claude/Whisper (fica pronto para o próximo turno quando você decidir o backend).
+- Mudanças de UI, prompts do Brain Builder ou visual.
 
 ## Verificação
-- Typecheck.
-- Revisar Landing (hero → seções), Dashboard, Sidebar e uma página interna (ex.: SessionDetail) no preview para confirmar que H1 > H2 > H3 > body têm degraus visíveis.
+- `tsgo --noEmit` limpo.
+- Fluxo de gravar → transcrição → anonimização → tópicos → gerar conteúdo continua funcionando (via fallback mock, idêntico ao comportamento atual).
+- `scoreCFM` novo aplicado às peças geradas — checar 1 peça no `SessionDetail` para ver as flags novas.
+
+## Como ativar depois (nota para você)
+Quando decidir o backend, o único ponto de troca é:
+- `callClaude` → `fetch('/api/ai/claude', ...)` (ou edge function Lovable Cloud).
+- `transcribeAudio` → `fetch('/api/ai/transcribe', ...)`.
+- Setar `AI_ENABLED = true`.
+Nenhum outro arquivo do app precisa mudar.
