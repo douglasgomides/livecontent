@@ -91,10 +91,10 @@ export default function Landing() {
 
       {/* Inputs */}
       <section className="relative z-10 max-w-5xl mx-auto px-6 py-20">
-        <div className="text-center mb-10">
-          <p className="text-xs uppercase tracking-[0.25em] text-primary mb-3">Entradas</p>
-          <h2 className="font-serif text-3xl md:text-4xl">Enquanto você respira, ela produz.</h2>
-          <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
+        <div className="text-center mb-12">
+          <p className="t-eyebrow mb-4">Entradas</p>
+          <h2 className="t-h2">Enquanto você respira, ela produz.</h2>
+          <p className="mt-4 t-body text-muted-foreground max-w-xl mx-auto">
             A consulta é a estrela, mas tudo que sai da sua voz vira conteúdo — inclusive links.
           </p>
         </div>
@@ -113,8 +113,8 @@ export default function Landing() {
               }`}>
                 <i.icon className={`h-4 w-4 ${i.primary ? 'text-primary-foreground' : 'text-primary'}`} />
               </div>
-              <div className="font-medium text-sm">{i.label}</div>
-              <div className="text-xs text-muted-foreground mt-1">{i.hint}</div>
+              <div className="text-sm font-semibold">{i.label}</div>
+              <div className="t-micro text-muted-foreground mt-1">{i.hint}</div>
             </div>
           ))}
         </div>
