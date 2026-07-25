@@ -6,7 +6,7 @@ import { useStoreVersion } from '@/lib/store';
 import { CHANNEL_LABEL, FORMAT_LABEL } from '@/lib/contentFormats';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Send, Inbox, CheckCircle2, AlertCircle, Trash2, ArrowRight, RefreshCw, Copy, XCircle, Clock, Loader2 } from 'lucide-react';
+import { Send, Inbox, CheckCircle2, AlertCircle, Trash2, ArrowRight, Copy, XCircle, Clock, Loader2 } from 'lucide-react';
 import type { PublishJob, PublishStatus, ContentPiece } from '@/types/session';
 import { toast } from 'sonner';
 
