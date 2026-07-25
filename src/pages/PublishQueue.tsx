@@ -109,7 +109,6 @@ export default function PublishQueue() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={copyAllVisible}><Copy className="h-3.5 w-3.5 mr-1.5" /> Copiar tudo visível</Button>
-          <Button variant="outline" size="sm" onClick={refresh}><RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Atualizar</Button>
           <Button variant="ghost" size="sm" onClick={clearDone}>Limpar concluídas</Button>
         </div>
       </div>
@@ -141,7 +140,9 @@ export default function PublishQueue() {
         <div className="space-y-2">
           {filtered.map(j => {
             const meta = STATUS_META[j.status];
-            const scheduledAt = schedMap.get(j.pieceId);
+            const scheduledAt = j.scheduledAt;
+            const canPublishViaWebhook = WEBHOOK_CHANNELS.has(j.channel) && j.status !== 'published' && j.status !== 'publishing';
+            const isPublishing = !!publishing[j.id];
             return (
               <div key={j.id} className="border border-border/60 rounded-lg p-4 flex items-center gap-4 flex-wrap">
                 <div className="min-w-0 flex-1">
@@ -167,9 +168,17 @@ export default function PublishQueue() {
                       Consulta <ArrowRight className="h-3 w-3 ml-1" />
                     </Button>
                   </Link>
+                  {canPublishViaWebhook && (
+                    <Button size="sm" variant="outline" onClick={() => publishNow(j)} disabled={isPublishing} className="text-primary">
+                      {isPublishing
+                        ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                        : <Send className="h-3.5 w-3.5 mr-1" />}
+                      Publicar
+                    </Button>
+                  )}
                   {j.status !== 'published' && (
-                    <Button size="sm" variant="outline" onClick={() => markPublished(j)}>
-                      <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Publicado
+                    <Button size="sm" variant="ghost" onClick={() => markPublished(j)} title="Marcar publicado manualmente">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
                     </Button>
                   )}
                   {j.status !== 'failed' && j.status !== 'published' && (
