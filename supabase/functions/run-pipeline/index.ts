@@ -1,7 +1,7 @@
 // run-pipeline — orquestrador agentico do pipeline de uma sessão.
 // Faz: transcrição -> anonimização -> extração de tópicos -> geração por formato.
 // Atualiza sessions.status a cada etapa (Realtime).
-import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const CLAUDE = 'claude-sonnet-4-5';
