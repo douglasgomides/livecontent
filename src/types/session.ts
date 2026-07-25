@@ -132,5 +132,6 @@ export interface PublishJob {
   status: PublishStatus;
   createdAt: string;
   updatedAt: string;
+  scheduledAt?: string;
   message?: string;
 }
