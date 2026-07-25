@@ -22,3 +22,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# Internal build-tool planning notes (not part of the product)
+.lovable/
