@@ -15,7 +15,11 @@ import {
   seedScience,
 } from './mockPipeline';
 
-export const uid = () => Math.random().toString(36).slice(2, 10);
+// Precisa ser um UUID de verdade — sessions.id/topics.id/content_pieces.id são
+// colunas UUID no Postgres. Um id curto tipo "l3d9tje8" quebra o insert com
+// "invalid input syntax for type uuid", silenciosamente engolido pelo catch
+// do store (era a causa real do "Falha ao iniciar pipeline").
+export const uid = () => crypto.randomUUID();
 
 // Delegamos geração local ao mock (para peças síncronas/manuais nas telas atuais).
 export function generateContentFor(
@@ -79,6 +83,54 @@ export async function fetchTrendingTopics(query?: string): Promise<{ query: stri
   const { data, error } = await supabase.functions.invoke('trending-topics', { body: { query } });
   if (error) throw new Error(error.message ?? 'Falha ao buscar temas em alta');
   return { query: data?.query ?? '', results: (data?.results ?? []) as TrendingItem[] };
+}
+
+// ─── Billing (Stripe) ────────────────────────────────────────────────────────
+
+export async function startCheckout(): Promise<string> {
+  const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+    body: { origin: window.location.origin },
+  });
+  if (error || !data?.url) throw new Error(error?.message ?? 'Falha ao abrir checkout');
+  return data.url as string;
+}
+
+export async function openCustomerPortal(): Promise<string> {
+  const { data, error } = await supabase.functions.invoke('customer-portal', {
+    body: { origin: window.location.origin },
+  });
+  if (error || !data?.url) throw new Error(error?.message ?? 'Falha ao abrir portal');
+  return data.url as string;
+}
+
+// ─── Admin ───────────────────────────────────────────────────────────────────
+
+export interface AdminUserRow {
+  id: string;
+  email: string | null;
+  created_at: string;
+  specialty: string | null;
+  sessions_total: number;
+  sessions_last_30d: number;
+  sessions_failed: number;
+  content_pieces_total: number;
+  last_activity: string | null;
+  plan: 'free' | 'pro';
+  subscription_status: string;
+}
+
+export interface AdminOverview {
+  total_users: number;
+  total_sessions: number;
+  total_pieces: number;
+  pro_users: number;
+  users: AdminUserRow[];
+}
+
+export async function fetchAdminOverview(): Promise<AdminOverview> {
+  const { data, error } = await supabase.functions.invoke('admin-overview');
+  if (error) throw new Error(error.message ?? 'Falha ao carregar painel admin');
+  return data as AdminOverview;
 }
 
 // ─── Pipeline real (Edge Function) ──────────────────────────────────────────

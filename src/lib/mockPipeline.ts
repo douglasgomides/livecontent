@@ -6,7 +6,8 @@ import { buildExternalPrompts } from './externalPrompts';
 
 
 
-export const uid = () => Math.random().toString(36).slice(2, 10);
+// UUID de verdade — sessions.id/topics.id/content_pieces.id são colunas UUID.
+export const uid = () => crypto.randomUUID();
 
 const DEMO_TRANSCRIPT = `Médico: Bom dia, dona Maria. Vi aqui no seu prontuário 4487 que a senhora mora ali na Rua das Palmeiras, número 320. Como está se sentindo hoje?
 Paciente: Doutor, tô com essa dor no joelho direito faz três meses. O plano Amil autorizou a ressonância finalmente. Trabalho como costureira, então fico sentada o dia todo.

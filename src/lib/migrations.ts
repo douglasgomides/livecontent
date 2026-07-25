@@ -28,7 +28,7 @@ export function normalizePiece(raw: any): ContentPiece {
   const channel: ContentChannel = p.channel || FORMAT_CHANNEL[format] || 'instagram';
   const cfmRaw = p.cfm && typeof p.cfm === 'object' ? p.cfm : {};
   return {
-    id: asString(p.id, `piece_${Math.random().toString(36).slice(2, 10)}`),
+    id: asString(p.id, crypto.randomUUID()),
     topicId: asString(p.topicId, ''),
     format,
     channel,
@@ -65,7 +65,7 @@ export function normalizeTopic(raw: any): Topic {
   const t = raw && typeof raw === 'object' ? raw : {};
   const stage = ['C0', 'C1', 'C2', 'C3'].includes(t.funnelStage) ? t.funnelStage : 'C1';
   return {
-    id: asString(t.id, `topic_${Math.random().toString(36).slice(2, 10)}`),
+    id: asString(t.id, crypto.randomUUID()),
     title: asString(t.title, 'Tema sem título'),
     summary: asString(t.summary, ''),
     funnelStage: stage,

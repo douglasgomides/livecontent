@@ -8,7 +8,8 @@ import type { PublishJob, ContentPiece, ContentChannel } from '@/types/session';
 import { FORMAT_CHANNEL } from './contentFormats';
 import { getJobs, upsertJob, deleteJob as storeDeleteJob } from './store';
 
-const uid = () => Math.random().toString(36).slice(2, 10);
+// UUID de verdade — publish_jobs.id é coluna UUID no Postgres.
+const uid = () => crypto.randomUUID();
 
 export function loadJobs(): PublishJob[] {
   return getJobs();

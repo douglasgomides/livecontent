@@ -21,7 +21,8 @@ export interface ScheduledPost {
   createdAt: string;
 }
 
-const uid = () => Math.random().toString(36).slice(2, 10);
+// UUID de verdade — publish_jobs.id é coluna UUID no Postgres.
+const uid = () => crypto.randomUUID();
 
 function jobToScheduled(j: PublishJob): ScheduledPost | null {
   if (!j.scheduledAt) return null;
