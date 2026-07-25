@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import type { Session, SessionStatus, ContentFormat, Topic } from '@/types/session';
 import { getSession, upsertSession, loadProfile } from '@/lib/storage';
-import { seedPipeline, generateContentFor } from '@/lib/pipeline';
+import { seedPipeline, generateContentFor, retryPipeline } from '@/lib/pipeline';
 import { loadBrain } from '@/lib/brainStorage';
+import { useStoreVersion } from '@/lib/store';
+import { toast } from 'sonner';
 
 import AnonymizationReview from '@/components/session/AnonymizationReview';
 import TopicsReview from '@/components/session/TopicsReview';
@@ -12,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import FormatPicker from '@/components/session/FormatPicker';
 import { RECOMMENDED_FORMATS } from '@/lib/contentFormats';
-import { ArrowLeft, Check, Circle, Loader2, Sparkles, FlaskConical, BookOpen, FileText } from 'lucide-react';
+import { ArrowLeft, Check, Circle, Loader2, Sparkles, FlaskConical, BookOpen, FileText, AlertTriangle, RefreshCw } from 'lucide-react';
 
 const ALL_STAGES: { id: SessionStatus; label: string }[] = [
   { id: 'transcribing', label: 'Transcrição' },
