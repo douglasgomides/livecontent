@@ -1,11 +1,11 @@
 import { useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Upload, ArrowLeft, FileAudio, X } from 'lucide-react';
+import { Upload, ArrowLeft, FileAudio, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { upsertSession } from '@/lib/storage';
-import { createBlankSession } from '@/lib/pipeline';
+import { createBlankSession, uploadAudioForSession, runPipeline } from '@/lib/pipeline';
 import { toast } from 'sonner';
 
 const ACCEPTED = ['audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/m4a', 'audio/x-m4a', 'audio/wav', 'audio/wave', 'audio/webm', 'audio/ogg'];
@@ -18,6 +18,7 @@ export default function UploadAudio() {
   const [title, setTitle] = useState('');
   const [duration, setDuration] = useState<number>(0);
   const [dragOver, setDragOver] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const handleFile = (f: File) => {
     if (!ACCEPTED.includes(f.type) && !/\.(mp3|m4a|wav|webm|ogg)$/i.test(f.name)) {
@@ -34,13 +35,26 @@ export default function UploadAudio() {
     audio.onloadedmetadata = () => setDuration(Math.round(audio.duration || 0));
   };
 
-  const submit = () => {
+  const submit = async () => {
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    const session = createBlankSession('upload', duration, url);
+    setUploading(true);
+    const ext = (file.name.split('.').pop() || 'webm').toLowerCase();
+    const session = createBlankSession('upload', duration);
     session.title = title || session.title;
-    upsertSession(session);
-    nav(`/app/session/${session.id}`);
+    try {
+      const path = await uploadAudioForSession(session.id, file, ext);
+      session.audioUrl = path;
+      session.status = 'transcribing';
+      upsertSession(session);
+      runPipeline(session.id).catch(err => {
+        console.error('[pipeline]', err);
+        toast.error('Falha ao iniciar pipeline. Você pode tentar novamente na sessão.');
+      });
+      nav(`/app/session/${session.id}`);
+    } catch (err: any) {
+      toast.error(`Falha no upload: ${err?.message ?? err}`);
+      setUploading(false);
+    }
   };
 
   return (
@@ -52,17 +66,17 @@ export default function UploadAudio() {
       <div>
         <p className="text-primary text-xs tracking-[0.3em] uppercase mb-2">Upload de áudio</p>
         <h1 className="font-serif text-4xl mb-2">Envie uma consulta já gravada</h1>
-        <p className="text-muted-foreground">Aceita MP3, M4A, WAV ou WebM. O áudio fica local no seu dispositivo.</p>
+        <p className="text-muted-foreground">Aceita MP3, M4A, WAV ou WebM. O áudio fica em armazenamento privado.</p>
       </div>
 
       <div
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
         onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f); }}
-        onClick={() => inputRef.current?.click()}
+        onClick={() => !uploading && inputRef.current?.click()}
         className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition ${
           dragOver ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50 hover:bg-primary/5'
-        }`}
+        } ${uploading ? 'opacity-50 pointer-events-none' : ''}`}
       >
         <input
           ref={inputRef}
@@ -103,9 +117,9 @@ export default function UploadAudio() {
       )}
 
       <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={() => nav('/app')}>Cancelar</Button>
-        <Button disabled={!file} onClick={submit} className="bg-gold-gradient text-primary-foreground">
-          Processar áudio
+        <Button variant="outline" onClick={() => nav('/app')} disabled={uploading}>Cancelar</Button>
+        <Button disabled={!file || uploading} onClick={submit} className="bg-gold-gradient text-primary-foreground">
+          {uploading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enviando...</> : 'Processar áudio'}
         </Button>
       </div>
     </div>

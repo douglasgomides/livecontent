@@ -4,11 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { saveProfile } from '@/lib/storage';
-import type { DoctorProfile } from '@/types/session';
+import { loadBrain, saveBrain } from '@/lib/brainStorage';
+import type { Brain } from '@/types/brain';
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 
-const TONES: { id: DoctorProfile['tone']; label: string; desc: string }[] = [
+const TONES: { id: Brain['doctor']['tone']; label: string; desc: string }[] = [
   { id: 'didactic', label: 'Didático', desc: 'Explica passo a passo, evita jargão.' },
   { id: 'empathetic', label: 'Empático', desc: 'Acolhe primeiro, informa depois.' },
   { id: 'direct', label: 'Direto', desc: 'Vai ao ponto, sem enrolação.' },
@@ -18,17 +18,27 @@ const TONES: { id: DoctorProfile['tone']; label: string; desc: string }[] = [
 export default function Onboarding() {
   const nav = useNavigate();
   const [step, setStep] = useState(0);
-  const [data, setData] = useState<DoctorProfile>({ name: '', specialty: '', idealPatient: '', tone: 'didactic', onboarded: false });
+  const initial = loadBrain();
+  const [name, setName] = useState(initial.doctor.name);
+  const [specialty, setSpecialty] = useState(initial.doctor.specialty);
+  const [idealPatient, setIdealPatient] = useState(initial.patient.demographic);
+  const [tone, setTone] = useState<Brain['doctor']['tone']>(initial.doctor.tone || 'didactic');
 
   const canNext = () => {
-    if (step === 0) return data.name.trim().length > 0;
-    if (step === 1) return data.specialty.trim().length > 0;
-    if (step === 2) return data.idealPatient.trim().length > 20;
+    if (step === 0) return name.trim().length > 0;
+    if (step === 1) return specialty.trim().length > 0;
+    if (step === 2) return idealPatient.trim().length > 20;
     return true;
   };
 
   const finish = () => {
-    saveProfile({ ...data, onboarded: true });
+    const brain: Brain = {
+      ...initial,
+      doctor: { ...initial.doctor, name: name.trim(), specialty: specialty.trim(), tone },
+      patient: { ...initial.patient, demographic: idealPatient.trim() },
+      onboarded: true,
+    };
+    saveBrain(brain);
     nav('/app');
   };
 
@@ -51,7 +61,7 @@ export default function Onboarding() {
               </div>
               <div className="space-y-2">
                 <Label>Nome</Label>
-                <Input autoFocus value={data.name} onChange={e => setData({ ...data, name: e.target.value })} placeholder="Dra. Ana Ferreira" />
+                <Input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="Dra. Ana Ferreira" />
               </div>
             </div>
           )}
@@ -64,7 +74,7 @@ export default function Onboarding() {
               </div>
               <div className="space-y-2">
                 <Label>Especialidade</Label>
-                <Input autoFocus value={data.specialty} onChange={e => setData({ ...data, specialty: e.target.value })} placeholder="Ortopedia, Dermatologia, Cardiologia..." />
+                <Input autoFocus value={specialty} onChange={e => setSpecialty(e.target.value)} placeholder="Ortopedia, Dermatologia, Cardiologia..." />
               </div>
             </div>
           )}
@@ -73,9 +83,9 @@ export default function Onboarding() {
               <div>
                 <p className="text-primary text-xs tracking-[0.3em] uppercase mb-3">Passo 3 de 4</p>
                 <h2 className="font-serif text-4xl mb-3">Seu paciente ideal</h2>
-                <p className="text-muted-foreground">Quem você quer atrair? Descreva com suas palavras — quanto mais específico, melhor o conteúdo.</p>
+                <p className="text-muted-foreground">Quem você quer atrair? Descreva com suas palavras.</p>
               </div>
-              <Textarea rows={5} value={data.idealPatient} onChange={e => setData({ ...data, idealPatient: e.target.value })} placeholder="Ex: mulher 35-55 anos, com dor crônica, já passou por outros médicos, quer entender antes de operar..." />
+              <Textarea rows={5} value={idealPatient} onChange={e => setIdealPatient(e.target.value)} placeholder="Ex: mulher 35-55 anos, com dor crônica..." />
             </div>
           )}
           {step === 3 && (
@@ -89,12 +99,12 @@ export default function Onboarding() {
                 {TONES.map(t => (
                   <button
                     key={t.id}
-                    onClick={() => setData({ ...data, tone: t.id })}
-                    className={`text-left p-4 rounded-lg border transition ${data.tone === t.id ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+                    onClick={() => setTone(t.id)}
+                    className={`text-left p-4 rounded-lg border transition ${tone === t.id ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-medium">{t.label}</span>
-                      {data.tone === t.id && <Check className="h-4 w-4 text-primary" />}
+                      {tone === t.id && <Check className="h-4 w-4 text-primary" />}
                     </div>
                     <p className="text-xs text-muted-foreground">{t.desc}</p>
                   </button>

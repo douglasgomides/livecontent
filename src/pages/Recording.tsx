@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mic, Pause, Play, Square, AlertTriangle, CheckCircle2, X } from 'lucide-react';
+import { Mic, Pause, Play, Square, AlertTriangle, CheckCircle2, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { upsertSession } from '@/lib/storage';
-import { createBlankSession } from '@/lib/pipeline';
+import { createBlankSession, uploadAudioForSession, runPipeline } from '@/lib/pipeline';
+import { toast } from 'sonner';
 
-type Status = 'consent' | 'ready' | 'recording' | 'paused';
+type Status = 'consent' | 'ready' | 'recording' | 'paused' | 'uploading';
 
 export default function Recording() {
   const nav = useNavigate();
@@ -60,13 +61,26 @@ export default function Recording() {
   const stop = () => {
     const rec = recorderRef.current;
     if (!rec) return;
-    rec.onstop = () => {
+    rec.onstop = async () => {
       const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-      const url = URL.createObjectURL(blob);
       streamRef.current?.getTracks().forEach(t => t.stop());
-      const session = createBlankSession('recording', duration, url);
-      upsertSession(session);
-      nav(`/app/session/${session.id}`);
+      setStatus('uploading');
+      const session = createBlankSession('recording', duration);
+      try {
+        const path = await uploadAudioForSession(session.id, blob, 'webm');
+        session.audioUrl = path;
+        session.status = 'transcribing';
+        upsertSession(session);
+        // fire-and-forget: Realtime updates UI stepwise
+        runPipeline(session.id).catch(err => {
+          console.error('[pipeline]', err);
+          toast.error('Falha ao iniciar pipeline. Você pode tentar novamente na sessão.');
+        });
+        nav(`/app/session/${session.id}`);
+      } catch (err: any) {
+        toast.error(`Falha no upload: ${err?.message ?? err}`);
+        setStatus('ready');
+      }
     };
     rec.stop();
   };
@@ -83,7 +97,7 @@ export default function Recording() {
             Confirme que o paciente autorizou a gravação para fins educativos e de produção de conteúdo. Nenhum dado identificável será publicado — a anonimização é obrigatória antes da geração.
           </p>
           <ul className="space-y-2 text-sm text-muted-foreground mb-8">
-            <li className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" /> Áudio fica local no seu dispositivo.</li>
+            <li className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" /> Áudio fica em armazenamento privado só seu.</li>
             <li className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" /> Toda PII detectada é apresentada para revisão.</li>
             <li className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" /> Você aprova cada peça antes de exportar.</li>
           </ul>
@@ -111,7 +125,7 @@ export default function Recording() {
           <div className={`h-40 w-40 rounded-full flex items-center justify-center ${
             status === 'recording' ? 'bg-destructive' : status === 'paused' ? 'bg-warning' : 'bg-gold-gradient'
           }`}>
-            <Mic className="h-14 w-14 text-primary-foreground" />
+            {status === 'uploading' ? <Loader2 className="h-14 w-14 text-primary-foreground animate-spin" /> : <Mic className="h-14 w-14 text-primary-foreground" />}
           </div>
         </div>
       </div>
@@ -121,6 +135,7 @@ export default function Recording() {
         {status === 'ready' && 'Aperte para começar'}
         {status === 'recording' && 'Gravando...'}
         {status === 'paused' && 'Pausado'}
+        {status === 'uploading' && 'Enviando áudio e iniciando processamento...'}
       </div>
 
       {error && <div className="text-destructive text-sm mb-4">{error}</div>}
