@@ -64,6 +64,23 @@ export async function searchPubmed(query: string, maxResults = 10): Promise<Pubm
   return (data?.results ?? []) as PubmedResult[];
 }
 
+// ─── Temas em alta (PubMed recente + notícias de saúde BR/internacional) ────
+
+export interface TrendingItem {
+  kind: 'pubmed' | 'news_br' | 'news_intl';
+  title: string;
+  source: string;
+  date: string | null;
+  url: string;
+  evidence_level?: string;
+}
+
+export async function fetchTrendingTopics(query?: string): Promise<{ query: string; results: TrendingItem[] }> {
+  const { data, error } = await supabase.functions.invoke('trending-topics', { body: { query } });
+  if (error) throw new Error(error.message ?? 'Falha ao buscar temas em alta');
+  return { query: data?.query ?? '', results: (data?.results ?? []) as TrendingItem[] };
+}
+
 // ─── Pipeline real (Edge Function) ──────────────────────────────────────────
 
 export async function uploadAudioForSession(sessionId: string, blob: Blob, ext = 'webm'): Promise<string> {

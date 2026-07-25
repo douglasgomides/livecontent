@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { FlaskConical, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,11 +18,19 @@ const KINDS: { id: Kind; label: string }[] = [
   { id: 'other', label: 'Outro' },
 ];
 
+interface PrefillState {
+  prefillText?: string;
+  prefillReference?: string;
+  prefillKind?: Kind;
+}
+
 export default function ScienceToContent() {
   const nav = useNavigate();
-  const [text, setText] = useState('');
-  const [reference, setReference] = useState('');
-  const [kind, setKind] = useState<Kind>('abstract');
+  const location = useLocation();
+  const prefill = (location.state ?? {}) as PrefillState;
+  const [text, setText] = useState(prefill.prefillText ?? '');
+  const [reference, setReference] = useState(prefill.prefillReference ?? '');
+  const [kind, setKind] = useState<Kind>(prefill.prefillKind ?? 'abstract');
 
   const submit = () => {
     if (!text.trim() || !reference.trim()) return;
