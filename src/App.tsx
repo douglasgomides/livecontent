@@ -25,6 +25,8 @@ import Settings from "./pages/Settings";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import EvidenceLibrary from "./pages/EvidenceLibrary";
+import ReferenceStyles from "./pages/ReferenceStyles";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
@@ -89,8 +91,10 @@ const App = () => (
               <Route path="publish-queue" element={<PublishQueue />} />
               <Route path="calendar" element={<CalendarPage />} />
               <Route path="evidence" element={<EvidenceLibrary />} />
+              <Route path="reference-styles" element={<ReferenceStyles />} />
               <Route path="brain" element={<BrainPage />} />
               <Route path="settings" element={<Settings />} />
+              <Route path="admin" element={<Admin />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

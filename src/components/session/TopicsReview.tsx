@@ -1,12 +1,18 @@
-import { useState } from 'react';
-import type { Session, Topic } from '@/types/session';
+import { useEffect, useState } from 'react';
+import type { Session, Topic, ReferenceStyle } from '@/types/session';
 import { upsertSession } from '@/lib/storage';
 import { runPipeline } from '@/lib/pipeline';
+import { fetchReferenceStyles } from '@/lib/db';
+import { getUserId } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Lightbulb } from 'lucide-react';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Lightbulb, LayoutTemplate } from 'lucide-react';
 import { toast } from 'sonner';
 
 const STAGES: Topic['funnelStage'][] = ['C0', 'C1', 'C2', 'C3'];
@@ -19,13 +25,22 @@ const STAGE_HINT: Record<Topic['funnelStage'], string> = {
 
 export default function TopicsReview({ session, onConfirm }: { session: Session; onConfirm: () => void }) {
   const [topics, setTopics] = useState<Topic[]>(session.topics || []);
+  const [styles, setStyles] = useState<ReferenceStyle[]>([]);
+  const [styleId, setStyleId] = useState<string>('none');
   const update = (id: string, patch: Partial<Topic>) => setTopics(t => t.map(x => x.id === id ? { ...x, ...patch } : x));
+
+  useEffect(() => {
+    const uid = getUserId();
+    if (!uid) return;
+    fetchReferenceStyles(uid).then(setStyles).catch(() => {});
+  }, []);
 
   const save = () => {
     upsertSession({ ...session, topics, status: 'generating_content' });
     onConfirm();
     // Retoma o pipeline real no servidor: gera conteúdo para os tópicos confirmados/editados.
-    runPipeline(session.id).catch(err => toast.error(`Falha ao gerar conteúdo: ${err?.message ?? err}`));
+    const referenceStyleId = styleId !== 'none' ? styleId : undefined;
+    runPipeline(session.id, undefined, referenceStyleId).catch(err => toast.error(`Falha ao gerar conteúdo: ${err?.message ?? err}`));
   };
 
   const includedCount = topics.filter(t => t.included).length;
@@ -67,6 +82,24 @@ export default function TopicsReview({ session, onConfirm }: { session: Session;
           </div>
         ))}
       </div>
+
+      {styles.length > 0 && (
+        <div className="border border-border/60 rounded-lg p-4 space-y-2">
+          <Label className="flex items-center gap-1.5 text-sm">
+            <LayoutTemplate className="h-3.5 w-3.5 text-primary" /> Usar uma estrutura de referência (opcional)
+          </Label>
+          <Select value={styleId} onValueChange={setStyleId}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Nenhuma — gerar do jeito padrão</SelectItem>
+              {styles.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <p className="text-[11px] text-muted-foreground">
+            Reaproveita o formato/gancho/progressão de uma referência salva — nunca copia o texto original.
+          </p>
+        </div>
+      )}
 
       <div className="flex justify-end">
         <Button onClick={save} disabled={!includedCount} className="bg-gold-gradient text-primary-foreground gold-shadow">

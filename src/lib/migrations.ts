@@ -58,6 +58,8 @@ export function normalizePiece(raw: any): ContentPiece {
         }
       : undefined,
     externalPrompts: p.externalPrompts && typeof p.externalPrompts === 'object' ? p.externalPrompts : undefined,
+    evidenceIds: asArray<string>(p.evidenceIds),
+    referenceStyleId: typeof p.referenceStyleId === 'string' ? p.referenceStyleId : undefined,
   };
 }
 

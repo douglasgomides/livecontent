@@ -1,11 +1,13 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Brain as BrainIcon, ArrowRight, Database, RefreshCw, Download, Trash2, Webhook, LogOut, Upload as UploadIcon } from 'lucide-react';
+import { Brain as BrainIcon, ArrowRight, Database, RefreshCw, Download, Trash2, Webhook, LogOut, Upload as UploadIcon, Crown, Loader2, ExternalLink } from 'lucide-react';
 import { useSessions, loadSessions } from '@/lib/storage';
 import { loadBrain, saveBrain, useBrain } from '@/lib/brainStorage';
 import { getSettings, saveSettings, upsertSession } from '@/lib/store';
 import { useAuth } from '@/contexts/AuthContext';
 import { runMigrations, normalizeSession } from '@/lib/migrations';
+import { fetchSubscription, type Subscription } from '@/lib/db';
+import { startCheckout, openCustomerPortal } from '@/lib/pipeline';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,6 +50,36 @@ export default function Settings() {
   useEffect(() => {
     setWebhooks(getSettings().webhooks as Record<string, string>);
   }, [user?.id]);
+
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [billingBusy, setBillingBusy] = useState(false);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    fetchSubscription(user.id).then(setSubscription).catch(() => {});
+  }, [user?.id]);
+
+  const upgrade = async () => {
+    setBillingBusy(true);
+    try {
+      const url = await startCheckout();
+      window.location.href = url;
+    } catch (err: any) {
+      toast.error(`Falha ao abrir checkout: ${err?.message ?? err}`);
+      setBillingBusy(false);
+    }
+  };
+
+  const manageBilling = async () => {
+    setBillingBusy(true);
+    try {
+      const url = await openCustomerPortal();
+      window.location.href = url;
+    } catch (err: any) {
+      toast.error(`Falha ao abrir portal: ${err?.message ?? err}`);
+      setBillingBusy(false);
+    }
+  };
 
   const stats = useMemo(() => {
     const sessions = loadSessions();
@@ -125,6 +157,38 @@ export default function Settings() {
       <div>
         <h1 className="font-serif text-4xl mb-2">Ajustes</h1>
         <p className="text-muted-foreground">Sua conta: {user?.email}</p>
+      </div>
+
+      <div className="border border-border/60 rounded-lg p-4 flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${
+            subscription?.plan === 'pro' ? 'bg-gold-gradient' : 'bg-secondary'
+          }`}>
+            <Crown className={`h-5 w-5 ${subscription?.plan === 'pro' ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
+          </div>
+          <div>
+            <div className="font-medium text-sm">
+              Plano {subscription?.plan === 'pro' ? 'Pro' : 'Free'}
+              {subscription?.plan === 'pro' && subscription.status === 'active' && (
+                <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-success/15 text-success align-middle">ativo</span>
+              )}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {subscription?.plan === 'pro' ? 'Uso liberado — até 500 gerações/mês' : 'Até 8 gerações/mês. Faça upgrade pra mais.'}
+            </div>
+          </div>
+        </div>
+        {subscription?.plan === 'pro' ? (
+          <Button variant="outline" size="sm" onClick={manageBilling} disabled={billingBusy}>
+            {billingBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <ExternalLink className="h-3.5 w-3.5 mr-1.5" />}
+            Gerenciar assinatura
+          </Button>
+        ) : (
+          <Button size="sm" onClick={upgrade} disabled={billingBusy} className="bg-gold-gradient text-primary-foreground">
+            {billingBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Crown className="h-3.5 w-3.5 mr-1.5" />}
+            Fazer upgrade pra Pro
+          </Button>
+        )}
       </div>
 
       <Link to="/app/brain" className="flex items-center gap-3 border border-primary/40 bg-primary/5 rounded-lg p-4 hover:bg-primary/10 transition">

@@ -10,6 +10,7 @@ import type {
   PublishJob,
   SessionStatus,
   EvidenceSource,
+  ReferenceStyle,
 } from '@/types/session';
 import type { Brain } from '@/types/brain';
 import { EMPTY_BRAIN } from '@/types/brain';
@@ -120,6 +121,8 @@ export async function fetchAllSessions(userId: string): Promise<Session[]> {
       brainSignals: p.brain_signals ?? undefined,
       artwork: p.artwork ?? undefined,
       externalPrompts: p.external_prompts ?? undefined,
+      evidenceIds: p.evidence_ids ?? undefined,
+      referenceStyleId: p.reference_style_id ?? undefined,
     }));
     piecesBySession.set(p.session_id, list);
   });
@@ -184,6 +187,8 @@ export async function upsertSessionDb(userId: string, s: Session): Promise<void>
       brain_signals: (p.brainSignals ?? null) as any,
       artwork: (p.artwork ?? null) as any,
       external_prompts: (p.externalPrompts ?? null) as any,
+      evidence_ids: (p.evidenceIds ?? []) as any,
+      reference_style_id: p.referenceStyleId ?? null,
     }));
     const { error: e3 } = await supabase.from('content_pieces').insert(rows);
     if (e3) throw e3;
@@ -346,4 +351,91 @@ export async function addEvidenceSource(userId: string, s: Omit<EvidenceSource, 
 export async function deleteEvidenceSource(id: string): Promise<void> {
   const { error } = await supabase.from('evidence_sources').delete().eq('id', id);
   if (error) throw error;
+}
+
+// ─── Biblioteca de estilos de referência (estrutura, não conteúdo) ─────────
+
+function mapReferenceStyleRow(row: any): ReferenceStyle {
+  return {
+    id: row.id,
+    name: row.name,
+    formatHint: row.format_hint,
+    sourceType: row.source_type,
+    sourceImagePath: row.source_image_path ?? undefined,
+    sourceText: row.source_text ?? undefined,
+    structureDescription: row.structure_description,
+    createdAt: row.created_at,
+  };
+}
+
+export async function fetchReferenceStyles(userId: string): Promise<ReferenceStyle[]> {
+  const { data, error } = await supabase
+    .from('reference_styles')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(mapReferenceStyleRow);
+}
+
+export async function addReferenceStyle(userId: string, s: {
+  name: string;
+  formatHint: string;
+  sourceType: 'image' | 'text';
+  sourceImagePath?: string;
+  sourceText?: string;
+  structureDescription: string;
+}): Promise<ReferenceStyle> {
+  const { data, error } = await supabase
+    .from('reference_styles')
+    .insert({
+      user_id: userId,
+      name: s.name,
+      format_hint: s.formatHint,
+      source_type: s.sourceType,
+      source_image_path: s.sourceImagePath ?? null,
+      source_text: s.sourceText ?? null,
+      structure_description: s.structureDescription,
+    })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return mapReferenceStyleRow(data);
+}
+
+export async function deleteReferenceStyle(id: string): Promise<void> {
+  const { error } = await supabase.from('reference_styles').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function uploadReferenceImage(userId: string, file: File): Promise<string> {
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage
+    .from('reference-images')
+    .upload(path, file, { contentType: file.type || 'image/jpeg' });
+  if (error) throw error;
+  return path;
+}
+
+// ─── Assinatura / plano ─────────────────────────────────────────────────────
+
+export interface Subscription {
+  plan: 'free' | 'pro';
+  status: 'active' | 'canceled' | 'past_due' | 'none';
+  currentPeriodEnd: string | null;
+}
+
+export async function fetchSubscription(userId: string): Promise<Subscription> {
+  const { data, error } = await supabase
+    .from('subscriptions')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return {
+    plan: (data?.plan as any) ?? 'free',
+    status: (data?.status as any) ?? 'none',
+    currentPeriodEnd: data?.current_period_end ?? null,
+  };
 }
