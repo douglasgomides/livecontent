@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import type { Session, SessionStatus, ContentFormat, Topic } from '@/types/session';
-import { getSession, upsertSession, loadProfile } from '@/lib/storage';
-import { seedPipeline, generateContentFor, retryPipeline } from '@/lib/pipeline';
+import type { Session, SessionStatus } from '@/types/session';
+import { getSession, upsertSession } from '@/lib/storage';
+import { retryPipeline } from '@/lib/pipeline';
 import { loadBrain } from '@/lib/brainStorage';
 import { useStoreVersion } from '@/lib/store';
 import { toast } from 'sonner';
@@ -12,9 +12,7 @@ import TopicsReview from '@/components/session/TopicsReview';
 import ContentPieceCard from '@/components/session/ContentPieceCard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import FormatPicker from '@/components/session/FormatPicker';
-import { RECOMMENDED_FORMATS } from '@/lib/contentFormats';
-import { ArrowLeft, Check, Circle, Loader2, Sparkles, FlaskConical, BookOpen, FileText, AlertTriangle, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Check, Circle, Loader2, Sparkles, FlaskConical, FileText, AlertTriangle, RefreshCw } from 'lucide-react';
 
 const ALL_STAGES: { id: SessionStatus; label: string }[] = [
   { id: 'transcribing', label: 'Transcrição' },
@@ -49,7 +47,6 @@ export default function SessionDetail() {
   const nav = useNavigate();
   useStoreVersion();
   const session: Session | null = id ? getSession(id) || null : null;
-  const [selectedFormats, setSelectedFormats] = useState<ContentFormat[]>(RECOMMENDED_FORMATS);
   const [tab, setTab] = useState<TabId>(() => session ? defaultTabFor(session) : 'pipeline');
   const [retrying, setRetrying] = useState(false);
 
@@ -61,56 +58,10 @@ export default function SessionDetail() {
     if (session) setTab(defaultTabFor(session));
   }, [session?.status]);
 
-  // Auto-advance mocked pipeline
-  useEffect(() => {
-    if (!session) return;
-    const isVoiceNote = session.source === 'voice_note';
-    const skipsAnon = session.source === 'science' || session.source === 'audio_livre' || session.source === 'link';
-    if (session.status === 'transcribing') {
-      const t = setTimeout(() => {
-        const seeded = seedPipeline(session);
-        const nextStatus: SessionStatus = skipsAnon ? 'extracting_topics' : 'anonymizing';
-        const updated: Session = { ...seeded, status: nextStatus };
-        upsertSession(updated); setSession(updated);
-      }, 1400);
-      return () => clearTimeout(t);
-    }
-
-    if (session.status === 'anonymizing') {
-      const t = setTimeout(() => {
-        const updated: Session = { ...session, status: 'anonymization_review' };
-        upsertSession(updated); setSession(updated);
-      }, 1200);
-      return () => clearTimeout(t);
-    }
-    if (session.status === 'extracting_topics') {
-      const t = setTimeout(() => {
-        const updated: Session = { ...session, status: isVoiceNote ? 'generating_content' : 'topics_review' };
-        upsertSession(updated); setSession(updated);
-      }, 1000);
-      return () => clearTimeout(t);
-    }
-  }, [session]);
-
-  const runGeneration = () => {
-    if (!session) return;
-    const profile = loadProfile();
-    const brain = loadBrain();
-    const included = (session.topics || []).filter(t => t.included);
-    const formats = session.source === 'voice_note' ? (['caption'] as ContentFormat[]) : selectedFormats;
-    const pieces = included.flatMap((t: Topic) => generateContentFor(t, formats, profile, session.science, brain));
-    const updated: Session = { ...session, content: pieces, status: 'ready' };
-
-    upsertSession(updated); setSession(updated);
-  };
-
-  useEffect(() => {
-    if (session?.source === 'voice_note' && session.status === 'generating_content' && !session.content) {
-      const t = setTimeout(runGeneration, 800);
-      return () => clearTimeout(t);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.status, session?.source]);
+  // O avanço entre etapas (transcrição -> anonimização -> tópicos -> conteúdo) é
+  // feito pelo backend real (Edge Function run-pipeline) via Realtime — nada é
+  // simulado no cliente. AnonymizationReview e TopicsReview retomam o pipeline
+  // no servidor quando o médico confirma cada checkpoint.
 
   if (!session) {
     return (
@@ -287,28 +238,11 @@ export default function SessionDetail() {
             )}
 
             <TabsContent value="content">
-              {session.status === 'generating_content' && session.source !== 'voice_note' && (
-                <div className="space-y-6">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Sparkles className="h-5 w-5 text-primary" />
-                      <h2 className="font-serif text-2xl">Formatos</h2>
-                    </div>
-                    <p className="text-muted-foreground text-sm">Escolha em quais formatos gerar cada tema selecionado — de post curto a artigo de blog, roteiro de YouTube ou post do Google Meu Negócio.</p>
-                  </div>
-                  <FormatPicker selected={selectedFormats} onChange={setSelectedFormats} />
-                  <div className="flex justify-end">
-                    <Button onClick={runGeneration} disabled={!selectedFormats.length} className="bg-gold-gradient text-primary-foreground gold-shadow">
-                      Gerar conteúdo
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {session.status === 'generating_content' && session.source === 'voice_note' && (
+              {session.status === 'generating_content' && (
                 <div className="border border-border/60 rounded-xl p-12 text-center">
-                  <BookOpen className="h-8 w-8 text-primary mx-auto mb-4" />
-                  <p className="text-lg">Transformando em post…</p>
+                  <Loader2 className="h-8 w-8 text-primary animate-spin mx-auto mb-4" />
+                  <p className="text-lg">Gerando conteúdo…</p>
+                  <p className="text-muted-foreground text-sm mt-1">A IA está escrevendo cada peça no seu tom de voz — isso continua mesmo se você sair desta tela.</p>
                 </div>
               )}
 

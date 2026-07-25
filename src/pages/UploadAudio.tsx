@@ -6,10 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { upsertSession } from '@/lib/storage';
 import { createBlankSession, uploadAudioForSession, runPipeline } from '@/lib/pipeline';
+import { MAX_AUDIO_UPLOAD_MB } from '@/hooks/useAudioRecorder';
 import { toast } from 'sonner';
 
 const ACCEPTED = ['audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/m4a', 'audio/x-m4a', 'audio/wav', 'audio/wave', 'audio/webm', 'audio/ogg'];
-const MAX_MB = 50;
+const MAX_MB = MAX_AUDIO_UPLOAD_MB;
 
 export default function UploadAudio() {
   const nav = useNavigate();

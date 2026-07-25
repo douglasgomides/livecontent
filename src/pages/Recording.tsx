@@ -1,91 +1,61 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mic, Pause, Play, Square, AlertTriangle, CheckCircle2, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { upsertSession } from '@/lib/storage';
 import { createBlankSession, uploadAudioForSession, runPipeline } from '@/lib/pipeline';
+import { useAudioRecorder, extFromMimeType } from '@/hooks/useAudioRecorder';
 import { toast } from 'sonner';
 
-type Status = 'consent' | 'ready' | 'recording' | 'paused' | 'uploading';
+// Sessões de consulta raramente passam de 1h — limite evita arquivos gigantes
+// e serve de rede de segurança mesmo com o bitrate já controlado no hook.
+const MAX_RECORDING_SEC = 60 * 60;
 
 export default function Recording() {
   const nav = useNavigate();
-  const [status, setStatus] = useState<Status>('consent');
-  const [duration, setDuration] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const recorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+  const [consented, setConsented] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
-  useEffect(() => () => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    streamRef.current?.getTracks().forEach(t => t.stop());
-  }, []);
-
-  useEffect(() => {
-    if (status === 'recording') {
-      timerRef.current = setInterval(() => setDuration(d => d + 1), 1000);
-    } else if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
+  const finish = async (result: { blob: Blob; durationSec: number }) => {
+    setUploading(true);
+    const session = createBlankSession('recording', result.durationSec);
+    try {
+      const ext = extFromMimeType(result.blob.type);
+      const path = await uploadAudioForSession(session.id, result.blob, ext);
+      session.audioUrl = path;
+      session.status = 'transcribing';
+      upsertSession(session);
+      // fire-and-forget: Realtime updates UI stepwise
+      runPipeline(session.id).catch(err => {
+        console.error('[pipeline]', err);
+        toast.error('Falha ao iniciar pipeline. Você pode tentar novamente na sessão.');
+      });
+      nav(`/app/session/${session.id}`);
+    } catch (err: any) {
+      toast.error(`Falha no upload: ${err?.message ?? err}`);
+      setUploading(false);
     }
-  }, [status]);
+  };
+
+  const rec = useAudioRecorder({ maxSec: MAX_RECORDING_SEC, onAutoStop: finish });
+  const { duration, error } = rec;
+  // Deriva o status visual direto do hook — nada de estado paralelo duplicado
+  // (evita bug de closure obsoleta se getUserMedia falhar silenciosamente).
+  const status = uploading ? 'uploading' : rec.status === 'idle' ? 'ready' : rec.status === 'stopped' ? 'uploading' : rec.status;
 
   const fmt = (s: number) => `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
 
-  const startCapture = async () => {
-    setError(null);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      const rec = new MediaRecorder(stream);
-      chunksRef.current = [];
-      rec.ondataavailable = (e) => { if (e.data.size) chunksRef.current.push(e.data); };
-      rec.start();
-      recorderRef.current = rec;
-      setStatus('recording');
-    } catch {
-      setError('Não foi possível acessar o microfone. Verifique as permissões do navegador.');
-      setStatus('ready');
-    }
-  };
-
   const togglePause = () => {
-    const rec = recorderRef.current;
-    if (!rec) return;
-    if (status === 'recording') { rec.pause(); setStatus('paused'); }
-    else if (status === 'paused') { rec.resume(); setStatus('recording'); }
+    if (rec.status === 'recording') rec.pause();
+    else if (rec.status === 'paused') rec.resume();
   };
 
-  const stop = () => {
-    const rec = recorderRef.current;
-    if (!rec) return;
-    rec.onstop = async () => {
-      const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-      streamRef.current?.getTracks().forEach(t => t.stop());
-      setStatus('uploading');
-      const session = createBlankSession('recording', duration);
-      try {
-        const path = await uploadAudioForSession(session.id, blob, 'webm');
-        session.audioUrl = path;
-        session.status = 'transcribing';
-        upsertSession(session);
-        // fire-and-forget: Realtime updates UI stepwise
-        runPipeline(session.id).catch(err => {
-          console.error('[pipeline]', err);
-          toast.error('Falha ao iniciar pipeline. Você pode tentar novamente na sessão.');
-        });
-        nav(`/app/session/${session.id}`);
-      } catch (err: any) {
-        toast.error(`Falha no upload: ${err?.message ?? err}`);
-        setStatus('ready');
-      }
-    };
-    rec.stop();
+  const stop = async () => {
+    const r = await rec.stop();
+    if (r) finish(r);
   };
 
-  if (status === 'consent') {
+  if (!consented) {
     return (
       <div className="max-w-lg mx-auto">
         <div className="border border-border/60 rounded-xl p-8 bg-card">
@@ -103,7 +73,7 @@ export default function Recording() {
           </ul>
           <div className="flex gap-3">
             <Button variant="outline" onClick={() => nav('/app')}><X className="h-4 w-4 mr-2" /> Cancelar</Button>
-            <Button className="flex-1 bg-gold-gradient text-primary-foreground" onClick={() => setStatus('ready')}>
+            <Button className="flex-1 bg-gold-gradient text-primary-foreground" onClick={() => setConsented(true)}>
               Paciente consentiu
             </Button>
           </div>
@@ -142,7 +112,7 @@ export default function Recording() {
 
       <div className="flex items-center justify-center gap-4">
         {status === 'ready' && (
-          <Button size="lg" onClick={startCapture} className="bg-gold-gradient text-primary-foreground gold-shadow h-14 px-8">
+          <Button size="lg" onClick={rec.start} className="bg-gold-gradient text-primary-foreground gold-shadow h-14 px-8">
             <Mic className="h-5 w-5 mr-2" /> Começar
           </Button>
         )}

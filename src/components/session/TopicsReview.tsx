@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import type { Session, Topic } from '@/types/session';
 import { upsertSession } from '@/lib/storage';
+import { runPipeline } from '@/lib/pipeline';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Lightbulb } from 'lucide-react';
+import { toast } from 'sonner';
 
 const STAGES: Topic['funnelStage'][] = ['C0', 'C1', 'C2', 'C3'];
 const STAGE_HINT: Record<Topic['funnelStage'], string> = {
@@ -22,6 +24,8 @@ export default function TopicsReview({ session, onConfirm }: { session: Session;
   const save = () => {
     upsertSession({ ...session, topics, status: 'generating_content' });
     onConfirm();
+    // Retoma o pipeline real no servidor: gera conteúdo para os tópicos confirmados/editados.
+    runPipeline(session.id).catch(err => toast.error(`Falha ao gerar conteúdo: ${err?.message ?? err}`));
   };
 
   const includedCount = topics.filter(t => t.included).length;

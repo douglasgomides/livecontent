@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { upsertSession } from '@/lib/storage';
-import { createBlankSession, seedScience } from '@/lib/pipeline';
+import { createBlankSession, runPipeline } from '@/lib/pipeline';
+import { toast } from 'sonner';
 
 type Kind = 'abstract' | 'news' | 'guideline' | 'other';
 
@@ -25,10 +26,13 @@ export default function ScienceToContent() {
 
   const submit = () => {
     if (!text.trim() || !reference.trim()) return;
-    let s = createBlankSession('science');
-    s = seedScience(s, text.trim(), reference.trim(), kind);
-    s.status = 'topics_review';
+    const s = createBlankSession('science');
+    s.title = text.split(/[.!?]/)[0].trim().slice(0, 90) || s.title;
+    s.rawTranscript = text.trim();
+    s.science = { reference: reference.trim(), kind, originalText: text.trim() };
     upsertSession(s);
+    // Extração de tópicos e geração de conteúdo reais rodam no servidor a partir daqui.
+    runPipeline(s.id).catch(err => toast.error(`Pipeline: ${err?.message ?? err}`));
     nav(`/app/session/${s.id}`);
   };
 

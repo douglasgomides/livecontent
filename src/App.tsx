@@ -22,10 +22,13 @@ import LinkImport from "./pages/LinkImport";
 import BrainPage from "./pages/Brain";
 import CalendarPage from "./pages/Calendar";
 import Settings from "./pages/Settings";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
 
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { useBrain } from "./lib/brainStorage";
+import { ErrorBoundary } from "./components/app/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +53,7 @@ const RequireOnboarded = ({ children }: { children: React.ReactNode }) => {
 };
 
 const App = () => (
+  <ErrorBoundary>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -90,6 +94,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

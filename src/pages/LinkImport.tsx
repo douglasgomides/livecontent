@@ -4,7 +4,8 @@ import { ArrowLeft, Link2, Youtube, Instagram, Music, Globe, Sparkles } from 'lu
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { upsertSession } from '@/lib/storage';
-import { createBlankSession } from '@/lib/pipeline';
+import { createBlankSession, runPipeline } from '@/lib/pipeline';
+import { toast } from 'sonner';
 
 type LinkKind = 'youtube' | 'reels' | 'tiktok' | 'article';
 
@@ -44,6 +45,9 @@ export default function LinkImport() {
       `Este é um rascunho baseado no link. Quando você conectar a chave de transcrição (YouTube Data ou Whisper), a transcrição real substitui este texto automaticamente.`,
     ].join('\n');
     upsertSession(s);
+    // Extração de tópicos e geração de conteúdo reais rodam no servidor a partir do
+    // texto/contexto informado (a transcrição de vídeo em si ainda não é automática).
+    runPipeline(s.id).catch(err => toast.error(`Pipeline: ${err?.message ?? err}`));
     nav(`/app/session/${s.id}`);
   };
 

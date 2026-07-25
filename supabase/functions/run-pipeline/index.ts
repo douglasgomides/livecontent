@@ -58,6 +58,19 @@ Deno.serve(async (req) => {
     if (sErr || !session) return json({ error: 'Session not found' }, 404);
     if (session.user_id !== userId) return json({ error: 'Forbidden' }, 403);
 
+    // Limite de uso: cada geração dispara várias chamadas pagas de IA (Claude + Whisper).
+    // Sem isso, uma conta comprometida ou um loop de retry no cliente gera custo ilimitado.
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { count: recentRuns } = await supabase
+      .from('sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('created_at', oneHourAgo);
+    const RATE_LIMIT_PER_HOUR = 20;
+    if ((recentRuns ?? 0) > RATE_LIMIT_PER_HOUR) {
+      return json({ error: 'Limite de gerações por hora atingido. Tente novamente mais tarde.' }, 429);
+    }
+
     const { data: brainRow } = await supabase.from('brains').select('*').eq('user_id', userId).maybeSingle();
     const brain = brainRow ? { doctor: brainRow.doctor, patient: brainRow.patient, brand: brainRow.brand } : null;
 
@@ -72,9 +85,15 @@ Deno.serve(async (req) => {
       await supabase.from('sessions').update({ status: 'failed', error_message: msg }).eq('id', session_id);
     }
 
-    // ── 1. Transcribe (if needed) ────────────────────────────────────────
+    const skipAnon = ['science', 'link', 'audio_livre'].includes(session.source);
+    // 'voice_note' é a nota rápida de 1 post: sem checkpoint de revisão de tópicos,
+    // gera direto uma legenda a partir do único tópico extraído.
+    const isQuickNote = session.source === 'voice_note';
+
+    // ── Fase 1: transcrever (se necessário) ──────────────────────────────
     let rawTranscript: string = session.raw_transcript ?? '';
-    if (!rawTranscript && session.audio_path) {
+    if (!rawTranscript) {
+      if (!session.audio_path) { await setError('No transcript'); return json({ error: 'No transcript' }, 400); }
       if (!openaiKey) { await setError('OPENAI_API_KEY not configured'); return json({ error: 'OPENAI_API_KEY not configured' }, 500); }
       await setStatus('transcribing');
       const { data: blob, error: dlErr } = await supabase.storage.from('consultation-audio').download(session.audio_path);
@@ -93,40 +112,43 @@ Deno.serve(async (req) => {
       rawTranscript = trData.text ?? '';
       await supabase.from('sessions').update({ raw_transcript: rawTranscript }).eq('id', session_id);
     }
-    if (!rawTranscript) { await setError('No transcript'); return json({ error: 'No transcript' }, 400); }
 
-    // ── 2. Anonymize (skip if source is science/link/audio_livre and already anon) ──
+    // ── Fase 2: anonimizar — PARA aqui pra revisão humana ────────────────
+    // Fontes que já chegam sem PII (science/link/audio_livre) pulam direto pra
+    // extração de tópicos NA MESMA chamada, sem checkpoint. As demais (recording/
+    // upload/voice_note) param em 'anonymization_review' e só continuam quando o
+    // médico confirmar na tela — o que dispara uma NOVA chamada a este endpoint.
     let anonymized: string = session.anonymized_transcript ?? '';
-    let piiFindings: any[] = session.pii_findings ?? [];
-    const skipAnon = ['science', 'link', 'audio_livre'].includes(session.source);
     if (!anonymized) {
       if (skipAnon) {
         anonymized = rawTranscript;
+        await supabase.from('sessions').update({ anonymized_transcript: anonymized }).eq('id', session_id);
       } else {
         await setStatus('anonymizing');
-        const anonRes = await claudeJson(anthropicKey, {
-          system: ANON_SYSTEM,
-          user: rawTranscript,
-          maxTokens: 8000,
-        });
+        const anonRes = await claudeJson(anthropicKey, { system: ANON_SYSTEM, user: rawTranscript, maxTokens: 8000 });
+        let piiFindings: any[] = [];
         if (anonRes.ok) {
           anonymized = anonRes.data.anonymized ?? rawTranscript;
           piiFindings = Array.isArray(anonRes.data.findings) ? anonRes.data.findings : [];
         } else {
-          // não bloqueia: usa transcript bruto e loga
+          // não bloqueia: usa transcript bruto e loga — revisão humana ainda vai pegar
           console.warn('[anonymize failed]', anonRes.error);
           anonymized = rawTranscript;
         }
+        await supabase.from('sessions').update({
+          anonymized_transcript: anonymized,
+          pii_findings: piiFindings,
+        }).eq('id', session_id);
+        await setStatus('anonymization_review');
+        return json({ ok: true, stage: 'anonymization_review' });
       }
-      await supabase.from('sessions').update({
-        anonymized_transcript: anonymized,
-        pii_findings: piiFindings,
-      }).eq('id', session_id);
     }
 
-    // ── 3. Extract topics ────────────────────────────────────────────────
+    // ── Fase 3: extrair tópicos — PARA aqui pra revisão humana ───────────
+    // Se já existem tópicos (retomada após confirmação humana), reusa-os tal como
+    // o médico deixou (títulos/resumos editados, inclusão marcada).
     let topics: any[] = [];
-    const { data: existingTopics } = await supabase.from('topics').select('*').eq('session_id', session_id);
+    const { data: existingTopics } = await supabase.from('topics').select('*').eq('session_id', session_id).order('position');
     if (existingTopics && existingTopics.length) {
       topics = existingTopics.map(t => ({
         id: t.id, title: t.title, summary: t.summary, funnelStage: t.funnel_stage, included: t.included,
@@ -156,14 +178,22 @@ Deno.serve(async (req) => {
       topics = (inserted ?? []).map(t => ({
         id: t.id, title: t.title, summary: t.summary, funnelStage: t.funnel_stage, included: t.included,
       }));
+
+      if (!isQuickNote) {
+        await setStatus('topics_review');
+        return json({ ok: true, stage: 'topics_review', topics: topics.length });
+      }
+      // voice_note: sem checkpoint, segue direto pra geração da legenda única.
     }
 
-    // ── 4. Generate content ──────────────────────────────────────────────
+    // ── Fase 4: gerar conteúdo (retomada após confirmação dos tópicos, ou
+    // direto no caso de voice_note) ──────────────────────────────────────
     await setStatus('generating_content');
+    const genFormats = isQuickNote ? ['caption'] : targetFormats;
     const pieces: any[] = [];
     for (const topic of topics) {
       if (topic.included === false) continue;
-      for (const format of targetFormats) {
+      for (const format of genFormats) {
         try {
           const body = await claudeText(anthropicKey, buildGenSystem(format), buildGenUser(topic, format, anonymized, brain));
           const cfm = scoreCFM(body);
@@ -188,9 +218,8 @@ Deno.serve(async (req) => {
       if (pErr) { await setError(pErr.message); return json({ error: pErr.message }, 500); }
     }
 
-    // ── 5. Done ───────────────────────────────────────────────────────────
     await setStatus('ready');
-    return json({ ok: true, topics: topics.length, pieces: pieces.length });
+    return json({ ok: true, stage: 'ready', topics: topics.length, pieces: pieces.length });
   } catch (e) {
     console.error('[run-pipeline]', e);
     return json({ error: String(e?.message ?? e) }, 500);

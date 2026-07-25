@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mic, ArrowLeft, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAudioRecorder } from '@/hooks/useAudioRecorder';
+import { useAudioRecorder, extFromMimeType } from '@/hooks/useAudioRecorder';
 import { upsertSession } from '@/lib/storage';
-import { createBlankSession } from '@/lib/pipeline';
+import { createBlankSession, uploadAudioForSession, runPipeline } from '@/lib/pipeline';
+import { toast } from 'sonner';
 
 export default function VoiceNote() {
   const nav = useNavigate();
@@ -13,10 +14,19 @@ export default function VoiceNote() {
   const maxSec = mode === 'quick' ? 180 : 60 * 60;
   const source = mode === 'quick' ? 'voice_note' : 'audio_livre';
 
-  const finish = (result: { url: string; durationSec: number }) => {
-    const s = createBlankSession(source, result.durationSec, result.url);
-    upsertSession(s);
-    nav(`/app/session/${s.id}`);
+  const finish = async (result: { blob: Blob; durationSec: number }) => {
+    const s = createBlankSession(source, result.durationSec);
+    try {
+      const ext = extFromMimeType(result.blob.type);
+      const path = await uploadAudioForSession(s.id, result.blob, ext);
+      s.audioUrl = path;
+      s.status = 'transcribing';
+      upsertSession(s);
+      runPipeline(s.id).catch(err => toast.error(`Pipeline: ${err?.message ?? err}`));
+      nav(`/app/session/${s.id}`);
+    } catch (err: any) {
+      toast.error(`Falha no upload: ${err?.message ?? err}`);
+    }
   };
 
   const rec = useAudioRecorder({ maxSec, onAutoStop: finish });

@@ -2,6 +2,21 @@ import { useEffect, useRef, useState } from 'react';
 
 export type RecorderStatus = 'idle' | 'recording' | 'paused' | 'stopped';
 
+function pickMimeType(): string {
+  const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
+  return candidates.find(m => (window as any).MediaRecorder?.isTypeSupported?.(m)) || '';
+}
+
+// Limite real da API do Whisper é 25MB por arquivo — deixamos margem de segurança.
+export const MAX_AUDIO_UPLOAD_MB = 24;
+
+export function extFromMimeType(mimeType: string): string {
+  if (mimeType.includes('mp4')) return 'm4a';
+  if (mimeType.includes('ogg')) return 'ogg';
+  if (mimeType.includes('webm')) return 'webm';
+  return 'webm';
+}
+
 export interface UseAudioRecorderOptions {
   maxSec?: number;
   onAutoStop?: (result: { blob: Blob; url: string; durationSec: number }) => void;
@@ -47,7 +62,10 @@ export function useAudioRecorder(opts: UseAudioRecorderOptions = {}) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
-      const rec = new MediaRecorder(stream);
+      // Bitrate fixo e baixo (32kbps, suficiente pra fala/Whisper) para manter o arquivo
+      // previsível — o limite da API do Whisper é 25MB por arquivo, e o bitrate padrão
+      // do navegador varia e não é confiável para consultas longas (30-60min).
+      const rec = new MediaRecorder(stream, { mimeType: pickMimeType(), audioBitsPerSecond: 32_000 });
       chunksRef.current = [];
       rec.ondataavailable = (e) => { if (e.data.size) chunksRef.current.push(e.data); };
       rec.start();
@@ -68,7 +86,7 @@ export function useAudioRecorder(opts: UseAudioRecorderOptions = {}) {
       if (!rec || rec.state === 'inactive') { resolve(null); return; }
       resolverRef.current = resolve as any;
       rec.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        const blob = new Blob(chunksRef.current, { type: rec.mimeType || 'audio/webm' });
         const url = URL.createObjectURL(blob);
         streamRef.current?.getTracks().forEach(t => t.stop());
         setStatus('stopped');

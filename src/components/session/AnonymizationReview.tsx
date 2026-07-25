@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
 import type { Session } from '@/types/session';
 import { upsertSession } from '@/lib/storage';
+import { runPipeline } from '@/lib/pipeline';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Shield, CheckCircle2, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 const TYPE_LABEL = { name: 'Nome', id: 'Identificador', plan: 'Plano', address: 'Endereço', contact: 'Contato', profession: 'Profissão', other: 'Outro' } as const;
 
@@ -33,6 +35,8 @@ export default function AnonymizationReview({ session, onConfirm }: { session: S
   const save = () => {
     upsertSession({ ...session, anonymizedTranscript: text, status: 'extracting_topics' });
     onConfirm();
+    // Retoma o pipeline real no servidor a partir da transcrição (possivelmente editada).
+    runPipeline(session.id).catch(err => toast.error(`Falha ao extrair temas: ${err?.message ?? err}`));
   };
 
   return (

@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mic, Upload, ArrowLeft, Square, FileAudio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAudioRecorder } from '@/hooks/useAudioRecorder';
+import { useAudioRecorder, extFromMimeType, MAX_AUDIO_UPLOAD_MB } from '@/hooks/useAudioRecorder';
 import { upsertSession } from '@/lib/storage';
 import { createBlankSession, uploadAudioForSession, runPipeline } from '@/lib/pipeline';
 import { toast } from 'sonner';
@@ -53,7 +53,7 @@ function RecordMode({ nav }: { nav: ReturnType<typeof useNavigate> }) {
     const s = createBlankSession('audio_livre', r.durationSec);
     try {
       const blob = r.blob ?? await fetch(r.url).then(res => res.blob());
-      const path = await uploadAudioForSession(s.id, blob, 'webm');
+      const path = await uploadAudioForSession(s.id, blob, extFromMimeType(blob.type));
       s.audioUrl = path;
       s.status = 'transcribing';
       upsertSession(s);
@@ -104,6 +104,10 @@ function UploadMode({ nav }: { nav: ReturnType<typeof useNavigate> }) {
 
   const submit = () => {
     if (!file) return;
+    if (file.size > MAX_AUDIO_UPLOAD_MB * 1024 * 1024) {
+      toast.error(`Arquivo muito grande. Máximo ${MAX_AUDIO_UPLOAD_MB}MB (limite da transcrição).`);
+      return;
+    }
     const url = URL.createObjectURL(file);
     const audio = new Audio(url);
     audio.onloadedmetadata = async () => {
