@@ -1,28 +1,53 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Brain as BrainIcon, ArrowRight, Database, RefreshCw, Download, Trash2 } from 'lucide-react';
-import { loadProfile, saveProfile, loadSessions } from '@/lib/storage';
-import { runMigrations } from '@/lib/migrations';
+import { Brain as BrainIcon, ArrowRight, Database, RefreshCw, Download, Trash2, Webhook, LogOut, Upload as UploadIcon } from 'lucide-react';
+import { useSessions, loadSessions } from '@/lib/storage';
+import { loadBrain, saveBrain, useBrain } from '@/lib/brainStorage';
+import { getSettings, saveSettings, upsertSession } from '@/lib/store';
+import { useAuth } from '@/contexts/AuthContext';
+import { runMigrations, normalizeSession } from '@/lib/migrations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import type { DoctorProfile } from '@/types/session';
+import type { Brain } from '@/types/brain';
 import { toast } from 'sonner';
 
-
-
-const TONES: { id: DoctorProfile['tone']; label: string }[] = [
+const TONES: { id: Brain['doctor']['tone']; label: string }[] = [
   { id: 'didactic', label: 'Didático' },
   { id: 'empathetic', label: 'Empático' },
   { id: 'direct', label: 'Direto' },
   { id: 'technical', label: 'Técnico acessível' },
 ];
 
+const CHANNELS: { id: string; label: string; placeholder: string }[] = [
+  { id: 'instagram', label: 'Instagram', placeholder: 'https://hooks.zapier.com/... ou webhook do Make/n8n' },
+  { id: 'linkedin', label: 'LinkedIn', placeholder: 'URL do webhook LinkedIn' },
+  { id: 'youtube', label: 'YouTube', placeholder: 'URL do webhook YouTube' },
+  { id: 'tiktok', label: 'TikTok', placeholder: 'URL do webhook TikTok' },
+  { id: 'blog', label: 'Blog', placeholder: 'URL do webhook Blog (Wordpress etc)' },
+  { id: 'gmb', label: 'Google Meu Negócio', placeholder: 'URL do webhook GMB' },
+  { id: 'doctoralia', label: 'Doctoralia', placeholder: 'URL do webhook Doctoralia' },
+  { id: 'website', label: 'Website', placeholder: 'URL do webhook do site' },
+  { id: 'podcast', label: 'Podcast', placeholder: 'URL do webhook do host de podcast' },
+];
+
 export default function Settings() {
-  const initial = loadProfile() || { name: '', specialty: '', idealPatient: '', tone: 'didactic' as const, onboarded: true };
-  const [data, setData] = useState<DoctorProfile>(initial);
-  const [dataTick, setDataTick] = useState(0);
+  const { signOut, user } = useAuth();
+  useSessions(); // subscribe to store
+  const brain = useBrain();
+
+  const [doctorName, setDoctorName] = useState(brain.doctor.name);
+  const [specialty, setSpecialty] = useState(brain.doctor.specialty);
+  const [demographic, setDemographic] = useState(brain.patient.demographic);
+  const [tone, setTone] = useState<Brain['doctor']['tone']>(brain.doctor.tone || 'didactic');
+
+  const initialSettings = getSettings();
+  const [webhooks, setWebhooks] = useState<Record<string, string>>(initialSettings.webhooks as Record<string, string>);
+
+  useEffect(() => {
+    setWebhooks(getSettings().webhooks as Record<string, string>);
+  }, [user?.id]);
 
   const stats = useMemo(() => {
     const sessions = loadSessions();
@@ -33,27 +58,25 @@ export default function Settings() {
       if (p.cfm.flags.some(f => f.severity === 'block')) blocked++;
     }));
     return { sessions: sessions.length, pieces, blocked, approved };
-  }, [dataTick]);
+  }, [useSessions().length]);
 
-  const save = () => {
-    saveProfile({ ...data, onboarded: true });
-    toast.success('Ajustes salvos');
+  const savePerfil = () => {
+    saveBrain({
+      ...brain,
+      doctor: { ...brain.doctor, name: doctorName, specialty, tone },
+      patient: { ...brain.patient, demographic },
+      onboarded: true,
+    });
+    toast.success('Perfil salvo');
   };
 
-  const revalidate = () => {
-    const r = runMigrations({ force: true });
-    setDataTick(t => t + 1);
-    toast.success(`Dados revalidados`, {
-      description: `${r.sessions} sessões · ${r.pieces} peças · ${r.fixedPieces} corrigidas${r.dropped ? ` · ${r.dropped} descartadas` : ''}`,
-    });
+  const saveWebhooks = async () => {
+    await saveSettings({ ...initialSettings, webhooks });
+    toast.success('Webhooks salvos');
   };
 
   const exportBackup = () => {
-    const payload = {
-      exportedAt: new Date().toISOString(),
-      sessions: loadSessions(),
-      profile: loadProfile(),
-    };
+    const payload = { exportedAt: new Date().toISOString(), sessions: loadSessions(), brain: loadBrain() };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -63,19 +86,45 @@ export default function Settings() {
     URL.revokeObjectURL(url);
   };
 
-  const clearAll = () => {
-    if (!confirm('Apagar TODAS as sessões, peças e agendamentos locais? Esta ação não pode ser desfeita.')) return;
-    ['cc_sessions', 'cc_schema_version', 'cc_publish_jobs', 'cc_schedule'].forEach(k => localStorage.removeItem(k));
-    setDataTick(t => t + 1);
-    toast.success('Dados locais apagados');
-  };
+  const hasLegacy = useMemo(() => {
+    try {
+      return !!localStorage.getItem('cc_sessions') || !!localStorage.getItem('cc_brain');
+    } catch { return false; }
+  }, []);
 
+  const importLegacy = async () => {
+    try {
+      runMigrations({ force: true });
+      const rawSess = localStorage.getItem('cc_sessions');
+      const rawBrain = localStorage.getItem('cc_brain');
+      let imported = 0;
+      if (rawBrain) {
+        const b = JSON.parse(rawBrain);
+        saveBrain({ ...brain, ...b, onboarded: true });
+      }
+      if (rawSess) {
+        const list = JSON.parse(rawSess);
+        for (const s of list) {
+          const clean = normalizeSession(s);
+          if (clean) { await upsertSession(clean); imported++; }
+        }
+      }
+      localStorage.removeItem('cc_sessions');
+      localStorage.removeItem('cc_brain');
+      localStorage.removeItem('cc_publish_jobs');
+      localStorage.removeItem('cc_schedule');
+      localStorage.removeItem('cc_profile');
+      toast.success(`Importado. ${imported} sessão(ões) enviadas para sua conta.`);
+    } catch (err: any) {
+      toast.error(`Falha ao importar: ${err?.message ?? err}`);
+    }
+  };
 
   return (
     <div className="max-w-2xl space-y-8 pb-24 md:pb-8">
       <div>
         <h1 className="font-serif text-4xl mb-2">Ajustes</h1>
-        <p className="text-muted-foreground">Perfil rápido do médico. Para memória completa (paciente ideal, marca), use a Brain.</p>
+        <p className="text-muted-foreground">Sua conta: {user?.email}</p>
       </div>
 
       <Link to="/app/brain" className="flex items-center gap-3 border border-primary/40 bg-primary/5 rounded-lg p-4 hover:bg-primary/10 transition">
@@ -87,19 +136,18 @@ export default function Settings() {
         <ArrowRight className="h-4 w-4 text-primary shrink-0" />
       </Link>
 
-
       <div className="space-y-5">
         <div className="space-y-2">
           <Label>Nome</Label>
-          <Input value={data.name} onChange={e => setData({ ...data, name: e.target.value })} />
+          <Input value={doctorName} onChange={e => setDoctorName(e.target.value)} />
         </div>
         <div className="space-y-2">
           <Label>Especialidade</Label>
-          <Input value={data.specialty} onChange={e => setData({ ...data, specialty: e.target.value })} />
+          <Input value={specialty} onChange={e => setSpecialty(e.target.value)} />
         </div>
         <div className="space-y-2">
           <Label>Paciente ideal</Label>
-          <Textarea rows={4} value={data.idealPatient} onChange={e => setData({ ...data, idealPatient: e.target.value })} />
+          <Textarea rows={4} value={demographic} onChange={e => setDemographic(e.target.value)} />
         </div>
         <div className="space-y-2">
           <Label>Tom de voz</Label>
@@ -107,26 +155,45 @@ export default function Settings() {
             {TONES.map(t => (
               <button
                 key={t.id}
-                onClick={() => setData({ ...data, tone: t.id })}
-                className={`p-3 rounded-lg border text-sm text-left transition ${data.tone === t.id ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+                onClick={() => setTone(t.id)}
+                className={`p-3 rounded-lg border text-sm text-left transition ${tone === t.id ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
               >
                 {t.label}
               </button>
             ))}
           </div>
         </div>
+        <Button onClick={savePerfil} className="bg-gold-gradient text-primary-foreground">Salvar perfil</Button>
       </div>
 
-      <Button onClick={save} className="bg-gold-gradient text-primary-foreground">Salvar</Button>
+      <div className="border-t border-border pt-8 space-y-4">
+        <div className="flex items-center gap-2">
+          <Webhook className="h-4 w-4 text-primary" />
+          <h2 className="font-serif text-2xl">Webhooks de publicação</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Para cada canal, cole a URL do seu webhook Zapier/Make/n8n. Quando você aprovar e publicar uma peça, o conteúdo é enviado para essa URL.
+        </p>
+        <div className="space-y-3">
+          {CHANNELS.map(c => (
+            <div key={c.id} className="space-y-1.5">
+              <Label className="text-xs">{c.label}</Label>
+              <Input
+                value={webhooks[c.id] ?? ''}
+                onChange={e => setWebhooks(w => ({ ...w, [c.id]: e.target.value }))}
+                placeholder={c.placeholder}
+              />
+            </div>
+          ))}
+        </div>
+        <Button onClick={saveWebhooks} variant="outline" size="sm">Salvar webhooks</Button>
+      </div>
 
       <div className="border-t border-border pt-8 space-y-4">
         <div className="flex items-center gap-2">
           <Database className="h-4 w-4 text-primary" />
-          <h2 className="font-serif text-2xl">Dados locais</h2>
+          <h2 className="font-serif text-2xl">Dados da conta</h2>
         </div>
-        <p className="text-sm text-muted-foreground">
-          Tudo é salvo neste navegador. Use estas ferramentas se algo parecer inconsistente ou antes de trocar de dispositivo.
-        </p>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="border border-border rounded-lg p-3">
@@ -148,16 +215,21 @@ export default function Settings() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={revalidate}>
-            <RefreshCw className="h-3.5 w-3.5 mr-2" /> Revalidar dados
-          </Button>
+          {hasLegacy && (
+            <Button variant="outline" size="sm" onClick={importLegacy} className="border-primary text-primary hover:bg-primary/10">
+              <UploadIcon className="h-3.5 w-3.5 mr-2" /> Importar dados deste navegador
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={exportBackup}>
             <Download className="h-3.5 w-3.5 mr-2" /> Exportar backup
           </Button>
-          <Button variant="outline" size="sm" onClick={clearAll} className="text-destructive hover:text-destructive">
-            <Trash2 className="h-3.5 w-3.5 mr-2" /> Limpar tudo
-          </Button>
         </div>
+      </div>
+
+      <div className="border-t border-border pt-8">
+        <Button variant="outline" onClick={signOut} className="text-destructive hover:text-destructive">
+          <LogOut className="h-4 w-4 mr-2" /> Sair
+        </Button>
       </div>
     </div>
   );

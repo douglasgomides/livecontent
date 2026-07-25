@@ -1,51 +1,26 @@
+/**
+ * brainStorage.ts — Fachada sobre o store para o Brain (3 camadas).
+ * Leituras síncronas do cache; escritas persistem no Postgres.
+ */
 import type { Brain } from '@/types/brain';
 import { EMPTY_BRAIN } from '@/types/brain';
-import { loadProfile } from './storage';
-
-const BRAIN_KEY = 'cc_brain';
+import {
+  getBrain,
+  saveBrain as storeSaveBrain,
+  useStoreVersion,
+} from './store';
 
 export function loadBrain(): Brain {
-  try {
-    const raw = localStorage.getItem(BRAIN_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return mergeBrain(parsed);
-    }
-  } catch {}
-  // migrate from legacy profile
-  const p = loadProfile();
-  if (p) {
-    const brain: Brain = {
-      ...EMPTY_BRAIN,
-      doctor: {
-        ...EMPTY_BRAIN.doctor,
-        name: p.name,
-        specialty: p.specialty,
-        tone: p.tone,
-      },
-      patient: {
-        ...EMPTY_BRAIN.patient,
-        demographic: p.idealPatient,
-      },
-      onboarded: true,
-    };
-    saveBrain(brain);
-    return brain;
-  }
-  return EMPTY_BRAIN;
-}
-
-function mergeBrain(partial: any): Brain {
-  return {
-    doctor: { ...EMPTY_BRAIN.doctor, ...(partial?.doctor || {}) },
-    patient: { ...EMPTY_BRAIN.patient, ...(partial?.patient || {}) },
-    brand: { ...EMPTY_BRAIN.brand, ...(partial?.brand || {}) },
-    onboarded: !!partial?.onboarded,
-  };
+  return getBrain();
 }
 
 export function saveBrain(brain: Brain) {
-  localStorage.setItem(BRAIN_KEY, JSON.stringify(brain));
+  void storeSaveBrain(brain);
+}
+
+export function useBrain(): Brain {
+  useStoreVersion();
+  return getBrain();
 }
 
 const isFilled = (v: any): boolean => {
@@ -57,6 +32,7 @@ const isFilled = (v: any): boolean => {
 export function getCompleteness(brain: Brain): { total: number; doctor: number; patient: number; brand: number } {
   const layerPct = (obj: Record<string, any>) => {
     const keys = Object.keys(obj);
+    if (!keys.length) return 0;
     const filled = keys.filter(k => isFilled(obj[k])).length;
     return Math.round((filled / keys.length) * 100);
   };
@@ -66,3 +42,5 @@ export function getCompleteness(brain: Brain): { total: number; doctor: number; 
   const total = Math.round((doctor + patient + brand) / 3);
   return { total, doctor, patient, brand };
 }
+
+export { EMPTY_BRAIN };

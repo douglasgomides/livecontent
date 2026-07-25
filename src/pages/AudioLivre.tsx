@@ -4,7 +4,8 @@ import { Mic, Upload, ArrowLeft, Square, FileAudio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { upsertSession } from '@/lib/storage';
-import { createBlankSession } from '@/lib/pipeline';
+import { createBlankSession, uploadAudioForSession, runPipeline } from '@/lib/pipeline';
+import { toast } from 'sonner';
 
 type Mode = 'record' | 'upload';
 
@@ -48,10 +49,19 @@ export default function AudioLivre() {
 }
 
 function RecordMode({ nav }: { nav: ReturnType<typeof useNavigate> }) {
-  const finish = (r: { url: string; durationSec: number }) => {
-    const s = createBlankSession('audio_livre', r.durationSec, r.url);
-    upsertSession(s);
-    nav(`/app/session/${s.id}`);
+  const finish = async (r: { url: string; durationSec: number; blob?: Blob }) => {
+    const s = createBlankSession('audio_livre', r.durationSec);
+    try {
+      const blob = r.blob ?? await fetch(r.url).then(res => res.blob());
+      const path = await uploadAudioForSession(s.id, blob, 'webm');
+      s.audioUrl = path;
+      s.status = 'transcribing';
+      upsertSession(s);
+      runPipeline(s.id).catch(err => toast.error(`Pipeline: ${err?.message ?? err}`));
+      nav(`/app/session/${s.id}`);
+    } catch (err: any) {
+      toast.error(`Falha: ${err?.message ?? err}`);
+    }
   };
   const rec = useAudioRecorder({ maxSec: 60 * 60, onAutoStop: finish });
   const stop = async () => { const r = await rec.stop(); if (r) finish(r); };
@@ -96,11 +106,20 @@ function UploadMode({ nav }: { nav: ReturnType<typeof useNavigate> }) {
     if (!file) return;
     const url = URL.createObjectURL(file);
     const audio = new Audio(url);
-    audio.onloadedmetadata = () => {
-      const s = createBlankSession('audio_livre', Math.round(audio.duration || 0), url);
+    audio.onloadedmetadata = async () => {
+      const s = createBlankSession('audio_livre', Math.round(audio.duration || 0));
       s.title = `${file.name.replace(/\.[^.]+$/, '')} — áudio livre`;
-      upsertSession(s);
-      nav(`/app/session/${s.id}`);
+      const ext = (file.name.split('.').pop() || 'webm').toLowerCase();
+      try {
+        const path = await uploadAudioForSession(s.id, file, ext);
+        s.audioUrl = path;
+        s.status = 'transcribing';
+        upsertSession(s);
+        runPipeline(s.id).catch(err => toast.error(`Pipeline: ${err?.message ?? err}`));
+        nav(`/app/session/${s.id}`);
+      } catch (err: any) {
+        toast.error(`Falha no upload: ${err?.message ?? err}`);
+      }
     };
   };
 
