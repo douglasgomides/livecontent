@@ -1,6 +1,6 @@
 // transcribe-audio — chama OpenAI Whisper para transcrever áudio a partir do Storage.
 // Requer: OPENAI_API_KEY em Project Settings → Secrets.
-import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 Deno.serve(async (req) => {
