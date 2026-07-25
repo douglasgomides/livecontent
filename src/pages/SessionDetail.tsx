@@ -47,11 +47,14 @@ function defaultTabFor(session: Session): TabId {
 export default function SessionDetail() {
   const { id } = useParams();
   const nav = useNavigate();
-  const [session, setSession] = useState<Session | null>(id ? getSession(id) || null : null);
+  useStoreVersion();
+  const session: Session | null = id ? getSession(id) || null : null;
   const [selectedFormats, setSelectedFormats] = useState<ContentFormat[]>(RECOMMENDED_FORMATS);
   const [tab, setTab] = useState<TabId>(() => session ? defaultTabFor(session) : 'pipeline');
+  const [retrying, setRetrying] = useState(false);
 
   const stages = useMemo(() => session ? stagesFor(session.source) : ALL_STAGES, [session?.source]);
+  const setSession = (s: Session | null) => { if (s) upsertSession(s); };
 
   // Follow the pipeline stage automatically
   useEffect(() => {
