@@ -87,6 +87,7 @@ export interface ContentPiece {
   artwork?: Artwork;
   externalPrompts?: Partial<Record<ExternalPromptTool, string>>;
   evidenceIds?: string[];
+  referenceStyleId?: string;
 }
 
 export type EvidenceLevel =
@@ -105,6 +106,17 @@ export interface EvidenceSource {
   summary?: string;
   tags: string[];
   source: 'manual' | 'pubmed';
+  createdAt: string;
+}
+
+export interface ReferenceStyle {
+  id: string;
+  name: string;
+  formatHint: string;
+  sourceType: 'image' | 'text';
+  sourceImagePath?: string;
+  sourceText?: string;
+  structureDescription: string;
   createdAt: string;
 }
 

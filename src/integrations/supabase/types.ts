@@ -64,6 +64,7 @@ export type Database = {
           rejected: boolean
           rejected_note: string | null
           rejected_reason: string | null
+          reference_style_id: string | null
           session_id: string
           topic_id: string | null
           updated_at: string
@@ -85,6 +86,7 @@ export type Database = {
           rejected?: boolean
           rejected_note?: string | null
           rejected_reason?: string | null
+          reference_style_id?: string | null
           session_id: string
           topic_id?: string | null
           updated_at?: string
@@ -106,6 +108,7 @@ export type Database = {
           rejected?: boolean
           rejected_note?: string | null
           rejected_reason?: string | null
+          reference_style_id?: string | null
           session_id?: string
           topic_id?: string | null
           updated_at?: string
@@ -124,6 +127,13 @@ export type Database = {
             columns: ["topic_id"]
             isOneToOne: false
             referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_pieces_reference_style_id_fkey"
+            columns: ["reference_style_id"]
+            isOneToOne: false
+            referencedRelation: "reference_styles"
             referencedColumns: ["id"]
           },
         ]
@@ -314,6 +324,78 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          created_at: string
+          current_period_end: string | null
+          plan: Database["public"]["Enums"]["plan_tier"]
+          status: Database["public"]["Enums"]["subscription_status"]
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_period_end?: string | null
+          plan?: Database["public"]["Enums"]["plan_tier"]
+          status?: Database["public"]["Enums"]["subscription_status"]
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_period_end?: string | null
+          plan?: Database["public"]["Enums"]["plan_tier"]
+          status?: Database["public"]["Enums"]["subscription_status"]
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reference_styles: {
+        Row: {
+          created_at: string
+          format_hint: string
+          id: string
+          name: string
+          source_image_path: string | null
+          source_text: string | null
+          source_type: string
+          structure_description: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          format_hint?: string
+          id?: string
+          name?: string
+          source_image_path?: string | null
+          source_text?: string | null
+          source_type?: string
+          structure_description?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          format_hint?: string
+          id?: string
+          name?: string
+          source_image_path?: string | null
+          source_text?: string | null
+          source_type?: string
+          structure_description?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       topics: {
         Row: {
           created_at: string
@@ -402,6 +484,7 @@ export type Database = {
         | "guideline"
         | "expert_opinion"
         | "other"
+      plan_tier: "free" | "pro"
       publish_status:
         | "queued"
         | "publishing"
@@ -409,6 +492,7 @@ export type Database = {
         | "needs_connection"
         | "downloaded"
         | "failed"
+      subscription_status: "active" | "canceled" | "past_due" | "none"
       session_source:
         | "recording"
         | "upload"
@@ -589,6 +673,7 @@ export const Constants = {
         "expert_opinion",
         "other",
       ],
+      plan_tier: ["free", "pro"],
       publish_status: [
         "queued",
         "publishing",
@@ -597,6 +682,7 @@ export const Constants = {
         "downloaded",
         "failed",
       ],
+      subscription_status: ["active", "canceled", "past_due", "none"],
       session_source: [
         "recording",
         "upload",

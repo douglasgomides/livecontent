@@ -15,6 +15,8 @@ import {
   CalendarDays,
   Link2,
   Microscope,
+  ShieldCheck,
+  LayoutTemplate,
 } from 'lucide-react';
 
 import {
@@ -50,11 +52,13 @@ const workItems = [
   { title: 'Fila de publicação', url: '/app/publish-queue', icon: Send },
   { title: 'Biblioteca', url: '/app/library', icon: Library },
   { title: 'Evidências', url: '/app/evidence', icon: Microscope },
+  { title: 'Estilos de referência', url: '/app/reference-styles', icon: LayoutTemplate },
 ];
 
 const accountItems = [
   { title: 'Brain', url: '/app/brain', icon: BrainIcon },
   { title: 'Ajustes', url: '/app/settings', icon: Settings },
+  { title: 'Admin', url: '/app/admin', icon: ShieldCheck },
 ];
 
 export function AppSidebar() {

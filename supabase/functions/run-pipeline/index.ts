@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
     if (authErr || !claims?.claims) return json({ error: 'Unauthorized' }, 401);
     const userId = claims.claims.sub;
 
-    const { session_id, formats } = await req.json();
+    const { session_id, formats, reference_style_id } = await req.json();
     if (!session_id) return json({ error: 'Missing session_id' }, 400);
 
     const { data: session, error: sErr } = await supabase
@@ -41,15 +41,32 @@ Deno.serve(async (req) => {
 
     // Limite de uso: cada geração dispara várias chamadas pagas de IA (Claude + Whisper).
     // Sem isso, uma conta comprometida ou um loop de retry no cliente gera custo ilimitado.
+    // Limite por hora (rede de segurança contra abuso/loop) + limite mensal por plano.
+    const { data: subRow } = await supabase.from('subscriptions').select('plan, status').eq('user_id', userId).maybeSingle();
+    const isPro = subRow?.plan === 'pro' && subRow?.status === 'active';
+
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
     const { count: recentRuns } = await supabase
       .from('sessions')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId)
       .gte('created_at', oneHourAgo);
-    const RATE_LIMIT_PER_HOUR = 20;
+    const RATE_LIMIT_PER_HOUR = isPro ? 60 : 20;
     if ((recentRuns ?? 0) > RATE_LIMIT_PER_HOUR) {
       return json({ error: 'Limite de gerações por hora atingido. Tente novamente mais tarde.' }, 429);
+    }
+
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const { count: monthlyRuns } = await supabase
+      .from('sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('created_at', thirtyDaysAgo);
+    const MONTHLY_LIMIT = isPro ? 500 : 8;
+    if ((monthlyRuns ?? 0) > MONTHLY_LIMIT) {
+      return json({ error: isPro
+        ? 'Limite mensal do plano Pro atingido. Fale com o suporte.'
+        : 'Limite do plano Free atingido (8 gerações/mês). Faça upgrade pra Pro em Ajustes.' }, 429);
     }
 
     const { data: brainRow } = await supabase.from('brains').select('*').eq('user_id', userId).maybeSingle();
@@ -65,6 +82,16 @@ Deno.serve(async (req) => {
       .from('evidence_sources').select('*').eq('user_id', userId)
       .order('created_at', { ascending: false }).limit(30);
     const evidence = evidenceRows ?? [];
+
+    // Estrutura de referência (opcional) — o médico escolheu uma peça que gostou.
+    // Reaproveitamos só o PADRÃO estrutural extraído (nunca texto literal da peça original).
+    let referenceStructure: string | null = null;
+    if (reference_style_id) {
+      const { data: refRow } = await supabase
+        .from('reference_styles').select('structure_description')
+        .eq('id', reference_style_id).eq('user_id', userId).maybeSingle();
+      referenceStructure = refRow?.structure_description ?? null;
+    }
 
     async function setStatus(status: string, extra: Record<string, any> = {}) {
       await supabase.from('sessions').update({ status, error_message: null, ...extra }).eq('id', session_id);
@@ -183,7 +210,7 @@ Deno.serve(async (req) => {
       if (topic.included === false) continue;
       for (const format of genFormats) {
         try {
-          const body = await claudeText(anthropicKey, buildGenSystem(format), buildGenUser(topic, format, anonymized, brain, evidence));
+          const body = await claudeText(anthropicKey, buildGenSystem(format), buildGenUser(topic, format, anonymized, brain, evidence, referenceStructure));
           const cfm = await scoreCFMSemantic(anthropicKey, body);
           const evidenceIds = matchCitedEvidence(body, evidence);
           pieces.push({
@@ -195,6 +222,7 @@ Deno.serve(async (req) => {
             body,
             cfm,
             evidence_ids: evidenceIds,
+            reference_style_id: reference_style_id ?? null,
             approved: false,
             rejected: false,
           });
@@ -280,7 +308,7 @@ function matchCitedEvidence(body: string, evidence: any[]): string[] {
     .map(e => e.id);
 }
 
-function buildGenUser(topic: any, _format: string, transcript: string, brain: any, evidence: any[] = []) {
+function buildGenUser(topic: any, _format: string, transcript: string, brain: any, evidence: any[] = [], referenceStructure: string | null = null) {
   const funnelDesc: Record<string, string> = {
     C0: 'não sabe que o problema existe', C1: 'reconhece sintoma, tem crenças erradas',
     C2: 'quer saber o que fazer', C3: 'quase-paciente, precisa de prova',
@@ -288,15 +316,18 @@ function buildGenUser(topic: any, _format: string, transcript: string, brain: an
   const b = brain
     ? `\n\n## Perfil do médico:\n${JSON.stringify(brain).slice(0, 1500)}`
     : '';
+  const refBlock = referenceStructure
+    ? `\n\n## Estrutura de referência a seguir (formato/gancho/progressão/estilo — NUNCA copie frases, só o padrão)\n${referenceStructure}`
+    : '';
   return `## Tema
 Título: ${topic.title}
 Resumo: ${topic.summary}
 Funil: ${topic.funnelStage} — ${funnelDesc[topic.funnelStage] ?? ''}
 
 ## Transcrição base (não copiar literalmente)
-${String(transcript).slice(0, 1500)}${b}${buildEvidenceBlock(evidence)}
+${String(transcript).slice(0, 1500)}${b}${buildEvidenceBlock(evidence)}${refBlock}
 
-Gere o conteúdo agora aplicando todas as regras universais e CFM.`;
+Gere o conteúdo agora aplicando todas as regras universais e CFM${referenceStructure ? ', seguindo a estrutura de referência acima' : ''}.`;
 }
 
 async function claudeText(key: string, system: string, user: string): Promise<string> {
