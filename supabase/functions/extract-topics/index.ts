@@ -1,5 +1,5 @@
 // extract-topics — Claude extrai 2-5 tópicos de conteúdo do transcript anonimizado.
-import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const MODEL = 'claude-sonnet-4-5';
