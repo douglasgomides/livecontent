@@ -73,6 +73,7 @@ function sessionFromRow(
     topics,
     content: pieces,
     science: row.science ?? undefined,
+    errorMessage: row.error_message ?? undefined,
   })!;
 }
 
@@ -141,6 +142,7 @@ export async function upsertSessionDb(userId: string, s: Session): Promise<void>
     anonymized_transcript: s.anonymizedTranscript ?? null,
     pii_findings: (s.piiFindings ?? []) as any,
     science: (s.science ?? null) as any,
+    error_message: s.errorMessage ?? null,
   });
   if (e1) throw e1;
 
@@ -205,6 +207,7 @@ function jobFromRow(row: any): PublishJob {
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    scheduledAt: row.scheduled_at ?? undefined,
     message: row.message ?? undefined,
   };
 }
@@ -219,7 +222,7 @@ export async function fetchJobs(userId: string): Promise<PublishJob[]> {
   return (data ?? []).map(jobFromRow);
 }
 
-export async function upsertJobDb(userId: string, j: PublishJob, scheduledAt?: string | null): Promise<void> {
+export async function upsertJobDb(userId: string, j: PublishJob): Promise<void> {
   const { error } = await supabase.from('publish_jobs').upsert({
     id: j.id,
     user_id: userId,
@@ -230,8 +233,13 @@ export async function upsertJobDb(userId: string, j: PublishJob, scheduledAt?: s
     title: j.title,
     status: j.status,
     message: j.message ?? null,
-    scheduled_at: scheduledAt ?? null,
+    scheduled_at: j.scheduledAt ?? null,
   });
+  if (error) throw error;
+}
+
+export async function deleteJobDb(id: string): Promise<void> {
+  const { error } = await supabase.from('publish_jobs').delete().eq('id', id);
   if (error) throw error;
 }
 

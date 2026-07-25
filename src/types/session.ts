@@ -6,7 +6,8 @@ export type SessionStatus =
   | 'extracting_topics'
   | 'topics_review'
   | 'generating_content'
-  | 'ready';
+  | 'ready'
+  | 'failed';
 
 export type SessionSource = 'recording' | 'upload' | 'voice_note' | 'science' | 'audio_livre' | 'link';
 
@@ -107,6 +108,7 @@ export interface Session {
   topics?: Topic[];
   content?: ContentPiece[];
   science?: ScienceSource;
+  errorMessage?: string;
 }
 
 export interface DoctorProfile {
@@ -130,5 +132,6 @@ export interface PublishJob {
   status: PublishStatus;
   createdAt: string;
   updatedAt: string;
+  scheduledAt?: string;
   message?: string;
 }

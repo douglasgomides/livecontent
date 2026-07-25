@@ -18,6 +18,7 @@ import {
   saveBrainDb,
   fetchJobs,
   upsertJobDb,
+  deleteJobDb,
   fetchSettings,
   saveSettingsDb,
   type DoctorSettings,
@@ -156,14 +157,34 @@ export async function saveBrain(b: Brain): Promise<void> {
   }
 }
 
-export async function upsertJob(j: PublishJob, scheduledAt?: string | null): Promise<void> {
+export async function upsertJob(j: PublishJob): Promise<void> {
   if (!_userId) return;
   _jobs = [j, ..._jobs.filter(x => x.id !== j.id)];
   notify();
   try {
-    await upsertJobDb(_userId, j, scheduledAt);
+    await upsertJobDb(_userId, j);
   } catch (err) {
     console.error('[store] upsertJob failed', err);
+  }
+}
+
+export async function deleteJob(id: string): Promise<void> {
+  _jobs = _jobs.filter(j => j.id !== id);
+  notify();
+  try {
+    await deleteJobDb(id);
+  } catch (err) {
+    console.error('[store] deleteJob failed', err);
+  }
+}
+
+export async function refreshJobs(): Promise<void> {
+  if (!_userId) return;
+  try {
+    _jobs = await fetchJobs(_userId);
+    notify();
+  } catch (err) {
+    console.error('[store] refreshJobs failed', err);
   }
 }
 

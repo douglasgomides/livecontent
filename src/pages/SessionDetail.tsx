@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import type { Session, SessionStatus, ContentFormat, Topic } from '@/types/session';
 import { getSession, upsertSession, loadProfile } from '@/lib/storage';
-import { seedPipeline, generateContentFor } from '@/lib/pipeline';
+import { seedPipeline, generateContentFor, retryPipeline } from '@/lib/pipeline';
 import { loadBrain } from '@/lib/brainStorage';
+import { useStoreVersion } from '@/lib/store';
+import { toast } from 'sonner';
 
 import AnonymizationReview from '@/components/session/AnonymizationReview';
 import TopicsReview from '@/components/session/TopicsReview';
@@ -12,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import FormatPicker from '@/components/session/FormatPicker';
 import { RECOMMENDED_FORMATS } from '@/lib/contentFormats';
-import { ArrowLeft, Check, Circle, Loader2, Sparkles, FlaskConical, BookOpen, FileText } from 'lucide-react';
+import { ArrowLeft, Check, Circle, Loader2, Sparkles, FlaskConical, BookOpen, FileText, AlertTriangle, RefreshCw } from 'lucide-react';
 
 const ALL_STAGES: { id: SessionStatus; label: string }[] = [
   { id: 'transcribing', label: 'Transcrição' },
@@ -45,11 +47,14 @@ function defaultTabFor(session: Session): TabId {
 export default function SessionDetail() {
   const { id } = useParams();
   const nav = useNavigate();
-  const [session, setSession] = useState<Session | null>(id ? getSession(id) || null : null);
+  useStoreVersion();
+  const session: Session | null = id ? getSession(id) || null : null;
   const [selectedFormats, setSelectedFormats] = useState<ContentFormat[]>(RECOMMENDED_FORMATS);
   const [tab, setTab] = useState<TabId>(() => session ? defaultTabFor(session) : 'pipeline');
+  const [retrying, setRetrying] = useState(false);
 
   const stages = useMemo(() => session ? stagesFor(session.source) : ALL_STAGES, [session?.source]);
+  const setSession = (s: Session | null) => { if (s) upsertSession(s); };
 
   // Follow the pipeline stage automatically
   useEffect(() => {
@@ -188,7 +193,7 @@ export default function SessionDetail() {
                 <div className="border border-border/60 rounded-xl p-12 text-center">
                   <Loader2 className="h-8 w-8 text-primary animate-spin mx-auto mb-4" />
                   <p className="text-lg">Processando…</p>
-                  <p className="text-muted-foreground text-sm mt-1">Simulação. Ao conectar as APIs, roda Whisper + Claude aqui.</p>
+                  <p className="text-muted-foreground text-sm mt-1">O pipeline agentico está rodando no servidor. Você pode fechar esta aba — o progresso continua e volta em tempo real.</p>
                 </div>
               )}
               {session.status === 'ready' && (
@@ -197,6 +202,41 @@ export default function SessionDetail() {
                   <div>
                     <div className="font-medium">Pipeline concluído.</div>
                     <div className="text-sm text-muted-foreground">Abra a aba Conteúdo para revisar e aprovar as peças.</div>
+                  </div>
+                </div>
+              )}
+              {session.status === 'failed' && (
+                <div className="border border-destructive/40 bg-destructive/5 rounded-xl p-6 flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium">Pipeline falhou.</div>
+                    <div className="text-sm text-muted-foreground break-words">
+                      {session.errorMessage || 'Uma etapa quebrou. Verifique se as chaves da IA (Anthropic/OpenAI) estão configuradas em Ajustes → Segredos.'}
+                    </div>
+                    <div className="mt-3">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={retrying}
+                        onClick={async () => {
+                          if (!session) return;
+                          setRetrying(true);
+                          try {
+                            await retryPipeline(session.id);
+                            toast.success('Pipeline reiniciado');
+                          } catch (err: any) {
+                            toast.error(`Falhou ao reiniciar: ${err?.message ?? err}`);
+                          } finally {
+                            setRetrying(false);
+                          }
+                        }}
+                      >
+                        {retrying
+                          ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                          : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
+                        Tentar de novo
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}

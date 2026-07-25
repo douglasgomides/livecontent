@@ -9,7 +9,7 @@ const SESSIONS_KEY = 'cc_sessions';
 
 const VALID_STATUS: SessionStatus[] = [
   'recording', 'transcribing', 'anonymizing', 'anonymization_review',
-  'extracting_topics', 'topics_review', 'generating_content', 'ready',
+  'extracting_topics', 'topics_review', 'generating_content', 'ready', 'failed',
 ];
 const VALID_SOURCE: SessionSource[] = ['recording', 'upload', 'voice_note', 'science', 'audio_livre', 'link'];
 const VALID_FORMAT: ContentFormat[] = [
@@ -91,6 +91,7 @@ export function normalizeSession(raw: any): Session | null {
       topics: asArray(s.topics).map(normalizeTopic),
       content: asArray(s.content).map(normalizePiece),
       science: s.science && typeof s.science === 'object' ? s.science : undefined,
+      errorMessage: typeof s.errorMessage === 'string' ? s.errorMessage : undefined,
     };
   } catch (err) {
     console.warn('[migrations] dropping corrupted session', err);
