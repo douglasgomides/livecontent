@@ -6,7 +6,8 @@ import {
   type ScheduledPost,
 } from '@/lib/scheduleStorage';
 import { loadSessions } from '@/lib/storage';
-import { enqueueJobs } from '@/lib/publishQueue';
+import { useStoreVersion } from '@/lib/store';
+import { supabase } from '@/integrations/supabase/client';
 import { CHANNEL_LABEL, FORMAT_ICON } from '@/lib/contentFormats';
 import type { ContentChannel, ContentPiece, Session } from '@/types/session';
 import { Button } from '@/components/ui/button';
@@ -19,8 +20,10 @@ import {
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from '@/components/ui/popover';
-import { ChevronLeft, ChevronRight, Plus, Sparkles, Send, X, ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Sparkles, Send, X, ArrowRight, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+
+const WEBHOOK_CHANNELS = new Set<ContentChannel>(['instagram', 'linkedin', 'youtube', 'tiktok', 'podcast']);
 
 const CHANNEL_COLOR: Record<ContentChannel, string> = {
   instagram: 'bg-[#E1306C]/20 text-[#E1306C] border-[#E1306C]/40',
@@ -56,6 +59,7 @@ function collectApproved(sessions: Session[]): PieceWithCtx[] {
 }
 
 export default function CalendarPage() {
+  useStoreVersion();
   const [view, setView] = useState<'month' | 'week'>(
     typeof window !== 'undefined' && window.innerWidth < 768 ? 'week' : 'month',
   );
@@ -66,12 +70,11 @@ export default function CalendarPage() {
   });
   const [filterChannels, setFilterChannels] = useState<ContentChannel[]>([]);
   const [openDay, setOpenDay] = useState<Date | null>(null);
-  const [tick, setTick] = useState(0);
-  const refresh = () => setTick(t => t + 1);
+  const refresh = () => { /* store notifies re-render automatically */ };
 
-  const sessions = useMemo(() => loadSessions(), [tick]);
-  const allSchedule = useMemo(() => loadSchedule(), [tick]);
-  const approved = useMemo(() => collectApproved(sessions), [tick]);
+  const sessions = useMemo(() => loadSessions(), []);
+  const allSchedule = loadSchedule();
+  const approved = useMemo(() => collectApproved(sessions), [sessions]);
 
   const schedule = filterChannels.length
     ? allSchedule.filter(s => filterChannels.includes(s.channel))
@@ -366,16 +369,35 @@ function DaySheet({
 
 function ScheduledRow({ item, onChange }: { item: ScheduledPost; onChange: () => void }) {
   const Icon = FORMAT_ICON[item.format];
-  const publishNow = () => {
-    // enqueue a job with just channel + a mock piece skeleton
-    const sessions = loadSessions();
-    const s = sessions.find(x => x.id === item.sessionId);
-    const p = s?.content?.find(c => c.id === item.pieceId);
-    if (!p) { toast.error('Peça não encontrada.'); return; }
-    enqueueJobs(p, item.sessionId, [item.channel], item.title);
-    updateScheduled(item.id, { status: 'published' });
-    toast.success('Enviado pra fila de publicação.');
-    onChange();
+  const [busy, setBusy] = useState(false);
+  const isWebhook = WEBHOOK_CHANNELS.has(item.channel);
+
+  const publishNow = async () => {
+    if (isWebhook) {
+      setBusy(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('dispatch-publish-webhook', {
+          body: { job_id: item.id },
+        });
+        if (error) throw error;
+        if ((data as any)?.needs_connection) {
+          toast.warning(`Configure a webhook do ${CHANNEL_LABEL[item.channel]} em Ajustes.`);
+        } else if ((data as any)?.ok) {
+          toast.success('Publicado via webhook');
+        } else {
+          toast.error(`Falhou: ${(data as any)?.message || 'erro'}`);
+        }
+      } catch (err: any) {
+        toast.error(`Erro: ${err?.message ?? err}`);
+      } finally {
+        setBusy(false);
+        onChange();
+      }
+    } else {
+      updateScheduled(item.id, { status: 'published' });
+      toast.success('Marcado como publicado.');
+      onChange();
+    }
   };
   const remove = () => { deleteScheduled(item.id); onChange(); };
   const changeDate = (iso: string) => { updateScheduled(item.id, { scheduledFor: iso }); onChange(); };
