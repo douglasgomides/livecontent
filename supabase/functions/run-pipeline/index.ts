@@ -59,6 +59,13 @@ Deno.serve(async (req) => {
     const preferredFormats: string[] = (settingsRow?.preferred_formats as any) ?? ['caption', 'carousel', 'reel', 'linkedin'];
     const targetFormats: string[] = Array.isArray(formats) && formats.length ? formats : preferredFormats;
 
+    // Biblioteca de evidências do médico — única fonte de citação permitida.
+    // Nunca deixamos o modelo inventar DOI/revista/autor: ou cita algo real daqui, ou não cita nada.
+    const { data: evidenceRows } = await supabase
+      .from('evidence_sources').select('*').eq('user_id', userId)
+      .order('created_at', { ascending: false }).limit(30);
+    const evidence = evidenceRows ?? [];
+
     async function setStatus(status: string, extra: Record<string, any> = {}) {
       await supabase.from('sessions').update({ status, error_message: null, ...extra }).eq('id', session_id);
     }
@@ -176,8 +183,9 @@ Deno.serve(async (req) => {
       if (topic.included === false) continue;
       for (const format of genFormats) {
         try {
-          const body = await claudeText(anthropicKey, buildGenSystem(format), buildGenUser(topic, format, anonymized, brain));
+          const body = await claudeText(anthropicKey, buildGenSystem(format), buildGenUser(topic, format, anonymized, brain, evidence));
           const cfm = await scoreCFMSemantic(anthropicKey, body);
+          const evidenceIds = matchCitedEvidence(body, evidence);
           pieces.push({
             user_id: userId,
             session_id,
@@ -186,6 +194,7 @@ Deno.serve(async (req) => {
             channel: FORMAT_CHANNEL[format] ?? 'instagram',
             body,
             cfm,
+            evidence_ids: evidenceIds,
             approved: false,
             rejected: false,
           });
@@ -246,7 +255,32 @@ const FORMAT_SYS: Record<string, string> = {
 function buildGenSystem(format: string) {
   return `${BASE_RULES}\n\n${FORMAT_SYS[format] ?? FORMAT_SYS.caption}`;
 }
-function buildGenUser(topic: any, _format: string, transcript: string, brain: any) {
+function buildEvidenceBlock(evidence: any[]): string {
+  if (!evidence.length) {
+    return '\n\n## Evidência científica disponível\nNenhuma fonte cadastrada pelo médico. NÃO cite estudo, revista, autor ou dado estatístico específico — fale em termos gerais de prática clínica, sem inventar referência.';
+  }
+  const list = evidence.map((e, i) =>
+    `[${i + 1}] ${e.title}${e.authors ? ` — ${e.authors}` : ''}${e.journal ? ` (${e.journal}${e.year ? `, ${e.year}` : ''})` : ''} · nível: ${e.evidence_level}`
+  ).join('\n');
+  return `\n\n## Evidência científica disponível — ÚNICA fonte permitida pra citação
+${list}
+
+Se for citar um estudo/dado científico, cite APENAS um dos itens acima (pelo título ou achado, em linguagem natural). NUNCA invente DOI, autor, revista ou estatística que não esteja nesta lista. Se nenhum item for relevante pro tema, não cite estudo nenhum — fale em termos gerais sem referência específica.`;
+}
+
+function matchCitedEvidence(body: string, evidence: any[]): string[] {
+  const lower = body.toLowerCase();
+  return evidence
+    .filter(e => {
+      const titleStart = String(e.title || '').slice(0, 24).toLowerCase().trim();
+      const authorSurname = String(e.authors || '').split(/[, ]/)[0].toLowerCase().trim();
+      return (titleStart.length > 6 && lower.includes(titleStart))
+        || (authorSurname.length > 3 && lower.includes(authorSurname));
+    })
+    .map(e => e.id);
+}
+
+function buildGenUser(topic: any, _format: string, transcript: string, brain: any, evidence: any[] = []) {
   const funnelDesc: Record<string, string> = {
     C0: 'não sabe que o problema existe', C1: 'reconhece sintoma, tem crenças erradas',
     C2: 'quer saber o que fazer', C3: 'quase-paciente, precisa de prova',
@@ -260,7 +294,7 @@ Resumo: ${topic.summary}
 Funil: ${topic.funnelStage} — ${funnelDesc[topic.funnelStage] ?? ''}
 
 ## Transcrição base (não copiar literalmente)
-${String(transcript).slice(0, 1500)}${b}
+${String(transcript).slice(0, 1500)}${b}${buildEvidenceBlock(evidence)}
 
 Gere o conteúdo agora aplicando todas as regras universais e CFM.`;
 }

@@ -139,6 +139,7 @@ Deno.serve(async (req) => {
     );
     const { data: claims, error } = await supabase.auth.getClaims(authHeader.replace('Bearer ', ''));
     if (error || !claims?.claims) return json({ error: 'Unauthorized' }, 401);
+    const userId = claims.claims.sub;
 
     const { topic, format, transcript, brain } = await req.json();
     if (!topic || !format) return json({ error: 'Missing topic/format' }, 400);
@@ -152,6 +153,16 @@ Deno.serve(async (req) => {
       C3: 'paciente ou quase-paciente (prova, confiança)',
     };
 
+    const { data: evidenceRows } = await supabase
+      .from('evidence_sources').select('*').eq('user_id', userId)
+      .order('created_at', { ascending: false }).limit(30);
+    const evidence = evidenceRows ?? [];
+    const evidenceBlock = evidence.length
+      ? `\n\n## Evidência científica disponível — ÚNICA fonte permitida pra citação\n${evidence.map((e: any, i: number) =>
+          `[${i + 1}] ${e.title}${e.authors ? ` — ${e.authors}` : ''}${e.journal ? ` (${e.journal}${e.year ? `, ${e.year}` : ''})` : ''} · nível: ${e.evidence_level}`
+        ).join('\n')}\n\nSe for citar um estudo/dado científico, cite APENAS um dos itens acima. NUNCA invente DOI, autor, revista ou estatística que não esteja nesta lista.`
+      : '\n\n## Evidência científica disponível\nNenhuma fonte cadastrada. NÃO cite estudo, revista, autor ou dado estatístico específico — fale em termos gerais, sem inventar referência.';
+
     const userMessage = `
 ## Tema
 Título: ${topic.title}
@@ -160,7 +171,7 @@ Funil: ${topic.funnelStage} — ${funnelDesc[topic.funnelStage] || ''}
 
 ${transcript ? `## Transcrição base (não copiar literalmente)\n${String(transcript).slice(0, 1500)}` : ''}
 
-${buildBrainContext(brain)}
+${buildBrainContext(brain)}${evidenceBlock}
 
 Gere o conteúdo agora no formato solicitado. Aplique todas as regras universais e CFM.
 `.trim();

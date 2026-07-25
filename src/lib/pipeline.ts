@@ -45,6 +45,25 @@ export async function scoreCFMRemote(body: string): Promise<CFMResult> {
   return data as CFMResult;
 }
 
+// ─── Busca real de evidência científica (PubMed) ────────────────────────────
+
+export interface PubmedResult {
+  pubmed_id: string;
+  title: string;
+  authors: string;
+  journal: string;
+  year: number | null;
+  url: string;
+  evidence_level: string;
+  pub_types: string[];
+}
+
+export async function searchPubmed(query: string, maxResults = 10): Promise<PubmedResult[]> {
+  const { data, error } = await supabase.functions.invoke('search-pubmed', { body: { query, maxResults } });
+  if (error) throw new Error(error.message ?? 'Falha na busca do PubMed');
+  return (data?.results ?? []) as PubmedResult[];
+}
+
 // ─── Pipeline real (Edge Function) ──────────────────────────────────────────
 
 export async function uploadAudioForSession(sessionId: string, blob: Blob, ext = 'webm'): Promise<string> {

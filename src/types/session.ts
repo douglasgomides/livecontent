@@ -86,6 +86,26 @@ export interface ContentPiece {
   };
   artwork?: Artwork;
   externalPrompts?: Partial<Record<ExternalPromptTool, string>>;
+  evidenceIds?: string[];
+}
+
+export type EvidenceLevel =
+  | 'meta_analysis' | 'systematic_review' | 'rct' | 'cohort'
+  | 'case_control' | 'case_series' | 'guideline' | 'expert_opinion' | 'other';
+
+export interface EvidenceSource {
+  id: string;
+  title: string;
+  authors?: string;
+  journal?: string;
+  year?: number;
+  url?: string;
+  pubmedId?: string;
+  evidenceLevel: EvidenceLevel;
+  summary?: string;
+  tags: string[];
+  source: 'manual' | 'pubmed';
+  createdAt: string;
 }
 
 export interface ScienceSource {

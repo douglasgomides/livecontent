@@ -24,6 +24,7 @@ import CalendarPage from "./pages/Calendar";
 import Settings from "./pages/Settings";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
+import EvidenceLibrary from "./pages/EvidenceLibrary";
 import NotFound from "./pages/NotFound";
 
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
@@ -63,6 +64,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/termos" element={<Terms />} />
+            <Route path="/privacidade" element={<Privacy />} />
             <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
             <Route
               path="/app"
@@ -85,6 +88,7 @@ const App = () => (
               <Route path="approvals" element={<Approvals />} />
               <Route path="publish-queue" element={<PublishQueue />} />
               <Route path="calendar" element={<CalendarPage />} />
+              <Route path="evidence" element={<EvidenceLibrary />} />
               <Route path="brain" element={<BrainPage />} />
               <Route path="settings" element={<Settings />} />
             </Route>

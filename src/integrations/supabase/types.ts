@@ -56,6 +56,7 @@ export type Database = {
           cfm: Json
           channel: Database["public"]["Enums"]["content_channel"]
           created_at: string
+          evidence_ids: Json
           external_prompts: Json | null
           format: Database["public"]["Enums"]["content_format"]
           id: string
@@ -76,6 +77,7 @@ export type Database = {
           cfm?: Json
           channel: Database["public"]["Enums"]["content_channel"]
           created_at?: string
+          evidence_ids?: Json
           external_prompts?: Json | null
           format: Database["public"]["Enums"]["content_format"]
           id?: string
@@ -96,6 +98,7 @@ export type Database = {
           cfm?: Json
           channel?: Database["public"]["Enums"]["content_channel"]
           created_at?: string
+          evidence_ids?: Json
           external_prompts?: Json | null
           format?: Database["public"]["Enums"]["content_format"]
           id?: string
@@ -124,6 +127,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      evidence_sources: {
+        Row: {
+          authors: string | null
+          created_at: string
+          evidence_level: Database["public"]["Enums"]["evidence_level"]
+          id: string
+          journal: string | null
+          pubmed_id: string | null
+          source: string
+          summary: string | null
+          tags: Json
+          title: string
+          updated_at: string
+          url: string | null
+          user_id: string
+          year: number | null
+        }
+        Insert: {
+          authors?: string | null
+          created_at?: string
+          evidence_level?: Database["public"]["Enums"]["evidence_level"]
+          id?: string
+          journal?: string | null
+          pubmed_id?: string | null
+          source?: string
+          summary?: string | null
+          tags?: Json
+          title: string
+          updated_at?: string
+          url?: string | null
+          user_id: string
+          year?: number | null
+        }
+        Update: {
+          authors?: string | null
+          created_at?: string
+          evidence_level?: Database["public"]["Enums"]["evidence_level"]
+          id?: string
+          journal?: string | null
+          pubmed_id?: string | null
+          source?: string
+          summary?: string | null
+          tags?: Json
+          title?: string
+          updated_at?: string
+          url?: string | null
+          user_id?: string
+          year?: number | null
+        }
+        Relationships: []
       }
       doctor_settings: {
         Row: {
@@ -338,6 +392,16 @@ export type Database = {
         | "gmb"
         | "doctoralia"
         | "website"
+      evidence_level:
+        | "meta_analysis"
+        | "systematic_review"
+        | "rct"
+        | "cohort"
+        | "case_control"
+        | "case_series"
+        | "guideline"
+        | "expert_opinion"
+        | "other"
       publish_status:
         | "queued"
         | "publishing"
@@ -513,6 +577,17 @@ export const Constants = {
         "gmb",
         "doctoralia",
         "website",
+      ],
+      evidence_level: [
+        "meta_analysis",
+        "systematic_review",
+        "rct",
+        "cohort",
+        "case_control",
+        "case_series",
+        "guideline",
+        "expert_opinion",
+        "other",
       ],
       publish_status: [
         "queued",

@@ -180,7 +180,11 @@ export default function Landing() {
       <footer className="relative z-10 border-t border-border/50">
         <div className="max-w-6xl mx-auto px-6 py-8 flex flex-wrap items-center justify-between gap-3 t-micro text-muted-foreground">
           <div>Anonimização de PII · Score CFM · Compliance-by-design</div>
-          <div className="font-serif font-semibold text-sm text-foreground/80">Consulta Creator</div>
+          <div className="flex items-center gap-4">
+            <Link to="/termos" className="hover:text-foreground">Termos de Uso</Link>
+            <Link to="/privacidade" className="hover:text-foreground">Privacidade</Link>
+            <span className="font-serif font-semibold text-sm text-foreground/80">Consulta Creator</span>
+          </div>
         </div>
       </footer>
     </div>

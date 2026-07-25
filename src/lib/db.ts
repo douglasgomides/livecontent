@@ -9,6 +9,7 @@ import type {
   ContentPiece,
   PublishJob,
   SessionStatus,
+  EvidenceSource,
 } from '@/types/session';
 import type { Brain } from '@/types/brain';
 import { EMPTY_BRAIN } from '@/types/brain';
@@ -289,4 +290,60 @@ export async function getAudioSignedUrl(path: string, ttlSec = 3600): Promise<st
     .createSignedUrl(path, ttlSec);
   if (error) throw error;
   return data.signedUrl;
+}
+
+// ─── Biblioteca de evidências científicas ──────────────────────────────────
+
+function mapEvidenceRow(row: any): EvidenceSource {
+  return {
+    id: row.id,
+    title: row.title,
+    authors: row.authors ?? undefined,
+    journal: row.journal ?? undefined,
+    year: row.year ?? undefined,
+    url: row.url ?? undefined,
+    pubmedId: row.pubmed_id ?? undefined,
+    evidenceLevel: row.evidence_level,
+    summary: row.summary ?? undefined,
+    tags: Array.isArray(row.tags) ? row.tags : [],
+    source: row.source,
+    createdAt: row.created_at,
+  };
+}
+
+export async function fetchEvidenceSources(userId: string): Promise<EvidenceSource[]> {
+  const { data, error } = await supabase
+    .from('evidence_sources')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(mapEvidenceRow);
+}
+
+export async function addEvidenceSource(userId: string, s: Omit<EvidenceSource, 'id' | 'createdAt'>): Promise<EvidenceSource> {
+  const { data, error } = await supabase
+    .from('evidence_sources')
+    .insert({
+      user_id: userId,
+      title: s.title,
+      authors: s.authors ?? null,
+      journal: s.journal ?? null,
+      year: s.year ?? null,
+      url: s.url ?? null,
+      pubmed_id: s.pubmedId ?? null,
+      evidence_level: s.evidenceLevel,
+      summary: s.summary ?? null,
+      tags: s.tags as any,
+      source: s.source,
+    })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return mapEvidenceRow(data);
+}
+
+export async function deleteEvidenceSource(id: string): Promise<void> {
+  const { error } = await supabase.from('evidence_sources').delete().eq('id', id);
+  if (error) throw error;
 }

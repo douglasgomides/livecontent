@@ -14,6 +14,7 @@ import {
   Radio,
   CalendarDays,
   Link2,
+  Microscope,
 } from 'lucide-react';
 
 import {
@@ -48,6 +49,7 @@ const workItems = [
   { title: 'Calendário', url: '/app/calendar', icon: CalendarDays },
   { title: 'Fila de publicação', url: '/app/publish-queue', icon: Send },
   { title: 'Biblioteca', url: '/app/library', icon: Library },
+  { title: 'Evidências', url: '/app/evidence', icon: Microscope },
 ];
 
 const accountItems = [
