@@ -108,6 +108,7 @@ export interface Session {
   topics?: Topic[];
   content?: ContentPiece[];
   science?: ScienceSource;
+  errorMessage?: string;
 }
 
 export interface DoctorProfile {
