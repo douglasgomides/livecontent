@@ -1,6 +1,6 @@
 // anonymize-transcript — chama Anthropic Claude para detectar/substituir PII.
 // Requer: ANTHROPIC_API_KEY.
-import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const MODEL = 'claude-sonnet-4-5';
