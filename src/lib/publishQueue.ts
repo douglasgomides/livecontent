@@ -1,16 +1,17 @@
+/**
+ * publishQueue.ts — wrapper síncrono sobre `publish_jobs` (via store).
+ *
+ * Todas as leituras vêm do cache do store (síncrono, hidratado no login).
+ * Escritas atualizam cache + banco (async, otimista) e o Realtime confirma.
+ */
 import type { PublishJob, ContentPiece, ContentChannel } from '@/types/session';
 import { FORMAT_CHANNEL } from './contentFormats';
-
-const KEY = 'cc_publish_queue';
+import { getJobs, upsertJob, deleteJob as storeDeleteJob } from './store';
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 
 export function loadJobs(): PublishJob[] {
-  try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; }
-}
-
-export function saveJobs(jobs: PublishJob[]) {
-  localStorage.setItem(KEY, JSON.stringify(jobs));
+  return getJobs();
 }
 
 export function enqueueJobs(
@@ -20,7 +21,6 @@ export function enqueueJobs(
   topicTitle: string,
 ): PublishJob[] {
   const now = new Date().toISOString();
-  const jobs = loadJobs();
   const created: PublishJob[] = channels.map(ch => ({
     id: uid(),
     pieceId: piece.id,
@@ -33,13 +33,12 @@ export function enqueueJobs(
     updatedAt: now,
     message: initialMessage(ch),
   }));
-  saveJobs([...created, ...jobs]);
+  created.forEach(j => { void upsertJob(j); });
   return created;
 }
 
 function initialStatus(ch: ContentChannel): PublishJob['status'] {
-  if (ch === 'blog' || ch === 'website' || ch === 'doctoralia') return 'downloaded';
-  if (ch === 'gmb') return 'downloaded';
+  if (ch === 'blog' || ch === 'website' || ch === 'doctoralia' || ch === 'gmb') return 'downloaded';
   return 'needs_connection';
 }
 
@@ -53,35 +52,37 @@ function initialMessage(ch: ContentChannel): string {
     case 'gmb':
       return 'Texto pronto. Cole no painel do Google Meu Negócio.';
     case 'instagram':
-      return 'Preview no formato do canal pronto. Conecte sua conta Instagram para publicar.';
+      return 'Configure a webhook do Instagram em Ajustes para publicar.';
     case 'linkedin':
-      return 'Post pronto. Conecte o LinkedIn para publicar direto daqui.';
+      return 'Configure a webhook do LinkedIn em Ajustes para publicar.';
     case 'youtube':
-      return 'Roteiro + capa prontos. Conecte o YouTube para agendar.';
+      return 'Configure a webhook do YouTube em Ajustes para publicar.';
     case 'tiktok':
-      return 'Roteiro + arte pronta. Conecte o TikTok para publicar.';
+      return 'Configure a webhook do TikTok em Ajustes para publicar.';
     case 'podcast':
-      return 'Roteiro pronto. Gere o áudio (Notebook LM ou ElevenLabs) e publique no seu canal.';
+      return 'Roteiro pronto. Gere o áudio (Notebook LM / ElevenLabs) e publique.';
   }
 }
 
 export function updateJob(id: string, patch: Partial<PublishJob>) {
-  const jobs = loadJobs().map(j => j.id === id ? { ...j, ...patch, updatedAt: new Date().toISOString() } : j);
-  saveJobs(jobs);
+  const current = getJobs().find(j => j.id === id);
+  if (!current) return;
+  void upsertJob({ ...current, ...patch, updatedAt: new Date().toISOString() });
 }
 
 export function deleteJob(id: string) {
-  saveJobs(loadJobs().filter(j => j.id !== id));
+  void storeDeleteJob(id);
 }
 
 export function clearFinished() {
-  saveJobs(loadJobs().filter(j => j.status === 'queued' || j.status === 'needs_connection' || j.status === 'publishing'));
+  getJobs()
+    .filter(j => j.status === 'published' || j.status === 'downloaded' || j.status === 'failed')
+    .forEach(j => { void storeDeleteJob(j.id); });
 }
 
 /** Recommended channels for a piece based on format. */
 export function recommendedChannelsForPiece(piece: ContentPiece): ContentChannel[] {
   const primary = FORMAT_CHANNEL[piece.format];
-  // most pieces publish to their own channel only; blog also mirrors on website
   if (piece.format === 'blog') return ['blog', 'website'];
   return [primary];
 }

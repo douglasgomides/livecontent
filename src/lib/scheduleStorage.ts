@@ -1,5 +1,11 @@
+/**
+ * scheduleStorage.ts — agenda editorial derivada de `publish_jobs`.
+ *
+ * Um "ScheduledPost" é uma linha de `publish_jobs` com `scheduledAt` definido.
+ * Isso unifica a fila e o calendário numa fonte de verdade única no banco.
+ */
 import type { ContentPiece, ContentChannel, ContentFormat, PublishJob } from '@/types/session';
-import { loadJobs } from './publishQueue';
+import { getJobs, upsertJob, deleteJob as storeDeleteJob } from './store';
 
 export type ScheduleStatus = 'planned' | 'ready' | 'published';
 
@@ -15,38 +21,29 @@ export interface ScheduledPost {
   createdAt: string;
 }
 
-const KEY = 'cc_schedule';
 const uid = () => Math.random().toString(36).slice(2, 10);
 
+function jobToScheduled(j: PublishJob): ScheduledPost | null {
+  if (!j.scheduledAt) return null;
+  const status: ScheduleStatus =
+    j.status === 'published' ? 'published' : 'planned';
+  return {
+    id: j.id,
+    pieceId: j.pieceId,
+    sessionId: j.sessionId,
+    channel: j.channel,
+    format: j.format,
+    title: j.title,
+    scheduledFor: j.scheduledAt,
+    status,
+    createdAt: j.createdAt,
+  };
+}
+
 export function loadSchedule(): ScheduledPost[] {
-  try {
-    const raw = JSON.parse(localStorage.getItem(KEY) || '[]') as ScheduledPost[];
-    return syncWithQueue(raw);
-  } catch {
-    return [];
-  }
-}
-
-function saveSchedule(items: ScheduledPost[]) {
-  localStorage.setItem(KEY, JSON.stringify(items));
-}
-
-/** If a matching publish job is 'published', reflect it on the schedule. */
-function syncWithQueue(items: ScheduledPost[]): ScheduledPost[] {
-  const jobs = loadJobs();
-  const publishedKeys = new Set(
-    jobs.filter(j => j.status === 'published').map(j => `${j.pieceId}:${j.channel}`),
-  );
-  let dirty = false;
-  const next = items.map(it => {
-    if (it.status !== 'published' && publishedKeys.has(`${it.pieceId}:${it.channel}`)) {
-      dirty = true;
-      return { ...it, status: 'published' as ScheduleStatus };
-    }
-    return it;
-  });
-  if (dirty) localStorage.setItem(KEY, JSON.stringify(next));
-  return next;
+  return getJobs()
+    .map(jobToScheduled)
+    .filter((s): s is ScheduledPost => s !== null);
 }
 
 export function schedulePiece(
@@ -57,27 +54,40 @@ export function schedulePiece(
   topicTitle: string,
 ): ScheduledPost {
   const now = new Date().toISOString();
-  const item: ScheduledPost = {
+  const job: PublishJob = {
     id: uid(),
     pieceId: piece.id,
     sessionId,
     channel,
     format: piece.format,
     title: topicTitle,
-    scheduledFor,
-    status: 'planned',
+    status: 'queued',
     createdAt: now,
+    updatedAt: now,
+    scheduledAt: scheduledFor,
+    message: 'Agendado. Publica quando você clicar em "Publicar" ou no horário definido.',
   };
-  saveSchedule([item, ...loadSchedule()]);
-  return item;
+  void upsertJob(job);
+  return jobToScheduled(job)!;
 }
 
 export function updateScheduled(id: string, patch: Partial<ScheduledPost>) {
-  saveSchedule(loadSchedule().map(s => (s.id === id ? { ...s, ...patch } : s)));
+  const current = getJobs().find(j => j.id === id);
+  if (!current) return;
+  const next: PublishJob = {
+    ...current,
+    scheduledAt: patch.scheduledFor ?? current.scheduledAt,
+    status:
+      patch.status === 'published' ? 'published' :
+      patch.status === 'planned' ? 'queued' :
+      current.status,
+    updatedAt: new Date().toISOString(),
+  };
+  void upsertJob(next);
 }
 
 export function deleteScheduled(id: string) {
-  saveSchedule(loadSchedule().filter(s => s.id !== id));
+  void storeDeleteJob(id);
 }
 
 /** Suggested time-of-day (HH:mm) per channel. */
@@ -100,7 +110,7 @@ export function buildDate(dateISO: string, time: string): string {
   return d.toISOString();
 }
 
-/** Distribute approved+unscheduled pieces across the next 7 days, respecting a light channel cap. */
+/** Distribute approved+unscheduled pieces across the next 7 days. */
 export function autoFillWeek(
   approvedPieces: { piece: ContentPiece; sessionId: string; topicTitle: string }[],
   existing: ScheduledPost[],
@@ -116,7 +126,6 @@ export function autoFillWeek(
   for (const { piece, sessionId, topicTitle } of approvedPieces) {
     if (scheduledPieceIds.has(piece.id)) continue;
     const channel: ContentChannel = (piece as any).channel || 'instagram';
-    // find a day in the next 7 with <2 items for this channel
     let placed = false;
     for (let i = 0; i < 7 && !placed; i++) {
       const idx = (cursor + i) % 7;
@@ -127,23 +136,12 @@ export function autoFillWeek(
       if ((perDayChannel[key][channel] || 0) < 2) {
         perDayChannel[key][channel] = (perDayChannel[key][channel] || 0) + 1;
         const iso = buildDate(day.toISOString(), SUGGESTED_TIME[channel] || '12:00');
-        created.push({
-          id: uid(),
-          pieceId: piece.id,
-          sessionId,
-          channel,
-          format: piece.format,
-          title: topicTitle,
-          scheduledFor: iso,
-          status: 'planned',
-          createdAt: new Date().toISOString(),
-        });
+        created.push(schedulePiece(piece, sessionId, channel, iso, topicTitle));
         placed = true;
         cursor = (idx + 1) % 7;
       }
     }
   }
-  if (created.length) saveSchedule([...created, ...loadSchedule()]);
   return created;
 }
 
