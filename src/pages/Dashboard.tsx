@@ -18,6 +18,7 @@ const STATUS_LABEL: Record<SessionStatus, string> = {
   topics_review: 'Revisar temas',
   generating_content: 'Gerando',
   ready: 'Pronto',
+  failed: 'Falhou',
 };
 
 const entries = [
