@@ -139,8 +139,8 @@ export async function upsertSessionDb(userId: string, s: Session): Promise<void>
     audio_path: s.audioUrl ?? null,
     raw_transcript: s.rawTranscript ?? null,
     anonymized_transcript: s.anonymizedTranscript ?? null,
-    pii_findings: s.piiFindings ?? [],
-    science: s.science ?? null,
+    pii_findings: (s.piiFindings ?? []) as any,
+    science: (s.science ?? null) as any,
   });
   if (e1) throw e1;
 
@@ -177,10 +177,10 @@ export async function upsertSessionDb(userId: string, s: Session): Promise<void>
       rejected: !!p.rejected,
       rejected_reason: p.rejectedReason ?? null,
       rejected_note: p.rejectedNote ?? null,
-      meta: p.meta ?? null,
-      brain_signals: p.brainSignals ?? null,
-      artwork: p.artwork ?? null,
-      external_prompts: p.externalPrompts ?? null,
+      meta: (p.meta ?? null) as any,
+      brain_signals: (p.brainSignals ?? null) as any,
+      artwork: (p.artwork ?? null) as any,
+      external_prompts: (p.externalPrompts ?? null) as any,
     }));
     const { error: e3 } = await supabase.from('content_pieces').insert(rows);
     if (e3) throw e3;
