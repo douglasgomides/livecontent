@@ -1,6 +1,6 @@
 // generate-content — Claude gera o corpo de uma peça de conteúdo por formato.
 // Recebe { topic, format, transcript, brain } e retorna { body }.
-import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const MODEL = 'claude-sonnet-4-5';
