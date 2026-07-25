@@ -198,7 +198,7 @@ export default function PublishQueue() {
 
       <div className="text-[11px] text-muted-foreground border-t border-border/60 pt-4 flex items-start gap-2">
         <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-        <span>Integração real com IG/LinkedIn/YouTube/TikTok fica pra próxima fase — a estrutura de adapter por canal já está pronta pra plugar. Blog/site/GMB/Doctoralia já saem prontos pra copiar e colar.</span>
+        <span>Publicação em IG/LinkedIn/YouTube/TikTok/Podcast usa uma webhook configurável (Zapier/Make/n8n) em Ajustes. Blog, site, GMB e Doctoralia saem prontos pra copiar e colar.</span>
       </div>
     </div>
   );
