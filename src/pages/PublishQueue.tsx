@@ -2,44 +2,41 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { loadJobs, updateJob, deleteJob, clearFinished } from '@/lib/publishQueue';
 import { loadSessions } from '@/lib/storage';
-import { loadSchedule } from '@/lib/scheduleStorage';
+import { useStoreVersion } from '@/lib/store';
 import { CHANNEL_LABEL, FORMAT_LABEL } from '@/lib/contentFormats';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Send, Inbox, CheckCircle2, AlertCircle, Trash2, ArrowRight, RefreshCw, Copy, XCircle, Clock } from 'lucide-react';
+import { Send, Inbox, CheckCircle2, AlertCircle, Trash2, ArrowRight, RefreshCw, Copy, XCircle, Clock, Loader2 } from 'lucide-react';
 import type { PublishJob, PublishStatus, ContentPiece } from '@/types/session';
 import { toast } from 'sonner';
 
 const STATUS_META: Record<PublishStatus, { label: string; cls: string }> = {
-  queued: { label: 'Na fila', cls: 'bg-secondary text-muted-foreground' },
+  queued: { label: 'Agendada', cls: 'bg-secondary text-muted-foreground' },
   publishing: { label: 'Publicando', cls: 'bg-primary/15 text-primary' },
   published: { label: 'Publicado', cls: 'bg-success/15 text-success' },
-  needs_connection: { label: 'Conecte a conta', cls: 'bg-warning/15 text-warning' },
+  needs_connection: { label: 'Configure webhook', cls: 'bg-warning/15 text-warning' },
   downloaded: { label: 'Pronto pra copiar', cls: 'bg-success/15 text-success' },
   failed: { label: 'Falhou', cls: 'bg-destructive/15 text-destructive' },
 };
 
 const fmtDate = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 
+// Channels that require a webhook to publish (others are copy/paste)
+const WEBHOOK_CHANNELS = new Set(['instagram', 'linkedin', 'youtube', 'tiktok', 'podcast']);
+
 export default function PublishQueue() {
-  const [jobs, setJobs] = useState<PublishJob[]>(loadJobs());
+  useStoreVersion(); // re-render on store changes
+  const jobs = loadJobs();
   const [filter, setFilter] = useState<'all' | PublishStatus>('all');
+  const [publishing, setPublishing] = useState<Record<string, boolean>>({});
 
-  const refresh = () => setJobs(loadJobs());
-
-  // Build lookup maps: pieceId -> piece (for body); pieceId -> next scheduled
-  const { pieceMap, schedMap } = useMemo(() => {
+  // Build lookup map: pieceId -> piece (for body)
+  const pieceMap = useMemo(() => {
     const sessions = loadSessions();
-    const pieceMap = new Map<string, ContentPiece>();
-    sessions.forEach(s => s.content?.forEach(p => pieceMap.set(p.id, p)));
-    const schedMap = new Map<string, string>();
-    loadSchedule().forEach(s => {
-      if (s.status !== 'published') {
-        const prev = schedMap.get(s.pieceId);
-        if (!prev || s.scheduledFor < prev) schedMap.set(s.pieceId, s.scheduledFor);
-      }
-    });
-    return { pieceMap, schedMap };
-  }, [jobs]);
+    const m = new Map<string, ContentPiece>();
+    sessions.forEach(s => s.content?.forEach(p => m.set(p.id, p)));
+    return m;
+  }, [jobs.length]);
 
   const filtered = filter === 'all' ? jobs : jobs.filter(j => j.status === filter);
 
@@ -51,26 +48,45 @@ export default function PublishQueue() {
 
   const markPublished = (j: PublishJob) => {
     updateJob(j.id, { status: 'published', message: 'Marcado como publicado manualmente.' });
-    refresh();
     toast.success('Marcado como publicado');
   };
   const markFailed = (j: PublishJob) => {
     updateJob(j.id, { status: 'failed', message: 'Marcado como falho.' });
-    refresh();
   };
-  const remove = (j: PublishJob) => { deleteJob(j.id); refresh(); };
-  const clearDone = () => { clearFinished(); refresh(); toast.success('Fila limpa'); };
+  const remove = (j: PublishJob) => { deleteJob(j.id); };
+  const clearDone = () => { clearFinished(); toast.success('Fila limpa'); };
+
+  const publishNow = async (j: PublishJob) => {
+    setPublishing(p => ({ ...p, [j.id]: true }));
+    try {
+      const { data, error } = await supabase.functions.invoke('dispatch-publish-webhook', {
+        body: { job_id: j.id },
+      });
+      if (error) throw error;
+      if ((data as any)?.needs_connection) {
+        toast.warning(`Configure a webhook do ${CHANNEL_LABEL[j.channel]} em Ajustes.`);
+      } else if ((data as any)?.ok) {
+        toast.success('Publicado via webhook');
+      } else {
+        toast.error(`Falhou: ${(data as any)?.message || 'erro desconhecido'}`);
+      }
+    } catch (err: any) {
+      toast.error(`Erro ao publicar: ${err?.message ?? err}`);
+    } finally {
+      setPublishing(p => ({ ...p, [j.id]: false }));
+    }
+  };
 
   const copyBody = async (j: PublishJob) => {
     const body = pieceMap.get(j.pieceId)?.body || '';
     if (!body) { toast.error('Corpo não encontrado'); return; }
     await navigator.clipboard.writeText(body);
-    if (j.status === 'queued' || j.status === 'downloaded') {
+    if (j.status === 'queued' || j.status === 'needs_connection') {
       updateJob(j.id, { status: 'downloaded', message: 'Copiado. Cole no canal.' });
-      refresh();
     }
     toast.success('Copiado');
   };
+
 
   const copyAllVisible = async () => {
     const chunks = filtered
