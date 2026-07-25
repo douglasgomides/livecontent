@@ -1,6 +1,6 @@
 // dispatch-publish-webhook — dispara um POST para a URL configurada pelo médico
 // para o canal da peça, e grava o resultado no publish_jobs.
-import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 Deno.serve(async (req) => {
