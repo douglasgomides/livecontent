@@ -432,8 +432,9 @@ function ScheduledRow({ item, onChange }: { item: ScheduledPost; onChange: () =>
           className="text-[11px] bg-background border border-border/60 rounded px-2 py-1"
         />
         {item.status !== 'published' && (
-          <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={publishNow}>
-            <Send className="h-3 w-3 mr-1" /> Publicar agora
+          <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={publishNow} disabled={busy}>
+            {busy ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Send className="h-3 w-3 mr-1" />}
+            {isWebhook ? 'Publicar agora' : 'Marcar publicada'}
           </Button>
         )}
       </div>
