@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Landing from "./pages/Landing";
+import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import AppShell from "./components/app/AppShell";
 import Dashboard from "./pages/Dashboard";
@@ -23,14 +24,28 @@ import CalendarPage from "./pages/Calendar";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
-
-import { loadProfile } from "./lib/storage";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { useBrain } from "./lib/brainStorage";
 
 const queryClient = new QueryClient();
 
+const RequireAuth = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading, hydrated } = useAuth();
+  if (loading) return null;
+  if (!user) return <Navigate to="/auth" replace />;
+  if (!hydrated) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-muted-foreground text-sm tracking-widest uppercase animate-pulse">Carregando…</div>
+      </div>
+    );
+  }
+  return <>{children}</>;
+};
+
 const RequireOnboarded = ({ children }: { children: React.ReactNode }) => {
-  const p = loadProfile();
-  if (!p?.onboarded) return <Navigate to="/onboarding" replace />;
+  const brain = useBrain();
+  if (!brain.onboarded) return <Navigate to="/onboarding" replace />;
   return <>{children}</>;
 };
 
@@ -40,31 +55,38 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/onboarding" element={<Onboarding />} />
-          <Route path="/app" element={<RequireOnboarded><AppShell /></RequireOnboarded>}>
-            <Route index element={<Dashboard />} />
-            <Route path="consultas" element={<Consultas />} />
-            <Route path="record" element={<Recording />} />
-            <Route path="new/upload" element={<UploadAudio />} />
-            <Route path="new/voice-note" element={<VoiceNote />} />
-            <Route path="new/audio-livre" element={<AudioLivre />} />
-            <Route path="new/link" element={<LinkImport />} />
-            <Route path="new/science" element={<ScienceToContent />} />
-            <Route path="session/:id" element={<SessionDetail />} />
-            <Route path="library" element={<Library />} />
-            <Route path="approvals" element={<Approvals />} />
-            <Route path="publish-queue" element={<PublishQueue />} />
-            <Route path="calendar" element={<CalendarPage />} />
-            <Route path="brain" element={<BrainPage />} />
-
-
-            <Route path="settings" element={<Settings />} />
-          </Route>
-
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
+            <Route
+              path="/app"
+              element={
+                <RequireAuth>
+                  <RequireOnboarded><AppShell /></RequireOnboarded>
+                </RequireAuth>
+              }
+            >
+              <Route index element={<Dashboard />} />
+              <Route path="consultas" element={<Consultas />} />
+              <Route path="record" element={<Recording />} />
+              <Route path="new/upload" element={<UploadAudio />} />
+              <Route path="new/voice-note" element={<VoiceNote />} />
+              <Route path="new/audio-livre" element={<AudioLivre />} />
+              <Route path="new/link" element={<LinkImport />} />
+              <Route path="new/science" element={<ScienceToContent />} />
+              <Route path="session/:id" element={<SessionDetail />} />
+              <Route path="library" element={<Library />} />
+              <Route path="approvals" element={<Approvals />} />
+              <Route path="publish-queue" element={<PublishQueue />} />
+              <Route path="calendar" element={<CalendarPage />} />
+              <Route path="brain" element={<BrainPage />} />
+              <Route path="settings" element={<Settings />} />
+            </Route>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
