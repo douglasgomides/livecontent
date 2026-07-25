@@ -14,7 +14,299 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      brains: {
+        Row: {
+          brand: Json
+          created_at: string
+          doctor: Json
+          id: string
+          onboarded: boolean
+          patient: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          brand?: Json
+          created_at?: string
+          doctor?: Json
+          id?: string
+          onboarded?: boolean
+          patient?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          brand?: Json
+          created_at?: string
+          doctor?: Json
+          id?: string
+          onboarded?: boolean
+          patient?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      content_pieces: {
+        Row: {
+          approved: boolean
+          artwork: Json | null
+          body: string
+          brain_signals: Json | null
+          cfm: Json
+          channel: Database["public"]["Enums"]["content_channel"]
+          created_at: string
+          external_prompts: Json | null
+          format: Database["public"]["Enums"]["content_format"]
+          id: string
+          meta: Json | null
+          rejected: boolean
+          rejected_note: string | null
+          rejected_reason: string | null
+          session_id: string
+          topic_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approved?: boolean
+          artwork?: Json | null
+          body?: string
+          brain_signals?: Json | null
+          cfm?: Json
+          channel: Database["public"]["Enums"]["content_channel"]
+          created_at?: string
+          external_prompts?: Json | null
+          format: Database["public"]["Enums"]["content_format"]
+          id?: string
+          meta?: Json | null
+          rejected?: boolean
+          rejected_note?: string | null
+          rejected_reason?: string | null
+          session_id: string
+          topic_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approved?: boolean
+          artwork?: Json | null
+          body?: string
+          brain_signals?: Json | null
+          cfm?: Json
+          channel?: Database["public"]["Enums"]["content_channel"]
+          created_at?: string
+          external_prompts?: Json | null
+          format?: Database["public"]["Enums"]["content_format"]
+          id?: string
+          meta?: Json | null
+          rejected?: boolean
+          rejected_note?: string | null
+          rejected_reason?: string | null
+          session_id?: string
+          topic_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_pieces_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_pieces_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      doctor_settings: {
+        Row: {
+          created_at: string
+          preferred_formats: Json
+          updated_at: string
+          user_id: string
+          webhooks: Json
+        }
+        Insert: {
+          created_at?: string
+          preferred_formats?: Json
+          updated_at?: string
+          user_id: string
+          webhooks?: Json
+        }
+        Update: {
+          created_at?: string
+          preferred_formats?: Json
+          updated_at?: string
+          user_id?: string
+          webhooks?: Json
+        }
+        Relationships: []
+      }
+      publish_jobs: {
+        Row: {
+          channel: Database["public"]["Enums"]["content_channel"]
+          created_at: string
+          format: Database["public"]["Enums"]["content_format"]
+          id: string
+          message: string | null
+          piece_id: string
+          scheduled_at: string | null
+          session_id: string
+          status: Database["public"]["Enums"]["publish_status"]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          channel: Database["public"]["Enums"]["content_channel"]
+          created_at?: string
+          format: Database["public"]["Enums"]["content_format"]
+          id?: string
+          message?: string | null
+          piece_id: string
+          scheduled_at?: string | null
+          session_id: string
+          status?: Database["public"]["Enums"]["publish_status"]
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          channel?: Database["public"]["Enums"]["content_channel"]
+          created_at?: string
+          format?: Database["public"]["Enums"]["content_format"]
+          id?: string
+          message?: string | null
+          piece_id?: string
+          scheduled_at?: string | null
+          session_id?: string
+          status?: Database["public"]["Enums"]["publish_status"]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "publish_jobs_piece_id_fkey"
+            columns: ["piece_id"]
+            isOneToOne: false
+            referencedRelation: "content_pieces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publish_jobs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sessions: {
+        Row: {
+          anonymized_transcript: string | null
+          audio_path: string | null
+          created_at: string
+          duration_sec: number
+          error_message: string | null
+          id: string
+          pii_findings: Json
+          raw_transcript: string | null
+          science: Json | null
+          source: Database["public"]["Enums"]["session_source"]
+          status: Database["public"]["Enums"]["session_status"]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          anonymized_transcript?: string | null
+          audio_path?: string | null
+          created_at?: string
+          duration_sec?: number
+          error_message?: string | null
+          id?: string
+          pii_findings?: Json
+          raw_transcript?: string | null
+          science?: Json | null
+          source?: Database["public"]["Enums"]["session_source"]
+          status?: Database["public"]["Enums"]["session_status"]
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          anonymized_transcript?: string | null
+          audio_path?: string | null
+          created_at?: string
+          duration_sec?: number
+          error_message?: string | null
+          id?: string
+          pii_findings?: Json
+          raw_transcript?: string | null
+          science?: Json | null
+          source?: Database["public"]["Enums"]["session_source"]
+          status?: Database["public"]["Enums"]["session_status"]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      topics: {
+        Row: {
+          created_at: string
+          funnel_stage: string
+          id: string
+          included: boolean
+          position: number
+          session_id: string
+          summary: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          funnel_stage?: string
+          id?: string
+          included?: boolean
+          position?: number
+          session_id: string
+          summary?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          funnel_stage?: string
+          id?: string
+          included?: boolean
+          position?: number
+          session_id?: string
+          summary?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topics_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +315,53 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      content_channel:
+        | "instagram"
+        | "linkedin"
+        | "youtube"
+        | "tiktok"
+        | "blog"
+        | "gmb"
+        | "doctoralia"
+        | "website"
+        | "podcast"
+      content_format:
+        | "reel"
+        | "carousel"
+        | "caption"
+        | "stories"
+        | "linkedin"
+        | "blog"
+        | "youtube"
+        | "tiktok"
+        | "podcast"
+        | "gmb"
+        | "doctoralia"
+        | "website"
+      publish_status:
+        | "queued"
+        | "publishing"
+        | "published"
+        | "needs_connection"
+        | "downloaded"
+        | "failed"
+      session_source:
+        | "recording"
+        | "upload"
+        | "voice_note"
+        | "science"
+        | "audio_livre"
+        | "link"
+      session_status:
+        | "recording"
+        | "transcribing"
+        | "anonymizing"
+        | "anonymization_review"
+        | "extracting_topics"
+        | "topics_review"
+        | "generating_content"
+        | "ready"
+        | "failed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +488,59 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      content_channel: [
+        "instagram",
+        "linkedin",
+        "youtube",
+        "tiktok",
+        "blog",
+        "gmb",
+        "doctoralia",
+        "website",
+        "podcast",
+      ],
+      content_format: [
+        "reel",
+        "carousel",
+        "caption",
+        "stories",
+        "linkedin",
+        "blog",
+        "youtube",
+        "tiktok",
+        "podcast",
+        "gmb",
+        "doctoralia",
+        "website",
+      ],
+      publish_status: [
+        "queued",
+        "publishing",
+        "published",
+        "needs_connection",
+        "downloaded",
+        "failed",
+      ],
+      session_source: [
+        "recording",
+        "upload",
+        "voice_note",
+        "science",
+        "audio_livre",
+        "link",
+      ],
+      session_status: [
+        "recording",
+        "transcribing",
+        "anonymizing",
+        "anonymization_review",
+        "extracting_topics",
+        "topics_review",
+        "generating_content",
+        "ready",
+        "failed",
+      ],
+    },
   },
 } as const
