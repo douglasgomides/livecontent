@@ -1,73 +1,42 @@
-# Welcome to your Lovable project
+# Consulta Creator
 
-## Project info
+Sua máquina de conteúdo médico, sempre ligada. Grave consultas, palestras, áudios ou cole
+um link — a ferramenta transcreve, anonimiza dados de paciente, extrai tópicos e gera
+conteúdo pronto pra publicar em vários formatos, com verificação de compliance (CFM)
+integrada.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Stack
 
-## How can I edit this code?
+- Vite + React + TypeScript
+- shadcn-ui + Tailwind CSS
+- Supabase (Postgres, Auth, Storage, Edge Functions)
+- Claude (Anthropic) e Whisper (OpenAI) para o pipeline de IA
 
-There are several ways of editing your application.
+## Rodando localmente
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+Requisitos: Node.js e npm ([instalar com nvm](https://github.com/nvm-sh/nvm#installing-and-updating)).
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# Clone o repositório
+git clone <URL_DO_REPO>
+cd consulta-creator
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Instale as dependências
+npm install
 
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Suba o servidor de desenvolvimento
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Variáveis de ambiente
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Veja `.env` para as chaves do Supabase do projeto. As Edge Functions em
+`supabase/functions/` exigem os secrets `ANTHROPIC_API_KEY` e `OPENAI_API_KEY`
+configurados no backend.
 
-**Use GitHub Codespaces**
+## Build de produção
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+```sh
+npm run build
+npm run preview
+```
