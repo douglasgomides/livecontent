@@ -28,39 +28,21 @@ export function generateContentFor(
   return mockGenerateContentFor(topic, formats, profile, science, brain);
 }
 
-export const rescoreContent = (piece: ContentPiece): ContentPiece => ({
-  ...piece,
-  cfm: scoreCFM(piece.body),
-});
-
 export { createBlankSession, seedPipeline, seedScience };
 
-// ─── CFM (regex local) ──────────────────────────────────────────────────────
+// ─── CFM (scoring semântico via Edge Function — julga contexto, não palavra-chave) ──
 
-const CFM_BLOCKS = [
-  'cura garantida', 'sem risco', 'milagre', 'infalível', 'melhor do brasil',
-  '100% eficaz', 'resultado garantido',
-];
-const CFM_WARNINGS = [
-  { pattern: /garant[ie]/i, label: '"Garantia" pode configurar promessa de resultado' },
-  { pattern: /antes.*depois|resultado real/i, label: 'Antes/depois exige cuidado ético (CFM)' },
-  { pattern: /\d+\s*dias?\s*(pra|para|de)\s*(result|melhora|cura)/i, label: 'Prazo de resultado pode ser promessa' },
-  { pattern: /melhor (médico|clínica|tratamento)/i, label: 'Superlativo pode configurar autopromoção' },
-  { pattern: /\d+\s*mg|\d+\s*comprimido|dose\s+de/i, label: 'Posologia não deve aparecer em conteúdo público' },
-];
+export async function rescoreContent(piece: ContentPiece): Promise<ContentPiece> {
+  const cfm = await scoreCFMRemote(piece.body);
+  return { ...piece, cfm };
+}
 
-export function scoreCFM(body: string): CFMResult {
-  const flags: CFMResult['flags'] = [];
-  let score = 98;
-  const lower = body.toLowerCase();
-  CFM_BLOCKS.forEach(term => {
-    if (lower.includes(term)) { flags.push({ label: `Termo bloqueado pelo CFM: "${term}"`, severity: 'block' }); score -= 30; }
-  });
-  CFM_WARNINGS.forEach(({ pattern, label }) => {
-    if (pattern.test(lower)) { flags.push({ label, severity: 'warning' }); score -= 8; }
-  });
-  if (!flags.length) flags.push({ label: 'Nenhum problema CFM detectado', severity: 'info' });
-  return { score: Math.max(0, Math.min(100, score)), flags };
+export async function scoreCFMRemote(body: string): Promise<CFMResult> {
+  const { data, error } = await supabase.functions.invoke('score-cfm', { body: { body } });
+  if (error || !data) {
+    throw new Error(error?.message ?? 'Falha ao avaliar CFM');
+  }
+  return data as CFMResult;
 }
 
 // ─── Pipeline real (Edge Function) ──────────────────────────────────────────

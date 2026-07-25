@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { rescoreContent } from '@/lib/pipeline';
 import { FORMAT_LABEL, FORMAT_ICON, EXPORT_MODE } from '@/lib/contentFormats';
-import { Copy, CheckCircle2, AlertTriangle, ShieldAlert, RefreshCw, Download } from 'lucide-react';
+import { Copy, CheckCircle2, AlertTriangle, ShieldAlert, RefreshCw, Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import PieceArtwork from './PieceArtwork';
 import PiecePrompts from './PiecePrompts';
@@ -21,16 +21,24 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, onCha
   onApprove: () => void;
 }) {
   const [body, setBody] = useState(piece.body);
+  const [rescoring, setRescoring] = useState(false);
   const cfm = piece.cfm;
   const blocked = cfm.flags.some(f => f.severity === 'block');
   const warned = cfm.flags.some(f => f.severity === 'warning');
   const Icon = FORMAT_ICON[piece.format];
   const exportMode = EXPORT_MODE[piece.format];
 
-  const rescore = () => {
-    const updated = rescoreContent({ ...piece, body });
-    onChange(updated);
-    toast.success('CFM Score atualizado');
+  const rescore = async () => {
+    setRescoring(true);
+    try {
+      const updated = await rescoreContent({ ...piece, body });
+      onChange(updated);
+      toast.success('CFM Score atualizado');
+    } catch (err: any) {
+      toast.error(`Falha ao avaliar CFM: ${err?.message ?? err}`);
+    } finally {
+      setRescoring(false);
+    }
   };
 
   const copy = () => {
@@ -60,7 +68,9 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, onCha
           <span className="text-xs uppercase tracking-widest text-primary truncate">{FORMAT_LABEL[piece.format]}</span>
           <ScoreBadge score={cfm.score} blocked={blocked} warned={warned} />
         </div>
-        <Button variant="ghost" size="sm" onClick={rescore}><RefreshCw className="h-3.5 w-3.5 mr-1" /> Rescan</Button>
+        <Button variant="ghost" size="sm" onClick={rescore} disabled={rescoring}>
+          {rescoring ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />} Rescan
+        </Button>
       </div>
 
       {piece.brainSignals && (piece.brainSignals.pillar || piece.brainSignals.usedTraits.length > 0) && (

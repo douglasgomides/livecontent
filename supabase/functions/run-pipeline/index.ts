@@ -2,29 +2,10 @@
 // Faz: transcrição -> anonimização -> extração de tópicos -> geração por formato.
 // Atualiza sessions.status a cada etapa (Realtime).
 import { corsHeaders } from '../_shared/cors.ts';
+import { scoreCFMSemantic } from '../_shared/cfm.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const CLAUDE = 'claude-sonnet-4-5';
-
-const CFM_BLOCKS = ['cura garantida', 'sem risco', 'milagre', 'infalível', 'melhor do brasil', '100% eficaz', 'resultado garantido'];
-const CFM_WARNINGS: Array<[RegExp, string]> = [
-  [/garant[ie]/i, '"Garantia" pode configurar promessa de resultado'],
-  [/antes.*depois|resultado real/i, 'Antes/depois exige cuidado ético (CFM)'],
-  [/\d+\s*dias?\s*(pra|para|de)\s*(result|melhora|cura)/i, 'Prazo de resultado pode ser promessa'],
-  [/melhor (médico|clínica|tratamento)/i, 'Superlativo pode configurar autopromoção'],
-  [/\d+\s*mg|\d+\s*comprimido|dose\s+de/i, 'Posologia não deve aparecer em conteúdo público'],
-  [/se você tem .{5,30} você tem/i, 'Diagnóstico à distância não permitido'],
-];
-
-function scoreCFM(body: string) {
-  const flags: Array<{ label: string; severity: 'info' | 'warning' | 'block' }> = [];
-  let score = 98;
-  const lower = body.toLowerCase();
-  CFM_BLOCKS.forEach(t => { if (lower.includes(t)) { flags.push({ label: `Termo bloqueado: "${t}"`, severity: 'block' }); score -= 30; } });
-  CFM_WARNINGS.forEach(([re, label]) => { if (re.test(lower)) { flags.push({ label, severity: 'warning' }); score -= 8; } });
-  if (!flags.length) flags.push({ label: 'Nenhum problema CFM detectado', severity: 'info' });
-  return { score: Math.max(0, Math.min(100, score)), flags };
-}
 
 const FORMAT_CHANNEL: Record<string, string> = {
   reel: 'instagram', carousel: 'instagram', caption: 'instagram', stories: 'instagram',
@@ -196,7 +177,7 @@ Deno.serve(async (req) => {
       for (const format of genFormats) {
         try {
           const body = await claudeText(anthropicKey, buildGenSystem(format), buildGenUser(topic, format, anonymized, brain));
-          const cfm = scoreCFM(body);
+          const cfm = await scoreCFMSemantic(anthropicKey, body);
           pieces.push({
             user_id: userId,
             session_id,

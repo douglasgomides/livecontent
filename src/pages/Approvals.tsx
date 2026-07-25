@@ -37,6 +37,7 @@ export default function Approvals() {
   const [editRow, setEditRow] = useState<Row | null>(null);
   const [previewRow, setPreviewRow] = useState<Row | null>(null);
   const [rejectRow, setRejectRow] = useState<Row | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const refresh = () => setSessions(loadSessions());
 
@@ -116,13 +117,20 @@ export default function Approvals() {
     setRejectRow(null);
   };
 
-  const saveEdit = (body: string) => {
+  const saveEdit = async (body: string) => {
     if (!editRow) return;
-    const rescored = rescoreContent({ ...editRow.piece, body });
-    patchPiece(editRow, { body, cfm: rescored.cfm });
-    const stillBlocked = rescored.cfm.flags.some(f => f.severity === 'block');
-    toast.success(stillBlocked ? 'Editada — ainda com bloqueio CFM' : 'Editada — CFM liberado');
-    setEditRow(null);
+    setSavingEdit(true);
+    try {
+      const rescored = await rescoreContent({ ...editRow.piece, body });
+      patchPiece(editRow, { body, cfm: rescored.cfm });
+      const stillBlocked = rescored.cfm.flags.some(f => f.severity === 'block');
+      toast.success(stillBlocked ? 'Editada — ainda com bloqueio CFM' : 'Editada — CFM liberado');
+      setEditRow(null);
+    } catch (err: any) {
+      toast.error(`Falha ao avaliar CFM: ${err?.message ?? err}`);
+    } finally {
+      setSavingEdit(false);
+    }
   };
 
   return (
@@ -251,7 +259,7 @@ export default function Approvals() {
       </Dialog>
 
       {/* Edit dialog */}
-      <EditDialog row={editRow} onClose={() => setEditRow(null)} onSave={saveEdit} />
+      <EditDialog row={editRow} onClose={() => setEditRow(null)} onSave={saveEdit} saving={savingEdit} />
 
       {/* Reject dialog */}
       <RejectDialog row={rejectRow} onClose={() => setRejectRow(null)} onConfirm={confirmReject} />
@@ -320,7 +328,7 @@ function PendingCard({
   );
 }
 
-function EditDialog({ row, onClose, onSave }: { row: Row | null; onClose: () => void; onSave: (body: string) => void }) {
+function EditDialog({ row, onClose, onSave, saving }: { row: Row | null; onClose: () => void; onSave: (body: string) => void; saving: boolean }) {
   const [body, setBody] = useState(row?.piece.body || '');
   // reset when row changes
   useMemo(() => setBody(row?.piece.body || ''), [row?.piece.id]);
@@ -332,9 +340,9 @@ function EditDialog({ row, onClose, onSave }: { row: Row | null; onClose: () => 
         </DialogHeader>
         <Textarea value={body} onChange={e => setBody(e.target.value)} rows={16} className="font-sans text-sm" />
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => onSave(body)} className="bg-gold-gradient text-primary-foreground">
-            Salvar e recalcular CFM
+          <Button variant="ghost" onClick={onClose} disabled={saving}>Cancelar</Button>
+          <Button onClick={() => onSave(body)} disabled={saving} className="bg-gold-gradient text-primary-foreground">
+            {saving ? 'Avaliando CFM…' : 'Salvar e recalcular CFM'}
           </Button>
         </DialogFooter>
       </DialogContent>
