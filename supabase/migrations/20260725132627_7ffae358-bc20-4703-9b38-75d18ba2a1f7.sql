@@ -168,13 +168,16 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.content_pieces;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.publish_jobs;
 
 -- ============ Auto-create brain + settings on signup ============
-CREATE OR REPLACE FUNCTION public.handle_new_user()
+-- Nome namespaced de propósito: este schema pode coexistir num projeto Supabase
+-- com outros apps (multi-produto na mesma conta) — evita colidir com uma função/
+-- trigger genérica "handle_new_user"/"on_auth_user_created" de outro projeto.
+CREATE OR REPLACE FUNCTION public.handle_new_user_livecontent()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
   INSERT INTO public.brains (user_id) VALUES (NEW.id) ON CONFLICT DO NOTHING;
   INSERT INTO public.doctor_settings (user_id) VALUES (NEW.id) ON CONFLICT DO NOTHING;
   RETURN NEW;
 END; $$;
-CREATE TRIGGER on_auth_user_created
+CREATE TRIGGER on_auth_user_created_livecontent
   AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user_livecontent();
