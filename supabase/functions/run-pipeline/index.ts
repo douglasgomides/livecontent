@@ -203,10 +203,13 @@ Deno.serve(async (req) => {
 
     // ── Fase 4: gerar conteúdo (retomada após confirmação dos tópicos, ou
     // direto no caso de voice_note) ──────────────────────────────────────
-    // Roda todas as combinações tema×formato EM PARALELO (era sequencial —
-    // com N temas × M formatos isso levava minutos/horas). A ARTE visual do
-    // carrossel/stories não é gerada aqui — fica sob demanda (botão "Gerar
-    // arte" no piece), pra não somar mais uma chamada de IA no caminho crítico.
+    // Roda as combinações tema×formato em paralelo, mas em LOTES pequenos —
+    // Promise.all sem limite disparava tudo de uma vez e estourava o limite
+    // de requisições simultâneas da Anthropic; todas as chamadas eram
+    // rejeitadas (429) e o catch por-job engolia isso silenciosamente,
+    // terminando com status "ready" e zero peças, sem erro nenhum visível.
+    // A ARTE visual do carrossel/stories não é gerada aqui — fica sob demanda
+    // (botão "Gerar arte" no piece), pra não somar mais uma chamada no caminho crítico.
     await setStatus('generating_content');
     const genFormats = isQuickNote ? ['caption'] : targetFormats;
     const jobs: { topic: any; format: string }[] = [];
@@ -215,35 +218,49 @@ Deno.serve(async (req) => {
       for (const format of genFormats) jobs.push({ topic, format });
     }
 
-    const results = await Promise.all(jobs.map(async ({ topic, format }) => {
-      try {
-        const body = await claudeText(anthropicKey, buildGenSystem(format), buildGenUser(topic, format, anonymized, brain, evidence, referenceStructure));
-        const cfm = await scoreCFMSemantic(anthropicKey, body);
-        const evidenceIds = matchCitedEvidence(body, evidence);
-        return {
-          user_id: userId,
-          session_id,
-          topic_id: topic.id,
-          format,
-          channel: FORMAT_CHANNEL[format] ?? 'instagram',
-          body,
-          cfm,
-          artwork: null,
-          evidence_ids: evidenceIds,
-          reference_style_id: reference_style_id ?? null,
-          approved: false,
-          rejected: false,
-        };
-      } catch (err) {
-        console.warn(`[gen ${format}/${topic.id}]`, err);
-        return null;
+    const CONCURRENCY = 3;
+    const pieces: any[] = [];
+    let failures = 0;
+    for (let i = 0; i < jobs.length; i += CONCURRENCY) {
+      const batch = jobs.slice(i, i + CONCURRENCY);
+      const results = await Promise.all(batch.map(async ({ topic, format }) => {
+        try {
+          const body = await claudeText(anthropicKey, buildGenSystem(format), buildGenUser(topic, format, anonymized, brain, evidence, referenceStructure));
+          const cfm = await scoreCFMSemantic(anthropicKey, body);
+          const evidenceIds = matchCitedEvidence(body, evidence);
+          return {
+            user_id: userId,
+            session_id,
+            topic_id: topic.id,
+            format,
+            channel: FORMAT_CHANNEL[format] ?? 'instagram',
+            body,
+            cfm,
+            artwork: null,
+            evidence_ids: evidenceIds,
+            reference_style_id: reference_style_id ?? null,
+            approved: false,
+            rejected: false,
+          };
+        } catch (err) {
+          console.warn(`[gen ${format}/${topic.id}]`, err);
+          return null;
+        }
+      }));
+      for (const r of results) {
+        if (r) pieces.push(r); else failures++;
       }
-    }));
-    const pieces = results.filter((p): p is NonNullable<typeof p> => p !== null);
+    }
+
+    if (failures > 0) console.warn(`[run-pipeline] ${failures}/${jobs.length} gerações falharam`);
 
     if (pieces.length) {
       const { error: pErr } = await supabase.from('content_pieces').insert(pieces);
       if (pErr) { await setError(pErr.message); return json({ error: pErr.message }, 500); }
+    } else if (jobs.length > 0) {
+      // Todas as gerações falharam — nunca silenciar isso como "ready" vazio.
+      await setError(`Falha ao gerar conteúdo: nenhuma das ${jobs.length} peças foi gerada (provavelmente limite de taxa da API). Tente novamente.`);
+      return json({ error: 'all generations failed' }, 502);
     }
 
     await setStatus('ready');
