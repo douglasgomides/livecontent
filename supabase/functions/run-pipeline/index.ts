@@ -13,6 +13,13 @@ const FORMAT_CHANNEL: Record<string, string> = {
   podcast: 'podcast', gmb: 'gmb', doctoralia: 'doctoralia', website: 'website',
 };
 
+// Formatos que entregam ARTE visual de verdade (slides renderizados em Canvas → PNG/vídeo
+// no client), não só copy. Os demais formatos seguem só texto (roteiro/legenda/artigo).
+const ARTWORK_DIMS: Record<string, { width: number; height: number }> = {
+  carousel: { width: 1080, height: 1350 },
+  stories: { width: 1080, height: 1920 },
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   try {
@@ -210,7 +217,17 @@ Deno.serve(async (req) => {
       if (topic.included === false) continue;
       for (const format of genFormats) {
         try {
-          const body = await claudeText(anthropicKey, buildGenSystem(format), buildGenUser(topic, format, anonymized, brain, evidence, referenceStructure));
+          let body: string;
+          let artwork: { width: number; height: number; slides: any[] } | null = null;
+
+          if (ARTWORK_DIMS[format]) {
+            const slides = await generateArtworkSlides(anthropicKey, format, topic, anonymized, brain, evidence, referenceStructure);
+            artwork = { ...ARTWORK_DIMS[format], slides };
+            body = flattenSlidesToText(slides);
+          } else {
+            body = await claudeText(anthropicKey, buildGenSystem(format), buildGenUser(topic, format, anonymized, brain, evidence, referenceStructure));
+          }
+
           const cfm = await scoreCFMSemantic(anthropicKey, body);
           const evidenceIds = matchCitedEvidence(body, evidence);
           pieces.push({
@@ -221,6 +238,7 @@ Deno.serve(async (req) => {
             channel: FORMAT_CHANNEL[format] ?? 'instagram',
             body,
             cfm,
+            artwork,
             evidence_ids: evidenceIds,
             reference_style_id: reference_style_id ?? null,
             approved: false,
@@ -328,6 +346,52 @@ Funil: ${topic.funnelStage} — ${funnelDesc[topic.funnelStage] ?? ''}
 ${String(transcript).slice(0, 1500)}${b}${buildEvidenceBlock(evidence)}${refBlock}
 
 Gere o conteúdo agora aplicando todas as regras universais e CFM${referenceStructure ? ', seguindo a estrutura de referência acima' : ''}.`;
+}
+
+// ─── Geração de arte (carousel/stories) — slides estruturados, não só prosa ──
+// Renderizados client-side (Canvas → PNG/vídeo) com a marca do médico.
+
+const SLIDES_SYSTEM: Record<string, string> = {
+  carousel: `Estrategista de carrosséis médicos. Gere 6-8 slides reais e específicos sobre o tema
+(nunca genéricos/placeholder). Estrutura: capa (gancho) → 3-5 slides de conteúdo (problema,
+explicação, mito×verdade, passos práticos — adapte ao tema real) → CTA final.
+Cada slide tem: kind ("cover" pro primeiro, "content" pros do meio, "cta" pro último),
+eyebrow (rótulo curto, ex: "01 · O SINTOMA"), title (frase de impacto, máx 60 chars),
+body (1-3 frases, máx 200 chars, vazio no cover/cta se não precisar).
+Regras CFM e universais valem aqui também (sem promessa de cura, sem hashtags, sem travessão).`,
+  stories: `Roteirista de Stories médicos. Gere exatos 4 frames: 1 enquete/pergunta, 1 dado ou
+insight, 1 reflexão ligada ao tema real da consulta, 1 CTA final.
+Cada frame: kind ("story" pros 3 primeiros, "cta" pro último), eyebrow (rótulo curto, ex:
+"ENQUETE"), title (frase curta de impacto, máx 50 chars), body (opcional, máx 100 chars).
+Regras CFM e universais valem aqui também.`,
+};
+
+async function generateArtworkSlides(
+  key: string, format: string, topic: any, transcript: string, brain: any,
+  evidence: any[], referenceStructure: string | null,
+): Promise<any[]> {
+  const handle = brain?.brand?.handle || undefined;
+  const system = `${BASE_RULES}\n\n${SLIDES_SYSTEM[format]}\n\nRetorne SÓ um JSON array: [{"kind":"cover|content|cta|story","eyebrow":"...","title":"...","body":"..."}]\nSem markdown, sem texto fora do array.`;
+  const user = buildGenUser(topic, format, transcript, brain, evidence, referenceStructure);
+  const res = await claudeJson(key, { system, user, maxTokens: 2500 });
+  if (!res.ok || !Array.isArray(res.data) || !res.data.length) {
+    // fallback simples: 1 slide de capa com o título do tema, pra nunca ficar sem arte nenhuma.
+    return [{ kind: 'cover', eyebrow: format.toUpperCase(), title: topic.title, body: topic.summary?.slice(0, 160) ?? '', footer: handle }];
+  }
+  return res.data.map((s: any) => ({
+    kind: ['cover', 'content', 'cta', 'story'].includes(s.kind) ? s.kind : 'content',
+    eyebrow: typeof s.eyebrow === 'string' ? s.eyebrow.slice(0, 40) : undefined,
+    title: typeof s.title === 'string' ? s.title.slice(0, 120) : undefined,
+    body: typeof s.body === 'string' ? s.body.slice(0, 300) : undefined,
+    footer: handle,
+  }));
+}
+
+function flattenSlidesToText(slides: any[]): string {
+  return slides.map((s, i) => {
+    const label = s.kind === 'cover' ? 'CAPA' : s.kind === 'cta' ? 'CTA FINAL' : `SLIDE ${i + 1}`;
+    return [`${label}${s.eyebrow ? ` — ${s.eyebrow}` : ''}`, s.title, s.body].filter(Boolean).join('\n');
+  }).join('\n\n');
 }
 
 async function claudeText(key: string, system: string, user: string): Promise<string> {
