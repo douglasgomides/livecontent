@@ -38,11 +38,21 @@ let _channels: any[] = [];
 type Listener = () => void;
 const listeners = new Set<Listener>();
 
+// Contador que sobe a cada notify() — o snapshot do useSyncExternalStore
+// precisa mudar de VALOR a cada mutação real, não só quando o tamanho de um
+// array muda. Antes o snapshot era baseado em .length dos arrays, então uma
+// sessão existente mudando de status (recording -> transcribing -> ...) via
+// Realtime não disparava re-render nenhum — só um refresh completo da página
+// (que re-hidrata do zero) mostrava o estado novo. Era o bug "preciso dar
+// refresh pra ver o progresso".
+let _version = 0;
+
 export function subscribe(fn: Listener): () => void {
   listeners.add(fn);
   return () => listeners.delete(fn);
 }
 function notify() {
+  _version++;
   listeners.forEach(l => {
     try { l(); } catch {}
   });
@@ -203,7 +213,7 @@ export async function saveSettings(s: DoctorSettings): Promise<void> {
 
 import { useSyncExternalStore } from 'react';
 
-const getSnapshot = () => _hydrated ? '1' + _sessions.length + _brain.onboarded + _jobs.length : '0';
+const getSnapshot = () => _hydrated ? `1-${_version}` : '0';
 export function useStoreVersion() {
   return useSyncExternalStore(subscribe, getSnapshot, () => '0');
 }
