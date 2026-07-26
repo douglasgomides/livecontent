@@ -57,7 +57,7 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, onCha
   };
 
   const topicTitle = topic?.title || piece.meta?.title || 'Sem título';
-  const hasArtwork = !!piece.artwork;
+  const canHaveArtwork = piece.format === 'carousel' || piece.format === 'stories';
   const hasPrompts = piece.externalPrompts && Object.keys(piece.externalPrompts).length > 0;
 
   return (
@@ -87,7 +87,7 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, onCha
       <Tabs defaultValue="text">
         <TabsList className="w-full justify-start rounded-none border-b border-border/60 h-9 bg-transparent px-2">
           <TabsTrigger value="text" className="text-xs">Texto</TabsTrigger>
-          <TabsTrigger value="art" className="text-xs" disabled={!hasArtwork}>Arte</TabsTrigger>
+          <TabsTrigger value="art" className="text-xs" disabled={!canHaveArtwork}>Arte</TabsTrigger>
           <TabsTrigger value="prompts" className="text-xs" disabled={!hasPrompts}>Prompts externos</TabsTrigger>
           <TabsTrigger value="publish" className="text-xs">Publicar</TabsTrigger>
         </TabsList>
@@ -110,7 +110,7 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, onCha
         </TabsContent>
 
         <TabsContent value="art" className="m-0">
-          <PieceArtwork piece={piece} topic={topic} brain={brain} />
+          <PieceArtwork piece={piece} topic={topic} brain={brain} onChange={onChange} />
         </TabsContent>
 
         <TabsContent value="prompts" className="m-0">

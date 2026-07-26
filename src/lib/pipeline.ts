@@ -119,6 +119,20 @@ export async function analyzeReferenceStyle(args: { imagePath?: string; text?: s
   return data.structure_description as string;
 }
 
+// ─── Arte visual sob demanda (carousel/stories) ─────────────────────────────
+// Separada do run-pipeline de propósito: a geração de conteúdo fica rápida,
+// e só paga o custo extra de IA pra arte quando o médico realmente pede.
+
+export async function generateArtwork(pieceId: string): Promise<any> {
+  const { data, error } = await supabase.functions.invoke('generate-artwork', {
+    body: { piece_id: pieceId },
+  });
+  if (error || !data?.artwork) {
+    throw new Error(await describeFunctionError(error, 'Falha ao gerar arte'));
+  }
+  return data.artwork;
+}
+
 // ─── Billing (Stripe) ────────────────────────────────────────────────────────
 
 export async function startCheckout(): Promise<string> {
