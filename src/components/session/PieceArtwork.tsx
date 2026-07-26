@@ -3,18 +3,35 @@ import type { ContentPiece, Topic } from '@/types/session';
 import type { Brain } from '@/types/brain';
 import { renderSlideToPngAsync, downloadPng } from '@/lib/artRenderer';
 import { renderSlidesToWebm, downloadBlob } from '@/lib/videoRenderer';
+import { generateArtwork } from '@/lib/pipeline';
 import { Button } from '@/components/ui/button';
-import { Download, ImageOff, Film, Loader2 } from 'lucide-react';
+import { Download, ImageOff, Film, Loader2, Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
 
-export default function PieceArtwork({ piece, brain }: {
+export default function PieceArtwork({ piece, brain, onChange }: {
   piece: ContentPiece;
   topic?: Topic;
   brain?: Brain | null;
+  onChange?: (p: ContentPiece) => void;
 }) {
   const art = piece.artwork;
   const [rendered, setRendered] = useState<string[]>([]);
   const [rendering, setRendering] = useState(false);
   const [makingVideo, setMakingVideo] = useState(false);
+  const [generating, setGenerating] = useState(false);
+
+  const generate = async () => {
+    setGenerating(true);
+    try {
+      const artwork = await generateArtwork(piece.id);
+      onChange?.({ ...piece, artwork });
+      toast.success('Arte gerada');
+    } catch (err: any) {
+      toast.error(`Falha ao gerar arte: ${err?.message ?? err}`);
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -41,11 +58,26 @@ export default function PieceArtwork({ piece, brain }: {
     [piece.format],
   );
 
+  const canGenerate = piece.format === 'carousel' || piece.format === 'stories';
+
   if (!art) {
     return (
       <div className="p-8 text-center text-muted-foreground text-sm">
-        <ImageOff className="h-6 w-6 mx-auto mb-2 opacity-50" />
-        Este formato entrega só texto — sem arte visual.
+        {canGenerate ? (
+          <>
+            <Sparkles className="h-6 w-6 mx-auto mb-3 opacity-50" />
+            <p className="mb-4">Ainda não gerada — a arte fica sob demanda pra manter a geração de conteúdo rápida.</p>
+            <Button onClick={generate} disabled={generating} className="bg-gold-gradient text-primary-foreground">
+              {generating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+              {generating ? 'Gerando…' : 'Gerar arte'}
+            </Button>
+          </>
+        ) : (
+          <>
+            <ImageOff className="h-6 w-6 mx-auto mb-2 opacity-50" />
+            Este formato entrega só texto — sem arte visual.
+          </>
+        )}
       </div>
     );
   }

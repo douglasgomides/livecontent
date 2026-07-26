@@ -21,6 +21,28 @@ import {
 // do store (era a causa real do "Falha ao iniciar pipeline").
 export const uid = () => crypto.randomUUID();
 
+// supabase-js só bota "Edge Function returned a non-2xx status code" em
+// error.message por padrão — o corpo JSON real (ex.: "ANTHROPIC_API_KEY not
+// configured") fica em error.context (a Response bruta) e nunca é lido a
+// menos que a gente busque explicitamente. Sem isso, todo erro real da função
+// vira essa mesma frase genérica e inútil pra diagnosticar qualquer coisa.
+export async function describeFunctionError(error: any, fallback: string): Promise<string> {
+  if (!error) return fallback;
+  const ctx = error.context;
+  if (ctx && typeof ctx.clone === 'function') {
+    try {
+      const body = await ctx.clone().json();
+      if (body?.error) return String(body.error);
+    } catch {
+      try {
+        const text = await ctx.clone().text();
+        if (text) return text.slice(0, 300);
+      } catch { /* noop */ }
+    }
+  }
+  return error.message ?? fallback;
+}
+
 // Delegamos geração local ao mock (para peças síncronas/manuais nas telas atuais).
 export function generateContentFor(
   topic: Topic,
@@ -44,7 +66,7 @@ export async function rescoreContent(piece: ContentPiece): Promise<ContentPiece>
 export async function scoreCFMRemote(body: string): Promise<CFMResult> {
   const { data, error } = await supabase.functions.invoke('score-cfm', { body: { body } });
   if (error || !data) {
-    throw new Error(error?.message ?? 'Falha ao avaliar CFM');
+    throw new Error(await describeFunctionError(error, 'Falha ao avaliar CFM'));
   }
   return data as CFMResult;
 }
@@ -64,7 +86,7 @@ export interface PubmedResult {
 
 export async function searchPubmed(query: string, maxResults = 10): Promise<PubmedResult[]> {
   const { data, error } = await supabase.functions.invoke('search-pubmed', { body: { query, maxResults } });
-  if (error) throw new Error(error.message ?? 'Falha na busca do PubMed');
+  if (error) throw new Error(await describeFunctionError(error, 'Falha na busca do PubMed'));
   return (data?.results ?? []) as PubmedResult[];
 }
 
@@ -81,7 +103,7 @@ export interface TrendingItem {
 
 export async function fetchTrendingTopics(query?: string): Promise<{ query: string; results: TrendingItem[] }> {
   const { data, error } = await supabase.functions.invoke('trending-topics', { body: { query } });
-  if (error) throw new Error(error.message ?? 'Falha ao buscar temas em alta');
+  if (error) throw new Error(await describeFunctionError(error, 'Falha ao buscar temas em alta'));
   return { query: data?.query ?? '', results: (data?.results ?? []) as TrendingItem[] };
 }
 
@@ -92,9 +114,23 @@ export async function analyzeReferenceStyle(args: { imagePath?: string; text?: s
     body: { image_path: args.imagePath, text: args.text, format_hint: args.formatHint },
   });
   if (error || !data?.structure_description) {
-    throw new Error(error?.message ?? 'Falha ao analisar a referência');
+    throw new Error(await describeFunctionError(error, 'Falha ao analisar a referência'));
   }
   return data.structure_description as string;
+}
+
+// ─── Arte visual sob demanda (carousel/stories) ─────────────────────────────
+// Separada do run-pipeline de propósito: a geração de conteúdo fica rápida,
+// e só paga o custo extra de IA pra arte quando o médico realmente pede.
+
+export async function generateArtwork(pieceId: string): Promise<any> {
+  const { data, error } = await supabase.functions.invoke('generate-artwork', {
+    body: { piece_id: pieceId },
+  });
+  if (error || !data?.artwork) {
+    throw new Error(await describeFunctionError(error, 'Falha ao gerar arte'));
+  }
+  return data.artwork;
 }
 
 // ─── Billing (Stripe) ────────────────────────────────────────────────────────
@@ -103,7 +139,7 @@ export async function startCheckout(): Promise<string> {
   const { data, error } = await supabase.functions.invoke('create-checkout-session', {
     body: { origin: window.location.origin },
   });
-  if (error || !data?.url) throw new Error(error?.message ?? 'Falha ao abrir checkout');
+  if (error || !data?.url) throw new Error(await describeFunctionError(error, 'Falha ao abrir checkout'));
   return data.url as string;
 }
 
@@ -111,7 +147,7 @@ export async function openCustomerPortal(): Promise<string> {
   const { data, error } = await supabase.functions.invoke('customer-portal', {
     body: { origin: window.location.origin },
   });
-  if (error || !data?.url) throw new Error(error?.message ?? 'Falha ao abrir portal');
+  if (error || !data?.url) throw new Error(await describeFunctionError(error, 'Falha ao abrir portal'));
   return data.url as string;
 }
 
@@ -141,7 +177,7 @@ export interface AdminOverview {
 
 export async function fetchAdminOverview(): Promise<AdminOverview> {
   const { data, error } = await supabase.functions.invoke('admin-overview');
-  if (error) throw new Error(error.message ?? 'Falha ao carregar painel admin');
+  if (error) throw new Error(await describeFunctionError(error, 'Falha ao carregar painel admin'));
   return data as AdminOverview;
 }
 
@@ -161,7 +197,7 @@ export async function runPipeline(sessionId: string, formats?: ContentFormat[], 
   const { error } = await supabase.functions.invoke('run-pipeline', {
     body: { session_id: sessionId, formats, reference_style_id: referenceStyleId },
   });
-  if (error) throw error;
+  if (error) throw new Error(await describeFunctionError(error, 'Falha ao iniciar pipeline'));
 }
 
 /**

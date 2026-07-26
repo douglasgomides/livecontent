@@ -203,34 +203,44 @@ Deno.serve(async (req) => {
 
     // ── Fase 4: gerar conteúdo (retomada após confirmação dos tópicos, ou
     // direto no caso de voice_note) ──────────────────────────────────────
+    // Roda todas as combinações tema×formato EM PARALELO (era sequencial —
+    // com N temas × M formatos isso levava minutos/horas). A ARTE visual do
+    // carrossel/stories não é gerada aqui — fica sob demanda (botão "Gerar
+    // arte" no piece), pra não somar mais uma chamada de IA no caminho crítico.
     await setStatus('generating_content');
     const genFormats = isQuickNote ? ['caption'] : targetFormats;
-    const pieces: any[] = [];
+    const jobs: { topic: any; format: string }[] = [];
     for (const topic of topics) {
       if (topic.included === false) continue;
-      for (const format of genFormats) {
-        try {
-          const body = await claudeText(anthropicKey, buildGenSystem(format), buildGenUser(topic, format, anonymized, brain, evidence, referenceStructure));
-          const cfm = await scoreCFMSemantic(anthropicKey, body);
-          const evidenceIds = matchCitedEvidence(body, evidence);
-          pieces.push({
-            user_id: userId,
-            session_id,
-            topic_id: topic.id,
-            format,
-            channel: FORMAT_CHANNEL[format] ?? 'instagram',
-            body,
-            cfm,
-            evidence_ids: evidenceIds,
-            reference_style_id: reference_style_id ?? null,
-            approved: false,
-            rejected: false,
-          });
-        } catch (err) {
-          console.warn(`[gen ${format}/${topic.id}]`, err);
-        }
-      }
+      for (const format of genFormats) jobs.push({ topic, format });
     }
+
+    const results = await Promise.all(jobs.map(async ({ topic, format }) => {
+      try {
+        const body = await claudeText(anthropicKey, buildGenSystem(format), buildGenUser(topic, format, anonymized, brain, evidence, referenceStructure));
+        const cfm = await scoreCFMSemantic(anthropicKey, body);
+        const evidenceIds = matchCitedEvidence(body, evidence);
+        return {
+          user_id: userId,
+          session_id,
+          topic_id: topic.id,
+          format,
+          channel: FORMAT_CHANNEL[format] ?? 'instagram',
+          body,
+          cfm,
+          artwork: null,
+          evidence_ids: evidenceIds,
+          reference_style_id: reference_style_id ?? null,
+          approved: false,
+          rejected: false,
+        };
+      } catch (err) {
+        console.warn(`[gen ${format}/${topic.id}]`, err);
+        return null;
+      }
+    }));
+    const pieces = results.filter((p): p is NonNullable<typeof p> => p !== null);
+
     if (pieces.length) {
       const { error: pErr } = await supabase.from('content_pieces').insert(pieces);
       if (pErr) { await setError(pErr.message); return json({ error: pErr.message }, 500); }
