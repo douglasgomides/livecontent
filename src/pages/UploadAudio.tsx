@@ -49,7 +49,7 @@ export default function UploadAudio() {
       upsertSession(session);
       runPipeline(session.id).catch(err => {
         console.error('[pipeline]', err);
-        toast.error('Falha ao iniciar pipeline. Você pode tentar novamente na sessão.');
+        toast.error(`Falha ao iniciar pipeline: ${err?.message ?? err}`);
       });
       nav(`/app/session/${session.id}`);
     } catch (err: any) {
