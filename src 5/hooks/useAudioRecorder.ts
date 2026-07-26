@@ -1,0 +1,118 @@
+import { useEffect, useRef, useState } from 'react';
+import { setRecordingActive, LEAVE_RECORDING_WARNING } from '@/lib/recordingGuard';
+
+export type RecorderStatus = 'idle' | 'recording' | 'paused' | 'stopped';
+
+function pickMimeType(): string {
+  const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
+  return candidates.find(m => (window as any).MediaRecorder?.isTypeSupported?.(m)) || '';
+}
+
+// Limite real da API do Whisper é 25MB por arquivo — deixamos margem de segurança.
+export const MAX_AUDIO_UPLOAD_MB = 24;
+
+export function extFromMimeType(mimeType: string): string {
+  if (mimeType.includes('mp4')) return 'm4a';
+  if (mimeType.includes('ogg')) return 'ogg';
+  if (mimeType.includes('webm')) return 'webm';
+  return 'webm';
+}
+
+export interface UseAudioRecorderOptions {
+  maxSec?: number;
+  onAutoStop?: (result: { blob: Blob; url: string; durationSec: number }) => void;
+}
+
+export function useAudioRecorder(opts: UseAudioRecorderOptions = {}) {
+  const { maxSec, onAutoStop } = opts;
+  const [status, setStatus] = useState<RecorderStatus>('idle');
+  const [duration, setDuration] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
+  const streamRef = useRef<MediaStream | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const resolverRef = useRef<((r: { blob: Blob; url: string; durationSec: number }) => void) | null>(null);
+
+  useEffect(() => () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    setRecordingActive(false);
+  }, []);
+
+  // Avisa antes de fechar/atualizar a aba com gravação em andamento — sem isso
+  // o áudio se perde silenciosamente (era o bug "saio da página e para de gravar").
+  useEffect(() => {
+    setRecordingActive(status === 'recording' || status === 'paused');
+    if (status !== 'recording' && status !== 'paused') return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = LEAVE_RECORDING_WARNING;
+      return LEAVE_RECORDING_WARNING;
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [status]);
+
+  useEffect(() => {
+    if (status === 'recording') {
+      timerRef.current = setInterval(() => {
+        setDuration(d => {
+          const next = d + 1;
+          if (maxSec && next >= maxSec) {
+            queueMicrotask(() => stop().then(r => r && onAutoStop?.(r)));
+          }
+          return next;
+        });
+      }, 1000);
+    } else if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
+
+  const start = async () => {
+    setError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      // Bitrate fixo e baixo (32kbps, suficiente pra fala/Whisper) para manter o arquivo
+      // previsível — o limite da API do Whisper é 25MB por arquivo, e o bitrate padrão
+      // do navegador varia e não é confiável para consultas longas (30-60min).
+      const rec = new MediaRecorder(stream, { mimeType: pickMimeType(), audioBitsPerSecond: 32_000 });
+      chunksRef.current = [];
+      rec.ondataavailable = (e) => { if (e.data.size) chunksRef.current.push(e.data); };
+      rec.start();
+      recorderRef.current = rec;
+      setDuration(0);
+      setStatus('recording');
+    } catch {
+      setError('Não foi possível acessar o microfone. Verifique as permissões do navegador.');
+    }
+  };
+
+  const pause = () => { recorderRef.current?.pause(); setStatus('paused'); };
+  const resume = () => { recorderRef.current?.resume(); setStatus('recording'); };
+
+  const stop = (): Promise<{ blob: Blob; url: string; durationSec: number } | null> => {
+    return new Promise((resolve) => {
+      const rec = recorderRef.current;
+      if (!rec || rec.state === 'inactive') { resolve(null); return; }
+      resolverRef.current = resolve as any;
+      rec.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: rec.mimeType || 'audio/webm' });
+        const url = URL.createObjectURL(blob);
+        streamRef.current?.getTracks().forEach(t => t.stop());
+        setStatus('stopped');
+        const dur = duration;
+        resolverRef.current?.({ blob, url, durationSec: dur });
+        resolverRef.current = null;
+      };
+      rec.stop();
+    });
+  };
+
+  return { status, duration, error, start, pause, resume, stop };
+}
