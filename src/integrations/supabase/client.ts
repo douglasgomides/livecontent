@@ -2,8 +2,10 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// Hardcoded (não só via import.meta.env): já vimos o build servido ignorar o .env
+// mesmo com o commit certo publicado — isso remove essa ambiguidade por completo.
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://ifrsvvstjoduvxfcsozu.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_xHQPErZrn0lwbIIaB0Yb-w_SzSztQRi';
 
 
 function isNewSupabaseApiKey(value: string): boolean {
