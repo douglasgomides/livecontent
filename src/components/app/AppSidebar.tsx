@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/sidebar';
 import { loadProfile } from '@/lib/storage';
 import { loadBrain, getCompleteness } from '@/lib/brainStorage';
+import { isRecordingActive, LEAVE_RECORDING_WARNING } from '@/lib/recordingGuard';
 
 const createItems = [
   { title: 'Gravar consulta', url: '/app/record', icon: Mic },
@@ -77,7 +78,13 @@ export function AppSidebar() {
     return (
       <SidebarMenuItem key={item.url}>
         <SidebarMenuButton asChild isActive={isActive(item.url, item.end)} tooltip={item.title}>
-          <NavLink to={item.url} end={item.end}>
+          <NavLink
+            to={item.url}
+            end={item.end}
+            onClick={(e) => {
+              if (isRecordingActive() && !window.confirm(LEAVE_RECORDING_WARNING)) e.preventDefault();
+            }}
+          >
             <item.icon className="h-4 w-4" />
             <span className="flex-1">{item.title}</span>
             {showBadge && (
@@ -92,7 +99,13 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
-        <Link to="/app" className="flex items-center gap-2.5 px-2 py-2.5">
+        <Link
+          to="/app"
+          className="flex items-center gap-2.5 px-2 py-2.5"
+          onClick={(e) => {
+            if (isRecordingActive() && !window.confirm(LEAVE_RECORDING_WARNING)) e.preventDefault();
+          }}
+        >
           <div className="h-8 w-8 rounded-md bg-gold-gradient shrink-0 flex items-center justify-center shadow-gold-sm">
             <span className="font-serif font-bold text-primary-foreground text-sm leading-none">C</span>
           </div>
