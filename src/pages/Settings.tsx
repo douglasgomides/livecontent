@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Brain as BrainIcon, ArrowRight, Database, RefreshCw, Download, Trash2, Webhook, LogOut, Upload as UploadIcon, Crown, Loader2, ExternalLink } from 'lucide-react';
+import { Brain as BrainIcon, ArrowRight, Database, RefreshCw, Download, Trash2, Webhook, LogOut, Upload as UploadIcon, Crown, Loader2, ExternalLink, Radio } from 'lucide-react';
 import { useSessions, loadSessions } from '@/lib/storage';
 import { loadBrain, saveBrain, useBrain } from '@/lib/brainStorage';
 import { getSettings, saveSettings, upsertSession } from '@/lib/store';
@@ -12,7 +12,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import FormatPicker from '@/components/session/FormatPicker';
 import type { Brain } from '@/types/brain';
+import type { ContentFormat } from '@/types/session';
 import { toast } from 'sonner';
 
 const TONES: { id: Brain['doctor']['tone']; label: string }[] = [
@@ -46,9 +48,12 @@ export default function Settings() {
 
   const initialSettings = getSettings();
   const [webhooks, setWebhooks] = useState<Record<string, string>>(initialSettings.webhooks as Record<string, string>);
+  const [preferredFormats, setPreferredFormats] = useState<ContentFormat[]>(initialSettings.preferredFormats as ContentFormat[]);
 
   useEffect(() => {
-    setWebhooks(getSettings().webhooks as Record<string, string>);
+    const s = getSettings();
+    setWebhooks(s.webhooks as Record<string, string>);
+    setPreferredFormats(s.preferredFormats as ContentFormat[]);
   }, [user?.id]);
 
   const [subscription, setSubscription] = useState<Subscription | null>(null);
@@ -103,8 +108,13 @@ export default function Settings() {
   };
 
   const saveWebhooks = async () => {
-    await saveSettings({ ...initialSettings, webhooks });
+    await saveSettings({ ...getSettings(), webhooks });
     toast.success('Webhooks salvos');
+  };
+
+  const saveFormats = async () => {
+    await saveSettings({ ...getSettings(), preferredFormats });
+    toast.success('Formatos salvos — toda nova consulta vai gerar essas peças por padrão.');
   };
 
   const exportBackup = () => {
@@ -228,6 +238,20 @@ export default function Settings() {
           </div>
         </div>
         <Button onClick={savePerfil} className="bg-gold-gradient text-primary-foreground">Salvar perfil</Button>
+      </div>
+
+      <div className="border-t border-border pt-8 space-y-4">
+        <div className="flex items-center gap-2">
+          <Radio className="h-4 w-4 text-primary" />
+          <h2 className="font-serif text-2xl">O que gerar por padrão</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Escolha em quais redes/plataformas você quer publicar — cada consulta nova gera peças só pra elas.
+          Sem essa escolha, toda consulta gera sempre o mesmo pacote fixo (legenda, carrossel, reel, LinkedIn),
+          mesmo que você queira blog, YouTube, TikTok ou outra coisa.
+        </p>
+        <FormatPicker selected={preferredFormats} onChange={setPreferredFormats} />
+        <Button onClick={saveFormats} className="bg-gold-gradient text-primary-foreground">Salvar formatos</Button>
       </div>
 
       <div className="border-t border-border pt-8 space-y-4">

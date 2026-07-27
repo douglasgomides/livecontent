@@ -70,10 +70,19 @@ export const CHANNEL_ICON: Record<ContentChannel, any> = {
   podcast: Mic,
 };
 
+// Agrupado por PLATAFORMA DE DESTINO (onde vai ser postado), não por categoria
+// de conteúdo — é assim que o médico pensa ("quero postar no Instagram e no
+// YouTube"), não em termos de "conteúdo longo x redes sociais".
 export const FORMAT_GROUPS: { label: string; formats: ContentFormat[] }[] = [
-  { label: 'Redes sociais', formats: ['reel', 'carousel', 'stories', 'caption', 'linkedin'] },
-  { label: 'Conteúdo longo', formats: ['blog', 'youtube', 'podcast', 'tiktok'] },
-  { label: 'Presença online', formats: ['gmb', 'doctoralia', 'website'] },
+  { label: 'Instagram', formats: ['reel', 'carousel', 'stories', 'caption'] },
+  { label: 'LinkedIn', formats: ['linkedin'] },
+  { label: 'TikTok', formats: ['tiktok'] },
+  { label: 'YouTube', formats: ['youtube'] },
+  { label: 'Blog', formats: ['blog'] },
+  { label: 'Podcast', formats: ['podcast'] },
+  { label: 'Google Meu Negócio', formats: ['gmb'] },
+  { label: 'Doctoralia', formats: ['doctoralia'] },
+  { label: 'Site do médico', formats: ['website'] },
 ];
 
 export const RECOMMENDED_FORMATS: ContentFormat[] = ['reel', 'carousel', 'caption', 'blog', 'gmb'];
