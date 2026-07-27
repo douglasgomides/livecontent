@@ -25,7 +25,9 @@ export default function Library() {
   const [format, setFormat] = useState<'all' | ContentFormat>('all');
   const [status, setStatus] = useState<'all' | 'approved' | 'pending' | 'blocked'>('all');
   const [view, setView] = useState<'grid' | 'list'>('grid');
-  const [groupBy, setGroupBy] = useState<'none' | 'session' | 'format'>('none');
+  // Agrupado por formato por padrão — misturar reel/carrossel/legenda/linkedin
+  // numa lista só ficava confuso de navegar.
+  const [groupBy, setGroupBy] = useState<'none' | 'session' | 'format'>('format');
 
   const filtered = useMemo(() => {
     return items.filter(({ session, piece, topicTitle }) => {
@@ -60,42 +62,57 @@ export default function Library() {
         <p className="text-muted-foreground">{items.length} peça(s) · {filtered.length} exibida(s)</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_160px_160px_160px_auto] gap-2">
-        <div className="relative">
-          <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar peça, consulta, tema..." className="pl-9" />
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_160px_160px_160px_auto] gap-3">
+        <div className="space-y-1">
+          <label className="text-[11px] uppercase tracking-wide text-muted-foreground">Buscar</label>
+          <div className="relative">
+            <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Peça, consulta, tema..." className="pl-9" />
+          </div>
         </div>
-        <Select value={format} onValueChange={v => setFormat(v as any)}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os formatos</SelectItem>
-            {Object.entries(LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={status} onValueChange={v => setStatus(v as any)}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os status</SelectItem>
-            <SelectItem value="approved">Aprovadas</SelectItem>
-            <SelectItem value="pending">Pendentes</SelectItem>
-            <SelectItem value="blocked">Bloqueadas</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={groupBy} onValueChange={v => setGroupBy(v as any)}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">Sem agrupamento</SelectItem>
-            <SelectItem value="session">Por consulta</SelectItem>
-            <SelectItem value="format">Por formato</SelectItem>
-          </SelectContent>
-        </Select>
-        <div className="flex border border-border/60 rounded-md">
-          <Button variant="ghost" size="icon" className={view === 'grid' ? 'text-primary' : 'text-muted-foreground'} onClick={() => setView('grid')}>
-            <LayoutGrid className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className={view === 'list' ? 'text-primary' : 'text-muted-foreground'} onClick={() => setView('list')}>
-            <List className="h-4 w-4" />
-          </Button>
+        <div className="space-y-1">
+          <label className="text-[11px] uppercase tracking-wide text-muted-foreground">Formato</label>
+          <Select value={format} onValueChange={v => setFormat(v as any)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os formatos</SelectItem>
+              {Object.entries(LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <label className="text-[11px] uppercase tracking-wide text-muted-foreground">Status</label>
+          <Select value={status} onValueChange={v => setStatus(v as any)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os status</SelectItem>
+              <SelectItem value="approved">Aprovadas</SelectItem>
+              <SelectItem value="pending">Pendentes</SelectItem>
+              <SelectItem value="blocked">Bloqueadas</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <label className="text-[11px] uppercase tracking-wide text-muted-foreground">Agrupar por</label>
+          <Select value={groupBy} onValueChange={v => setGroupBy(v as any)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="format">Formato</SelectItem>
+              <SelectItem value="session">Consulta</SelectItem>
+              <SelectItem value="none">Sem agrupamento</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <label className="text-[11px] uppercase tracking-wide text-muted-foreground hidden md:block">&nbsp;</label>
+          <div className="flex border border-border/60 rounded-md">
+            <Button variant="ghost" size="icon" className={view === 'grid' ? 'text-primary' : 'text-muted-foreground'} onClick={() => setView('grid')}>
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className={view === 'list' ? 'text-primary' : 'text-muted-foreground'} onClick={() => setView('list')}>
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { setRecordingActive, LEAVE_RECORDING_WARNING } from '@/lib/recordingGuard';
 
 export type RecorderStatus = 'idle' | 'recording' | 'paused' | 'stopped';
 
@@ -37,7 +38,22 @@ export function useAudioRecorder(opts: UseAudioRecorderOptions = {}) {
   useEffect(() => () => {
     if (timerRef.current) clearInterval(timerRef.current);
     streamRef.current?.getTracks().forEach(t => t.stop());
+    setRecordingActive(false);
   }, []);
+
+  // Avisa antes de fechar/atualizar a aba com gravação em andamento — sem isso
+  // o áudio se perde silenciosamente (era o bug "saio da página e para de gravar").
+  useEffect(() => {
+    setRecordingActive(status === 'recording' || status === 'paused');
+    if (status !== 'recording' && status !== 'paused') return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = LEAVE_RECORDING_WARNING;
+      return LEAVE_RECORDING_WARNING;
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [status]);
 
   useEffect(() => {
     if (status === 'recording') {
