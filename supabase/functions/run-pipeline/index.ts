@@ -286,21 +286,23 @@ Retorne SÓ um JSON array: [{"title":"...","summary":"...","funnelStage":"C0|C1|
 Sem markdown.`;
 
 const BASE_RULES = `## Regras universais
-- NUNCA hashtags (exceto LinkedIn até 3 no fim). NUNCA travessão (—). NUNCA "não é X, é Y".
+- NUNCA hashtags em nenhum formato (nem LinkedIn). NUNCA travessão (—). NUNCA "não é X, é Y".
 - NUNCA clichês de IA. Tom direto. Frases curtas. CTA específico.
 ## Regras CFM
 - Sem "cura", "100%", "garantido", "sem risco", "milagre", "melhor do Brasil".
 - Sem antes-e-depois identificável. Sem diagnóstico à distância. Sem posologia. Sem preço. Sem indicação nominal de colega.`;
 
+// Estruturas "campeãs" por formato (2026) — o que decide alcance/salvamento em
+// cada plataforma hoje, não só a forma do texto.
 const FORMAT_SYS: Record<string, string> = {
-  carousel: 'Carrossel médico: 7-10 slides, máx 280 chars cada. SLIDE 1 CAPA, ..., SLIDE FINAL CTA.',
-  reel: 'Reel: [GANCHO 0-3s] [CORPO] [CTA]. Duração estimada.',
-  caption: 'Legenda IG em 3 versões: CURTA (≤5 linhas), MÉDIA (8-12), LONGA (15-20). Sem hashtags.',
-  linkedin: 'Post LinkedIn: 1a linha forte, parágrafos curtos, CTA de conversa, máx 3 hashtags no fim.',
-  stories: '4 frames Stories: enquete, dado, insight, CTA. Textos curtíssimos.',
+  carousel: 'Carrossel médico, 7-10 slides (ideal 7 — é o mínimo que segura atenção sem afastar quem passa rápido). SLIDE 1 (capa): gancho de 4-7 palavras, pergunta direta ou promessa clara — decide se o usuário desliza. SLIDE 2: contexto, por que importa agora. SLIDES 3-4: desenvolvimento (mito x verdade, passo a passo, um ponto por slide, sem jargão nos primeiros). SLIDES 5-6: virada, o dado ou raciocínio clínico que ninguém conta. SLIDE 7: resumo em uma frase. SLIDE FINAL: CTA de salvar/compartilhar (nunca "segue"). Máx 280 chars por slide.',
+  reel: 'Reel em 4 blocos com tempo: GANCHO (0-3s, dor ou curiosidade imediata, direto pra câmera, sem enrolação) → DESENVOLVIMENTO (4-20s, entrega o prometido no gancho, uma ideia por frase, corte seco entre falas) → VIRADA (21-25s, informação que quebra expectativa) → CTA (últimos 3-5s, ação específica: salvar, comentar palavra-gatilho, ou agendar). Indique duração alvo (15-30s pra alcance/descoberta, 60-90s pra tutorial/autoridade — acima disso a retenção cai). Sempre observe que o vídeo precisa de legenda on-screen (a maioria assiste sem som).',
+  caption: 'Legenda IG em 3 versões: CURTA (≤5 linhas), MÉDIA (8-12), LONGA (15-20). Estrutura Gancho-Corpo-CTA: linha 1 gera tensão ou curiosidade específica sobre o tema (decide o "ver mais"); corpo aprofunda o que a imagem/vídeo não disse (nunca repete o carrossel/reel que acompanha); fecha com CTA e, quando fizer sentido, uma pergunta que puxe comentário qualificado. Sem hashtags.',
+  linkedin: 'Post LinkedIn como tese editorial, não anúncio: 1a linha é o gancho (aparece antes do "ver mais" — afirmação ou dado que para o feed); desenvolvimento traz a tese pessoal/clínica do médico com exemplo real ou raciocínio prático, parágrafos curtos, tom direto sem jargão excessivo; fechamento sintetiza a tese; CTA convida a comentário qualificado ou conexão, nunca venda direta. Sem hashtags.',
+  stories: 'Stories: 7-10 frames em 3 partes. Frame 1 = gancho (headline forte, por que assistir). Frames 2 até o penúltimo = valor, um ponto por frame, texto grande e legível, legenda de texto obrigatória. Frame final = ação clara (enquete, caixinha de pergunta, ou convite a marcar alguém). Não é repost automático do Reel — complementa e aprofunda o tema do dia.',
   gmb: 'Post Google Meu Negócio 150-300 palavras. Linguagem de busca. CTA agendar.',
-  blog: 'Artigo markdown 800-1500 palavras. # Título, intro, ## H2s, ## Conclusão + CTA.',
-  youtube: 'Roteiro YouTube ~8 min. [INTRO][problema][ciência][prática][FAQ][FECHO].',
+  blog: 'Artigo markdown 800-1500 palavras, pensado pra SEO E pra resposta de IA generativa (AEO/GEO). # Título com a palavra-chave principal e a promessa de resposta. Primeiro parágrafo já responde a pergunta central, sem enrolação. ## H2s organizados por sub-pergunta real do público, parágrafos curtos. Seção de FAQ com 3-5 perguntas objetivas ao final. Fecha com bio/credenciais do médico + CTA.',
+  youtube: 'Roteiro YouTube com uma promessa só (nunca 3 assuntos no mesmo vídeo). Sugira título e conceito de thumbnail coerentes com o conteúdo real (elemento humano, alto contraste). [ABERTURA 0-10s: gancho direto, sem introdução institucional] [DESENVOLVIMENTO: blocos de 1-3min por subtema, exemplos concretos, sugestão de apoio visual em tela] [FECHAMENTO: resumo da mensagem central] [CTA: inscrição, próximo vídeo relacionado, ou agendamento].',
   tiktok: 'TikTok 45s: [Hook 0-3s][Desenvolvimento][CTA]. Descreva legendas on-screen.',
   podcast: 'Podcast ~15min. Abertura, contexto, aprofundamento, prática, fecho.',
   doctoralia: 'Artigo Doctoralia 300-500 palavras. Título com condição, sinais, avaliação, CTA.',

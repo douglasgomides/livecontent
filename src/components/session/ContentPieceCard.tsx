@@ -12,11 +12,12 @@ import PieceArtwork from './PieceArtwork';
 import PiecePrompts from './PiecePrompts';
 import PiecePublish from './PiecePublish';
 
-export default function ContentPieceCard({ piece, topic, brain, sessionId, onChange, onApprove }: {
+export default function ContentPieceCard({ piece, topic, brain, sessionId, companionCaption, onChange, onApprove }: {
   piece: ContentPiece;
   topic?: Topic;
   brain?: Brain | null;
   sessionId: string;
+  companionCaption?: ContentPiece;
   onChange: (p: ContentPiece) => void;
   onApprove: () => void;
 }) {
@@ -132,6 +133,22 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, onCha
           <PiecePublish piece={piece} sessionId={sessionId} topicTitle={topicTitle} />
         </TabsContent>
       </Tabs>
+
+      {companionCaption && (
+        <div className="px-4 py-3 border-t border-border/60 bg-secondary/30">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">Legenda pra postar junto</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { navigator.clipboard.writeText(companionCaption.body); toast.success('Legenda copiada'); }}
+            >
+              <Copy className="h-3.5 w-3.5 mr-1" /> Copiar legenda
+            </Button>
+          </div>
+          <p className="text-xs whitespace-pre-wrap text-muted-foreground line-clamp-6">{companionCaption.body}</p>
+        </div>
+      )}
 
       <div className="px-4 py-3 border-t border-border/60 flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-1">

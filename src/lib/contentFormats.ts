@@ -58,6 +58,18 @@ export const CHANNEL_LABEL: Record<ContentChannel, string> = {
   podcast: 'Podcast',
 };
 
+export const CHANNEL_ICON: Record<ContentChannel, any> = {
+  instagram: Instagram,
+  linkedin: Linkedin,
+  youtube: Youtube,
+  tiktok: Music,
+  blog: FileText,
+  gmb: MapPin,
+  doctoralia: Stethoscope,
+  website: Globe,
+  podcast: Mic,
+};
+
 export const FORMAT_GROUPS: { label: string; formats: ContentFormat[] }[] = [
   { label: 'Redes sociais', formats: ['reel', 'carousel', 'stories', 'caption', 'linkedin'] },
   { label: 'Conteúdo longo', formats: ['blog', 'youtube', 'podcast', 'tiktok'] },

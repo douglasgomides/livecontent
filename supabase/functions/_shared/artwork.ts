@@ -9,23 +9,28 @@ export const ARTWORK_DIMS: Record<string, { width: number; height: number }> = {
 };
 
 const BASE_RULES = `## Regras universais
-- NUNCA hashtags (exceto LinkedIn até 3 no fim). NUNCA travessão (—). NUNCA "não é X, é Y".
+- NUNCA hashtags em nenhum formato (nem LinkedIn). NUNCA travessão (—). NUNCA "não é X, é Y".
 - NUNCA clichês de IA. Tom direto. Frases curtas. CTA específico.
 ## Regras CFM
 - Sem "cura", "100%", "garantido", "sem risco", "milagre", "melhor do Brasil".
 - Sem antes-e-depois identificável. Sem diagnóstico à distância. Sem posologia. Sem preço. Sem indicação nominal de colega.`;
 
 const SLIDES_SYSTEM: Record<string, string> = {
-  carousel: `Estrategista de carrosséis médicos. Gere 6-8 slides reais e específicos sobre o tema
-(nunca genéricos/placeholder). Estrutura: capa (gancho) → 3-5 slides de conteúdo (problema,
-explicação, mito×verdade, passos práticos — adapte ao tema real) → CTA final.
+  carousel: `Estrategista de carrosséis médicos. Gere 7-10 slides reais e específicos sobre o tema
+(nunca genéricos/placeholder) — o slide 1 decide se o usuário desliza, então o gancho tem que
+ser forte (4-7 palavras, pergunta direta ou promessa clara). Estrutura: capa (gancho) → contexto
+(por que importa agora) → 2-3 slides de desenvolvimento (mito×verdade, passo a passo — um ponto
+por slide, sem jargão) → 1-2 slides de virada (o dado ou raciocínio que ninguém conta) → resumo
+em uma frase → CTA final de salvar/compartilhar (nunca "seguir").
 Cada slide tem: kind ("cover" pro primeiro, "content" pros do meio, "cta" pro último),
 eyebrow (rótulo curto, ex: "01 · O SINTOMA"), title (frase de impacto, máx 60 chars),
 body (1-3 frases, máx 200 chars, vazio no cover/cta se não precisar).
 Regras CFM e universais valem aqui também (sem promessa de cura, sem hashtags, sem travessão).`,
-  stories: `Roteirista de Stories médicos. Gere exatos 4 frames: 1 enquete/pergunta, 1 dado ou
-insight, 1 reflexão ligada ao tema real da consulta, 1 CTA final.
-Cada frame: kind ("story" pros 3 primeiros, "cta" pro último), eyebrow (rótulo curto, ex:
+  stories: `Roteirista de Stories médicos. Gere 7-10 frames em 3 partes: 1 frame de gancho (headline
+forte, por que assistir), 5-8 frames de valor (um ponto por frame — dado, insight, reflexão ligada
+ao tema real da consulta, texto grande e legível), 1 frame final de ação (enquete, caixinha de
+pergunta, ou convite a marcar alguém).
+Cada frame: kind ("story" pros de valor, "cta" pro último), eyebrow (rótulo curto, ex:
 "ENQUETE"), title (frase curta de impacto, máx 50 chars), body (opcional, máx 100 chars).
 Regras CFM e universais valem aqui também.`,
 };

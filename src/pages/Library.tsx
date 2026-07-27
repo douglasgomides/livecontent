@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { loadSessions } from '@/lib/storage';
 import { ArrowRight, Search, LayoutGrid, List } from 'lucide-react';
 import type { ContentFormat } from '@/types/session';
-import { FORMAT_LABEL as LABELS, FORMAT_ICON as ICONS } from '@/lib/contentFormats';
+import { FORMAT_LABEL as LABELS, FORMAT_ICON as ICONS, CHANNEL_LABEL, CHANNEL_ICON } from '@/lib/contentFormats';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -25,9 +25,10 @@ export default function Library() {
   const [format, setFormat] = useState<'all' | ContentFormat>('all');
   const [status, setStatus] = useState<'all' | 'approved' | 'pending' | 'blocked'>('all');
   const [view, setView] = useState<'grid' | 'list'>('grid');
-  // Agrupado por formato por padrão — misturar reel/carrossel/legenda/linkedin
-  // numa lista só ficava confuso de navegar.
-  const [groupBy, setGroupBy] = useState<'none' | 'session' | 'format'>('format');
+  // Agrupado por mídia por padrão — misturar Instagram/LinkedIn/Blog numa lista
+  // só ficava confuso de navegar (e formato sozinho ainda misturava reel com
+  // carrossel do mesmo canal, que na prática são publicados juntos).
+  const [groupBy, setGroupBy] = useState<'none' | 'session' | 'format' | 'channel'>('channel');
 
   const filtered = useMemo(() => {
     return items.filter(({ session, piece, topicTitle }) => {
@@ -48,7 +49,9 @@ export default function Library() {
     if (groupBy === 'none') return [{ key: '', label: '', items: filtered }];
     const map = new Map<string, typeof filtered>();
     filtered.forEach(it => {
-      const key = groupBy === 'session' ? it.session.title : LABELS[it.piece.format];
+      const key = groupBy === 'session' ? it.session.title
+        : groupBy === 'channel' ? CHANNEL_LABEL[it.piece.channel]
+        : LABELS[it.piece.format];
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(it);
     });
@@ -97,6 +100,7 @@ export default function Library() {
           <Select value={groupBy} onValueChange={v => setGroupBy(v as any)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
+              <SelectItem value="channel">Mídia</SelectItem>
               <SelectItem value="format">Formato</SelectItem>
               <SelectItem value="session">Consulta</SelectItem>
               <SelectItem value="none">Sem agrupamento</SelectItem>
@@ -122,10 +126,18 @@ export default function Library() {
         </div>
       ) : (
         <div className="space-y-8">
-          {grouped.map(g => (
+          {grouped.map(g => {
+            const first = g.items[0];
+            const GroupIcon = groupBy === 'channel' && first ? CHANNEL_ICON[first.piece.channel]
+              : groupBy === 'format' && first ? ICONS[first.piece.format]
+              : null;
+            return (
             <div key={g.key || 'all'}>
               {g.label && (
-                <h2 className="text-xs uppercase tracking-widest text-primary mb-3">{g.label} · {g.items.length}</h2>
+                <h2 className="text-xs uppercase tracking-widest text-primary mb-3 flex items-center gap-1.5">
+                  {GroupIcon && <GroupIcon className="h-3.5 w-3.5" />}
+                  {g.label} · {g.items.length}
+                </h2>
               )}
               {view === 'grid' ? (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -141,7 +153,8 @@ export default function Library() {
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
