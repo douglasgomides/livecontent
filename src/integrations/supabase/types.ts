@@ -127,6 +127,83 @@ export type Database = {
           },
         ]
       }
+      clint_mcp_config: {
+        Row: {
+          key: string
+          value: string
+        }
+        Insert: {
+          key: string
+          value: string
+        }
+        Update: {
+          key?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      commercial_intelligence: {
+        Row: {
+          argumentos_utilizados: Json
+          condicoes_comerciais: Json
+          created_at: string
+          dores_identificadas: Json
+          houve_oferta_comercial: boolean
+          id: string
+          motivo_resultado: string | null
+          objecoes_paciente: Json
+          procedimentos_mencionados: string[]
+          proxima_acao: string | null
+          resultado: string
+          resumo_comercial: string
+          session_id: string
+          specialty: string
+          user_id: string
+        }
+        Insert: {
+          argumentos_utilizados?: Json
+          condicoes_comerciais?: Json
+          created_at?: string
+          dores_identificadas?: Json
+          houve_oferta_comercial?: boolean
+          id?: string
+          motivo_resultado?: string | null
+          objecoes_paciente?: Json
+          procedimentos_mencionados?: string[]
+          proxima_acao?: string | null
+          resultado?: string
+          resumo_comercial?: string
+          session_id: string
+          specialty?: string
+          user_id: string
+        }
+        Update: {
+          argumentos_utilizados?: Json
+          condicoes_comerciais?: Json
+          created_at?: string
+          dores_identificadas?: Json
+          houve_oferta_comercial?: boolean
+          id?: string
+          motivo_resultado?: string | null
+          objecoes_paciente?: Json
+          procedimentos_mencionados?: string[]
+          proxima_acao?: string | null
+          resultado?: string
+          resumo_comercial?: string
+          session_id?: string
+          specialty?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_intelligence_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consent_logs: {
         Row: {
           choices: Json
