@@ -181,6 +181,70 @@ export async function fetchAdminOverview(): Promise<AdminOverview> {
   return data as AdminOverview;
 }
 
+// ─── Inteligência comercial (agregado cross-médico, admin-only) ────────────
+
+export interface CommercialArgumentStat {
+  categoria: string;
+  total: number;
+  fechou: number;
+  taxa: number;
+}
+
+export interface CommercialArgumentRanking {
+  argumento: string;
+  total: number;
+  fechou: number;
+  taxa: number;
+}
+
+export interface CommercialObjectionStat {
+  categoria: string;
+  total: number;
+  taxa_superacao: number | null;
+}
+
+export interface CommercialCrossing {
+  dor_categoria: string;
+  arg_categoria: string;
+  fechou_count: number;
+}
+
+export interface CommercialByDoctor {
+  user_id: string;
+  specialty: string;
+  total: number;
+  fechou: number;
+  taxa: number;
+}
+
+export interface CommercialBySpecialty {
+  specialty: string;
+  total: number;
+  fechou: number;
+  taxa: number;
+}
+
+export interface CommercialIntelligenceReport {
+  total_sessoes_com_oferta: number;
+  total_sessoes_com_resultado_decidido: number;
+  taxa_fechamento_geral: number | null;
+  por_categoria_argumento: CommercialArgumentStat[];
+  ranking_argumentos: CommercialArgumentRanking[];
+  ranking_argumentos_amostra_minima: number;
+  ranking_argumentos_total_distintos: number;
+  ranking_argumentos_omitidos_por_amostra_baixa: number;
+  objecoes: CommercialObjectionStat[];
+  cruzamento_dor_argumento: CommercialCrossing[];
+  por_medico: CommercialByDoctor[];
+  por_especialidade: CommercialBySpecialty[];
+}
+
+export async function fetchCommercialIntelligenceReport(): Promise<CommercialIntelligenceReport> {
+  const { data, error } = await supabase.functions.invoke('commercial-intelligence-report');
+  if (error) throw new Error(await describeFunctionError(error, 'Falha ao carregar inteligência comercial'));
+  return data as CommercialIntelligenceReport;
+}
+
 // ─── Pipeline real (Edge Function) ──────────────────────────────────────────
 
 export async function uploadAudioForSession(sessionId: string, blob: Blob, ext = 'webm'): Promise<string> {
