@@ -26,6 +26,7 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import EvidenceLibrary from "./pages/EvidenceLibrary";
 import ReferenceStyles from "./pages/ReferenceStyles";
+import Insights from "./pages/Insights";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
@@ -91,6 +92,7 @@ const App = () => (
               <Route path="publish-queue" element={<PublishQueue />} />
               <Route path="calendar" element={<CalendarPage />} />
               <Route path="evidence" element={<EvidenceLibrary />} />
+              <Route path="insights" element={<Insights />} />
               <Route path="reference-styles" element={<ReferenceStyles />} />
               <Route path="brain" element={<BrainPage />} />
               <Route path="settings" element={<Settings />} />

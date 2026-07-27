@@ -109,9 +109,9 @@ export async function fetchTrendingTopics(query?: string): Promise<{ query: stri
 
 // ─── Estilos de referência (extrai estrutura, nunca conteúdo literal) ───────
 
-export async function analyzeReferenceStyle(args: { imagePath?: string; text?: string; formatHint?: string }): Promise<string> {
+export async function analyzeReferenceStyle(args: { imagePath?: string; text?: string; formatHint?: string; sourceOwnership?: 'own' | 'other' }): Promise<string> {
   const { data, error } = await supabase.functions.invoke('analyze-reference-style', {
-    body: { image_path: args.imagePath, text: args.text, format_hint: args.formatHint },
+    body: { image_path: args.imagePath, text: args.text, format_hint: args.formatHint, source_ownership: args.sourceOwnership ?? 'other' },
   });
   if (error || !data?.structure_description) {
     throw new Error(await describeFunctionError(error, 'Falha ao analisar a referência'));

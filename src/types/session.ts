@@ -116,6 +116,9 @@ export interface ReferenceStyle {
   sourceType: 'image' | 'text';
   sourceImagePath?: string;
   sourceText?: string;
+  // 'own' = peça do próprio médico (adaptação fiel liberada); 'other' = peça de
+  // outra pessoa/conta (só estrutura abstrata, nunca texto — protege direito autoral).
+  sourceOwnership: 'own' | 'other';
   structureDescription: string;
   createdAt: string;
 }
@@ -124,6 +127,20 @@ export interface ScienceSource {
   reference: string;
   kind: 'abstract' | 'news' | 'guideline' | 'other';
   originalText: string;
+}
+
+export type PatientSignalKind = 'objection' | 'question' | 'buying_signal';
+
+// Sinal de inteligência comercial extraído automaticamente da transcrição
+// anonimizada — paráfrase curta, nunca frase literal do paciente.
+export interface PatientSignal {
+  id: string;
+  sessionId: string;
+  kind: PatientSignalKind;
+  category: string;
+  label: string;
+  confidence: number;
+  createdAt: string;
 }
 
 export interface Session {

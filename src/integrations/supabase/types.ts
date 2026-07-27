@@ -14,12 +14,28 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_admins: {
+        Row: {
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       brains: {
         Row: {
           brand: Json
           created_at: string
           doctor: Json
           id: string
+          objections_opt_in: boolean
           onboarded: boolean
           patient: Json
           updated_at: string
@@ -30,6 +46,7 @@ export type Database = {
           created_at?: string
           doctor?: Json
           id?: string
+          objections_opt_in?: boolean
           onboarded?: boolean
           patient?: Json
           updated_at?: string
@@ -40,12 +57,86 @@ export type Database = {
           created_at?: string
           doctor?: Json
           id?: string
+          objections_opt_in?: boolean
           onboarded?: boolean
           patient?: Json
           updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      click_behavior: {
+        Row: {
+          click_id: string
+          cta_clicks: number
+          lead_submitted: boolean
+          max_scroll_pct: number | null
+          time_on_page_ms: number | null
+          updated_at: string
+          wa_opened: boolean
+        }
+        Insert: {
+          click_id: string
+          cta_clicks?: number
+          lead_submitted?: boolean
+          max_scroll_pct?: number | null
+          time_on_page_ms?: number | null
+          updated_at?: string
+          wa_opened?: boolean
+        }
+        Update: {
+          click_id?: string
+          cta_clicks?: number
+          lead_submitted?: boolean
+          max_scroll_pct?: number | null
+          time_on_page_ms?: number | null
+          updated_at?: string
+          wa_opened?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "click_behavior_click_id_fkey"
+            columns: ["click_id"]
+            isOneToOne: true
+            referencedRelation: "link_clicks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consent_logs: {
+        Row: {
+          choices: Json
+          cid: string | null
+          id: string
+          page_slug: string | null
+          tenant_id: string
+          ts: string
+        }
+        Insert: {
+          choices?: Json
+          cid?: string | null
+          id?: string
+          page_slug?: string | null
+          tenant_id: string
+          ts?: string
+        }
+        Update: {
+          choices?: Json
+          cid?: string | null
+          id?: string
+          page_slug?: string | null
+          tenant_id?: string
+          ts?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consent_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       content_pieces: {
         Row: {
@@ -61,10 +152,10 @@ export type Database = {
           format: Database["public"]["Enums"]["content_format"]
           id: string
           meta: Json | null
+          reference_style_id: string | null
           rejected: boolean
           rejected_note: string | null
           rejected_reason: string | null
-          reference_style_id: string | null
           session_id: string
           topic_id: string | null
           updated_at: string
@@ -83,10 +174,10 @@ export type Database = {
           format: Database["public"]["Enums"]["content_format"]
           id?: string
           meta?: Json | null
+          reference_style_id?: string | null
           rejected?: boolean
           rejected_note?: string | null
           rejected_reason?: string | null
-          reference_style_id?: string | null
           session_id: string
           topic_id?: string | null
           updated_at?: string
@@ -105,16 +196,23 @@ export type Database = {
           format?: Database["public"]["Enums"]["content_format"]
           id?: string
           meta?: Json | null
+          reference_style_id?: string | null
           rejected?: boolean
           rejected_note?: string | null
           rejected_reason?: string | null
-          reference_style_id?: string | null
           session_id?: string
           topic_id?: string | null
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "content_pieces_reference_style_id_fkey"
+            columns: ["reference_style_id"]
+            isOneToOne: false
+            referencedRelation: "reference_styles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "content_pieces_session_id_fkey"
             columns: ["session_id"]
@@ -129,11 +227,66 @@ export type Database = {
             referencedRelation: "topics"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      doctor_settings: {
+        Row: {
+          created_at: string
+          preferred_formats: Json
+          updated_at: string
+          user_id: string
+          webhooks: Json
+        }
+        Insert: {
+          created_at?: string
+          preferred_formats?: Json
+          updated_at?: string
+          user_id: string
+          webhooks?: Json
+        }
+        Update: {
+          created_at?: string
+          preferred_formats?: Json
+          updated_at?: string
+          user_id?: string
+          webhooks?: Json
+        }
+        Relationships: []
+      }
+      domains: {
+        Row: {
+          created_at: string
+          hostname: string
+          id: string
+          tenant_id: string
+          verified: boolean
+          verified_at: string | null
+          verify_token: string
+        }
+        Insert: {
+          created_at?: string
+          hostname: string
+          id?: string
+          tenant_id: string
+          verified?: boolean
+          verified_at?: string | null
+          verify_token?: string
+        }
+        Update: {
+          created_at?: string
+          hostname?: string
+          id?: string
+          tenant_id?: string
+          verified?: boolean
+          verified_at?: string | null
+          verify_token?: string
+        }
+        Relationships: [
           {
-            foreignKeyName: "content_pieces_reference_style_id_fkey"
-            columns: ["reference_style_id"]
+            foreignKeyName: "domains_tenant_id_fkey"
+            columns: ["tenant_id"]
             isOneToOne: false
-            referencedRelation: "reference_styles"
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -189,27 +342,265 @@ export type Database = {
         }
         Relationships: []
       }
-      doctor_settings: {
+      leads: {
         Row: {
+          click_id: string | null
+          consent: boolean
           created_at: string
-          preferred_formats: Json
-          updated_at: string
-          user_id: string
-          webhooks: Json
+          email: string | null
+          id: string
+          message: string | null
+          name: string | null
+          page_slug: string | null
+          phone: string | null
+          tenant_id: string
         }
         Insert: {
+          click_id?: string | null
+          consent?: boolean
           created_at?: string
-          preferred_formats?: Json
-          updated_at?: string
-          user_id: string
-          webhooks?: Json
+          email?: string | null
+          id?: string
+          message?: string | null
+          name?: string | null
+          page_slug?: string | null
+          phone?: string | null
+          tenant_id: string
         }
         Update: {
+          click_id?: string | null
+          consent?: boolean
           created_at?: string
-          preferred_formats?: Json
+          email?: string | null
+          id?: string
+          message?: string | null
+          name?: string | null
+          page_slug?: string | null
+          phone?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_click_id_fkey"
+            columns: ["click_id"]
+            isOneToOne: false
+            referencedRelation: "link_clicks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      link_clicks: {
+        Row: {
+          cid: string | null
+          device: Json
+          geo: Json
+          id: string
+          ip_hash: string | null
+          link_id: string
+          referrer: string | null
+          ts: string
+          ua: string | null
+          utm: Json
+        }
+        Insert: {
+          cid?: string | null
+          device?: Json
+          geo?: Json
+          id?: string
+          ip_hash?: string | null
+          link_id: string
+          referrer?: string | null
+          ts?: string
+          ua?: string | null
+          utm?: Json
+        }
+        Update: {
+          cid?: string | null
+          device?: Json
+          geo?: Json
+          id?: string
+          ip_hash?: string | null
+          link_id?: string
+          referrer?: string | null
+          ts?: string
+          ua?: string | null
+          utm?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "link_clicks_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "smart_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      page_versions: {
+        Row: {
+          blocks: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          page_id: string
+        }
+        Insert: {
+          blocks: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          page_id: string
+        }
+        Update: {
+          blocks?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          page_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_versions_page_id_fkey"
+            columns: ["page_id"]
+            isOneToOne: false
+            referencedRelation: "pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "page_versions_page_id_fkey"
+            columns: ["page_id"]
+            isOneToOne: false
+            referencedRelation: "pages_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pages: {
+        Row: {
+          blocks: Json
+          created_at: string
+          id: string
+          published_at: string | null
+          seo: Json
+          slug: string
+          status: Database["public"]["Enums"]["page_status"]
+          tenant_id: string
+          theme: Json
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          blocks?: Json
+          created_at?: string
+          id?: string
+          published_at?: string | null
+          seo?: Json
+          slug: string
+          status?: Database["public"]["Enums"]["page_status"]
+          tenant_id: string
+          theme?: Json
+          title: string
           updated_at?: string
+        }
+        Update: {
+          blocks?: Json
+          created_at?: string
+          id?: string
+          published_at?: string | null
+          seo?: Json
+          slug?: string
+          status?: Database["public"]["Enums"]["page_status"]
+          tenant_id?: string
+          theme?: Json
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_signals: {
+        Row: {
+          category: string
+          confidence: number
+          created_at: string
+          id: string
+          kind: string
+          label: string
+          session_id: string
+          topic_id: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          confidence?: number
+          created_at?: string
+          id?: string
+          kind?: string
+          label?: string
+          session_id: string
+          topic_id?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string
+          confidence?: number
+          created_at?: string
+          id?: string
+          kind?: string
+          label?: string
+          session_id?: string
+          topic_id?: string | null
           user_id?: string
-          webhooks?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_signals_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_signals_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          id: string
+          name: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          id: string
+          name?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          name?: string | null
         }
         Relationships: []
       }
@@ -273,6 +664,48 @@ export type Database = {
           },
         ]
       }
+      reference_styles: {
+        Row: {
+          created_at: string
+          format_hint: string
+          id: string
+          name: string
+          source_image_path: string | null
+          source_ownership: string
+          source_text: string | null
+          source_type: string
+          structure_description: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          format_hint?: string
+          id?: string
+          name?: string
+          source_image_path?: string | null
+          source_ownership?: string
+          source_text?: string | null
+          source_type?: string
+          structure_description?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          format_hint?: string
+          id?: string
+          name?: string
+          source_image_path?: string | null
+          source_ownership?: string
+          source_text?: string | null
+          source_type?: string
+          structure_description?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       sessions: {
         Row: {
           anonymized_transcript: string | null
@@ -324,6 +757,50 @@ export type Database = {
         }
         Relationships: []
       }
+      smart_links: {
+        Row: {
+          archived_at: string | null
+          code: string
+          created_at: string
+          id: string
+          label: string | null
+          page_slug: string | null
+          target_url: string
+          tenant_id: string
+          utm: Json
+        }
+        Insert: {
+          archived_at?: string | null
+          code: string
+          created_at?: string
+          id?: string
+          label?: string | null
+          page_slug?: string | null
+          target_url: string
+          tenant_id: string
+          utm?: Json
+        }
+        Update: {
+          archived_at?: string | null
+          code?: string
+          created_at?: string
+          id?: string
+          label?: string | null
+          page_slug?: string | null
+          target_url?: string
+          tenant_id?: string
+          utm?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "smart_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           created_at: string
@@ -357,42 +834,71 @@ export type Database = {
         }
         Relationships: []
       }
-      reference_styles: {
+      tenant_members: {
         Row: {
           created_at: string
-          format_hint: string
-          id: string
-          name: string
-          source_image_path: string | null
-          source_text: string | null
-          source_type: string
-          structure_description: string
-          updated_at: string
+          role: string
+          tenant_id: string
           user_id: string
         }
         Insert: {
           created_at?: string
-          format_hint?: string
-          id?: string
-          name?: string
-          source_image_path?: string | null
-          source_text?: string | null
-          source_type?: string
-          structure_description?: string
-          updated_at?: string
+          role?: string
+          tenant_id: string
           user_id: string
         }
         Update: {
           created_at?: string
-          format_hint?: string
-          id?: string
-          name?: string
-          source_image_path?: string | null
-          source_text?: string | null
-          source_type?: string
-          structure_description?: string
-          updated_at?: string
+          role?: string
+          tenant_id?: string
           user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenants: {
+        Row: {
+          created_at: string
+          id: string
+          logo_url: string | null
+          name: string
+          owner_id: string
+          plan: string
+          primary_color: string | null
+          slug: string
+          updated_at: string
+          whatsapp: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name: string
+          owner_id: string
+          plan?: string
+          primary_color?: string | null
+          slug: string
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name?: string
+          owner_id?: string
+          plan?: string
+          primary_color?: string | null
+          slug?: string
+          updated_at?: string
+          whatsapp?: string | null
         }
         Relationships: []
       }
@@ -443,14 +949,66 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      pages_public: {
+        Row: {
+          blocks: Json | null
+          id: string | null
+          published_at: string | null
+          seo: Json | null
+          slug: string | null
+          tenant_id: string | null
+          tenant_logo_url: string | null
+          tenant_name: string | null
+          tenant_primary_color: string | null
+          tenant_slug: string | null
+          tenant_whatsapp: string | null
+          theme: Json | null
+          title: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_app_admin: { Args: { uid: string }; Returns: boolean }
+      owns_tenant: { Args: { _tenant_id: string }; Returns: boolean }
     }
     Enums: {
+      app_role: "admin" | "user"
       content_channel:
         | "instagram"
         | "linkedin"
@@ -484,6 +1042,7 @@ export type Database = {
         | "guideline"
         | "expert_opinion"
         | "other"
+      page_status: "draft" | "published"
       plan_tier: "free" | "pro"
       publish_status:
         | "queued"
@@ -492,7 +1051,6 @@ export type Database = {
         | "needs_connection"
         | "downloaded"
         | "failed"
-      subscription_status: "active" | "canceled" | "past_due" | "none"
       session_source:
         | "recording"
         | "upload"
@@ -510,6 +1068,7 @@ export type Database = {
         | "generating_content"
         | "ready"
         | "failed"
+      subscription_status: "active" | "canceled" | "past_due" | "none"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -637,6 +1196,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "user"],
       content_channel: [
         "instagram",
         "linkedin",
@@ -673,6 +1233,7 @@ export const Constants = {
         "expert_opinion",
         "other",
       ],
+      page_status: ["draft", "published"],
       plan_tier: ["free", "pro"],
       publish_status: [
         "queued",
@@ -682,7 +1243,6 @@ export const Constants = {
         "downloaded",
         "failed",
       ],
-      subscription_status: ["active", "canceled", "past_due", "none"],
       session_source: [
         "recording",
         "upload",
@@ -702,6 +1262,7 @@ export const Constants = {
         "ready",
         "failed",
       ],
+      subscription_status: ["active", "canceled", "past_due", "none"],
     },
   },
 } as const

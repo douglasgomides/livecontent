@@ -1,20 +1,18 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Microscope, Search, Loader2, Plus, Trash2, ExternalLink, BookMarked, TrendingUp, Newspaper, Globe2, Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowLeft, Microscope, Search, Loader2, Plus, Trash2, ExternalLink, BookMarked, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import type { EvidenceLevel, EvidenceSource } from '@/types/session';
 import { fetchEvidenceSources, addEvidenceSource, deleteEvidenceSource } from '@/lib/db';
-import { searchPubmed, fetchTrendingTopics, type PubmedResult, type TrendingItem } from '@/lib/pipeline';
+import { searchPubmed, type PubmedResult } from '@/lib/pipeline';
 import { getUserId } from '@/lib/store';
-import { loadBrain } from '@/lib/brainStorage';
 
 const LEVEL_LABEL: Record<EvidenceLevel, string> = {
   meta_analysis: 'Meta-análise',
@@ -41,7 +39,6 @@ function levelTone(level: EvidenceLevel): string {
 }
 
 export default function EvidenceLibrary() {
-  const nav = useNavigate();
   const [sources, setSources] = useState<EvidenceSource[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
@@ -49,11 +46,6 @@ export default function EvidenceLibrary() {
   const [results, setResults] = useState<PubmedResult[]>([]);
   const [addingId, setAddingId] = useState<string | null>(null);
   const [showManual, setShowManual] = useState(false);
-
-  const [trending, setTrending] = useState<TrendingItem[]>([]);
-  const [trendingQuery, setTrendingQuery] = useState('');
-  const [loadingTrending, setLoadingTrending] = useState(false);
-  const [trendingLoaded, setTrendingLoaded] = useState(false);
 
   const refresh = async () => {
     const uid = getUserId();
@@ -122,32 +114,6 @@ export default function EvidenceLibrary() {
 
   const alreadyInLibrary = (pmid: string) => sources.some(s => s.pubmedId === pmid);
 
-  const loadTrending = async (customQuery?: string) => {
-    setLoadingTrending(true);
-    try {
-      const brain = loadBrain();
-      const seed = customQuery ?? trendingQuery.trim() ?? brain.doctor.specialty;
-      const { query: usedQuery, results: r } = await fetchTrendingTopics(seed || undefined);
-      setTrending(r);
-      setTrendingQuery(usedQuery);
-      setTrendingLoaded(true);
-    } catch (err: any) {
-      toast.error(`Falha ao buscar temas em alta: ${err?.message ?? err}`);
-    } finally {
-      setLoadingTrending(false);
-    }
-  };
-
-  const useTrendingTopic = (item: TrendingItem) => {
-    const kind = item.kind === 'pubmed' ? (item.evidence_level === 'guideline' ? 'guideline' : 'abstract') : 'news';
-    const text = item.kind === 'pubmed'
-      ? `Achado científico recente: ${item.title}.\nFonte: ${item.source}${item.date ? `, ${item.date}` : ''}.\nLink: ${item.url}`
-      : `Notícia: ${item.title}.\nFonte: ${item.source}${item.date ? `, ${item.date}` : ''}.\nLink: ${item.url}`;
-    nav('/app/new/science', {
-      state: { prefillText: text, prefillReference: `${item.source}${item.date ? ` — ${item.date}` : ''} · ${item.url}`, prefillKind: kind },
-    });
-  };
-
   return (
     <div className="max-w-3xl mx-auto space-y-8 pb-24 md:pb-0">
       <Link to="/app" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
@@ -160,20 +126,23 @@ export default function EvidenceLibrary() {
         </p>
         <h1 className="font-serif text-4xl mb-2">Só cita o que é real</h1>
         <p className="text-muted-foreground">
-          Descubra temas em alta e busque artigos reais no PubMed. A IA só cita estudos da sua
-          biblioteca ao gerar conteúdo — nunca inventa referência, autor ou revista.
+          Busque artigos reais no PubMed e monte sua biblioteca de citação. A IA só cita estudos daqui
+          ao gerar conteúdo — nunca inventa referência, autor ou revista.
         </p>
       </div>
 
-      <Tabs defaultValue="biblioteca">
-        <TabsList>
-          <TabsTrigger value="biblioteca"><BookMarked className="h-3.5 w-3.5 mr-1.5" /> Biblioteca</TabsTrigger>
-          <TabsTrigger value="trending" onClick={() => !trendingLoaded && loadTrending()}>
-            <TrendingUp className="h-3.5 w-3.5 mr-1.5" /> Temas em alta
-          </TabsTrigger>
-        </TabsList>
+      <Link
+        to="/app/new/science"
+        className="flex items-center gap-3 border border-primary/30 bg-primary/5 rounded-lg p-4 hover:bg-primary/10 transition"
+      >
+        <TrendingUp className="h-5 w-5 text-primary shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="font-medium text-sm">Procurando um tema pra falar, não uma fonte pra citar?</div>
+          <div className="text-xs text-muted-foreground">Temas em alta (PubMed + notícias) agora ficam em Science to Content, junto do resto do fluxo de criar consulta.</div>
+        </div>
+      </Link>
 
-        <TabsContent value="biblioteca" className="space-y-8 mt-6">
+      <div className="space-y-8">
 
       <div className="border border-border/60 rounded-xl p-5 bg-card space-y-4">
         <Label>Buscar no PubMed</Label>
@@ -271,71 +240,7 @@ export default function EvidenceLibrary() {
           ))}
         </div>
       )}
-        </TabsContent>
-
-        <TabsContent value="trending" className="space-y-4 mt-6">
-          <div className="border border-border/60 rounded-xl p-5 bg-card space-y-4">
-            <Label>Tema de busca</Label>
-            <div className="flex gap-2">
-              <Input
-                value={trendingQuery}
-                onChange={e => setTrendingQuery(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && loadTrending()}
-                placeholder="Deixe em branco pra usar sua especialidade"
-              />
-              <Button onClick={() => loadTrending()} disabled={loadingTrending} className="bg-gold-gradient text-primary-foreground shrink-0">
-                {loadingTrending ? <Loader2 className="h-4 w-4 animate-spin" /> : <TrendingUp className="h-4 w-4" />}
-              </Button>
-            </div>
-            <p className="text-[11px] text-muted-foreground">
-              Puxa de 3 fontes reais ao mesmo tempo: PubMed (artigos recentes), notícias de saúde no
-              Brasil e notícias de saúde internacionais — nada é inventado.
-            </p>
-          </div>
-
-          {loadingTrending ? (
-            <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Buscando temas em alta…
-            </div>
-          ) : !trendingLoaded ? (
-            <div className="border border-dashed border-border rounded-xl p-12 text-center text-muted-foreground">
-              <TrendingUp className="h-6 w-6 mx-auto mb-3 opacity-50" />
-              Clique em buscar pra ver o que está em alta agora.
-            </div>
-          ) : trending.length === 0 ? (
-            <div className="border border-dashed border-border rounded-xl p-12 text-center text-muted-foreground">
-              Nada encontrado pra esse tema. Tente um termo mais genérico ou em inglês.
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {trending.map((item, i) => (
-                <div key={i} className="border border-border/60 rounded-lg p-3 flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${
-                        item.kind === 'pubmed' ? 'bg-primary/15 text-primary' : item.kind === 'news_br' ? 'bg-success/15 text-success' : 'bg-secondary text-muted-foreground'
-                      }`}>
-                        {item.kind === 'pubmed' ? <><Microscope className="h-3 w-3" /> PubMed</> :
-                         item.kind === 'news_br' ? <><Newspaper className="h-3 w-3" /> Notícia BR</> :
-                         <><Globe2 className="h-3 w-3" /> Notícia internacional</>}
-                      </span>
-                      {item.date && <span className="text-[11px] text-muted-foreground">{item.date}</span>}
-                    </div>
-                    <div className="text-sm font-medium leading-snug">{item.title}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">{item.source}</div>
-                    <a href={item.url} target="_blank" rel="noreferrer" className="text-[11px] text-primary inline-flex items-center gap-1 mt-1 hover:underline">
-                      Abrir <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </div>
-                  <Button size="sm" variant="outline" onClick={() => useTrendingTopic(item)} className="shrink-0">
-                    <Sparkles className="h-3.5 w-3.5 mr-1" /> Usar este tema
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+      </div>
     </div>
   );
 }

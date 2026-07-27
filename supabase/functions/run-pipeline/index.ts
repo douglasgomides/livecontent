@@ -3,6 +3,7 @@
 // Atualiza sessions.status a cada etapa (Realtime).
 import { corsHeaders } from '../_shared/cors.ts';
 import { scoreCFMSemantic } from '../_shared/cfm.ts';
+import { extractPatientSignals } from '../_shared/patientSignals.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const CLAUDE = 'claude-sonnet-4-5';
@@ -84,13 +85,37 @@ Deno.serve(async (req) => {
     const evidence = evidenceRows ?? [];
 
     // Estrutura de referência (opcional) — o médico escolheu uma peça que gostou.
-    // Reaproveitamos só o PADRÃO estrutural extraído (nunca texto literal da peça original).
+    // Se for peça de outra pessoa/conta, reaproveitamos só o PADRÃO estrutural (nunca
+    // texto literal). Se for peça do próprio médico, o texto extraído já pode ser mais
+    // fiel (feito em analyze-reference-style), então a instrução de geração também
+    // libera uma adaptação mais próxima nesse caso.
     let referenceStructure: string | null = null;
+    let referenceOwnership: 'own' | 'other' = 'other';
     if (reference_style_id) {
       const { data: refRow } = await supabase
-        .from('reference_styles').select('structure_description')
+        .from('reference_styles').select('structure_description, source_ownership')
         .eq('id', reference_style_id).eq('user_id', userId).maybeSingle();
       referenceStructure = refRow?.structure_description ?? null;
+      referenceOwnership = refRow?.source_ownership === 'own' ? 'own' : 'other';
+    }
+
+    // Objeções aprendidas (opt-in): agregação on-demand, nada pré-computado guardado
+    // no Brain (evita ficar desatualizado, evita cron). Só roda se o médico ativou
+    // explicitamente em Insights — mesmo com amostra suficiente, nunca liga sozinho.
+    // Nunca sobrescreve brain.patient.commonObjections (curadoria manual, fonte distinta).
+    let objectionsBlock = '';
+    if (brainRow?.objections_opt_in) {
+      const { data: sigRows } = await supabase
+        .from('patient_signals').select('category')
+        .eq('user_id', userId).eq('kind', 'objection');
+      const counts = new Map<string, number>();
+      (sigRows ?? []).forEach(r => counts.set(r.category, (counts.get(r.category) ?? 0) + 1));
+      const top = [...counts.entries()].filter(([, n]) => n >= 3).sort((a, b) => b[1] - a[1]).slice(0, 3);
+      if ((sigRows?.length ?? 0) >= 8 && top.length) {
+        objectionsBlock = `\n\n## Objeções comuns dos seus pacientes (baseado em ${sigRows!.length} sinais reais)\n` +
+          top.map(([c, n]) => `- ${OBJECTION_LABEL[c] ?? c} (${n}x)`).join('\n') +
+          '\nSempre que fizer sentido para o tema, antecipe e desarme proativamente 1-2 dessas objeções reais, sem soar defensivo.';
+      }
     }
 
     async function setStatus(status: string, extra: Record<string, any> = {}) {
@@ -218,6 +243,11 @@ Deno.serve(async (req) => {
       for (const format of genFormats) jobs.push({ topic, format });
     }
 
+    // Inteligência comercial: roda em paralelo à geração de conteúdo, nunca bloqueia
+    // nem derruba a sessão — só a transcrição ANONIMIZADA é usada, e uma falha aqui
+    // vira warning silencioso, nunca setError (é analytics, não caminho crítico).
+    const signalsPromise = extractPatientSignals(anthropicKey, anonymized).catch(() => []);
+
     const CONCURRENCY = 3;
     const pieces: any[] = [];
     let failures = 0;
@@ -225,7 +255,7 @@ Deno.serve(async (req) => {
       const batch = jobs.slice(i, i + CONCURRENCY);
       const results = await Promise.all(batch.map(async ({ topic, format }) => {
         try {
-          const body = await claudeText(anthropicKey, buildGenSystem(format), buildGenUser(topic, format, anonymized, brain, evidence, referenceStructure));
+          const body = await claudeText(anthropicKey, buildGenSystem(format), buildGenUser(topic, format, anonymized, brain, evidence, referenceStructure, referenceOwnership, objectionsBlock));
           const cfm = await scoreCFMSemantic(anthropicKey, body);
           const evidenceIds = matchCitedEvidence(body, evidence);
           return {
@@ -261,6 +291,14 @@ Deno.serve(async (req) => {
       // Todas as gerações falharam — nunca silenciar isso como "ready" vazio.
       await setError(`Falha ao gerar conteúdo: nenhuma das ${jobs.length} peças foi gerada (provavelmente limite de taxa da API). Tente novamente.`);
       return json({ error: 'all generations failed' }, 502);
+    }
+
+    const signals = await signalsPromise;
+    if (signals.length) {
+      const { error: sigErr } = await supabase.from('patient_signals').insert(
+        signals.map(s => ({ user_id: userId, session_id, topic_id: null, ...s })),
+      );
+      if (sigErr) console.warn('[signals] insert failed', sigErr.message);
     }
 
     await setStatus('ready');
@@ -337,7 +375,16 @@ function matchCitedEvidence(body: string, evidence: any[]): string[] {
     .map(e => e.id);
 }
 
-function buildGenUser(topic: any, _format: string, transcript: string, brain: any, evidence: any[] = [], referenceStructure: string | null = null) {
+// Rótulos legíveis pra taxonomia fixa de _shared/patientSignals.ts — usados só no
+// texto do prompt de objeções aprendidas (apresentação, a fonte de verdade é o extrator).
+const OBJECTION_LABEL: Record<string, string> = {
+  price_cost: 'Preço/custo', fear_procedure_side_effects: 'Medo do procedimento/efeitos',
+  need_think_it_over: 'Precisa pensar', family_spouse_approval: 'Aprovação de família/cônjuge',
+  insurance_coverage: 'Cobertura de plano', previous_bad_experience: 'Experiência ruim anterior',
+  scheduling_time: 'Tempo/agenda', other: 'Outro',
+};
+
+function buildGenUser(topic: any, _format: string, transcript: string, brain: any, evidence: any[] = [], referenceStructure: string | null = null, referenceOwnership: 'own' | 'other' = 'other', objectionsBlock: string = '') {
   const funnelDesc: Record<string, string> = {
     C0: 'não sabe que o problema existe', C1: 'reconhece sintoma, tem crenças erradas',
     C2: 'quer saber o que fazer', C3: 'quase-paciente, precisa de prova',
@@ -345,8 +392,12 @@ function buildGenUser(topic: any, _format: string, transcript: string, brain: an
   const b = brain
     ? `\n\n## Perfil do médico:\n${JSON.stringify(brain).slice(0, 1500)}`
     : '';
+  // 'own': a referência é do próprio médico — pode adaptar de perto (cadência, conectores).
+  // 'other': referência de terceiro — só o padrão estrutural, nunca frase literal.
   const refBlock = referenceStructure
-    ? `\n\n## Estrutura de referência a seguir (formato/gancho/progressão/estilo — NUNCA copie frases, só o padrão)\n${referenceStructure}`
+    ? referenceOwnership === 'own'
+      ? `\n\n## Estrutura e estilo de uma peça sua anterior — adapte de perto (mesma cadência, mesmos conectores), só trocando tema/dados específicos\n${referenceStructure}`
+      : `\n\n## Estrutura de referência a seguir (formato/gancho/progressão/estilo — NUNCA copie frases, só o padrão)\n${referenceStructure}`
     : '';
   return `## Tema
 Título: ${topic.title}
@@ -354,7 +405,7 @@ Resumo: ${topic.summary}
 Funil: ${topic.funnelStage} — ${funnelDesc[topic.funnelStage] ?? ''}
 
 ## Transcrição base (não copiar literalmente)
-${String(transcript).slice(0, 1500)}${b}${buildEvidenceBlock(evidence)}${refBlock}
+${String(transcript).slice(0, 1500)}${b}${buildEvidenceBlock(evidence)}${refBlock}${objectionsBlock}
 
 Gere o conteúdo agora aplicando todas as regras universais e CFM${referenceStructure ? ', seguindo a estrutura de referência acima' : ''}.`;
 }

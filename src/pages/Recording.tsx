@@ -64,7 +64,9 @@ export default function Recording() {
           </div>
           <h1 className="font-serif text-3xl mb-3">Consentimento do paciente</h1>
           <p className="text-muted-foreground leading-relaxed mb-6">
-            Confirme que o paciente autorizou a gravação para fins educativos e de produção de conteúdo. Nenhum dado identificável será publicado — a anonimização é obrigatória antes da geração.
+            Confirme que o paciente autorizou a gravação para fins educativos, de produção de conteúdo, e para
+            entender dúvidas e objeções comuns que ajudem a melhorar a comunicação da clínica. Nenhum dado
+            identificável será publicado — a anonimização é obrigatória antes da geração.
           </p>
           <ul className="space-y-2 text-sm text-muted-foreground mb-8">
             <li className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" /> Áudio fica em armazenamento privado só seu.</li>

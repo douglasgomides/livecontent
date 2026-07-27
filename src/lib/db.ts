@@ -11,6 +11,7 @@ import type {
   SessionStatus,
   EvidenceSource,
   ReferenceStyle,
+  PatientSignal,
 } from '@/types/session';
 import type { Brain } from '@/types/brain';
 import { EMPTY_BRAIN } from '@/types/brain';
@@ -35,6 +36,7 @@ export async function fetchBrain(userId: string): Promise<Brain> {
     patient: { ...EMPTY_BRAIN.patient, ...(data.patient as any) },
     brand: { ...EMPTY_BRAIN.brand, ...(data.brand as any) },
     onboarded: !!data.onboarded,
+    objectionsOptIn: !!(data as any).objections_opt_in,
   };
 }
 
@@ -48,6 +50,7 @@ export async function saveBrainDb(userId: string, brain: Brain): Promise<void> {
         patient: brain.patient as any,
         brand: brain.brand as any,
         onboarded: brain.onboarded,
+        objections_opt_in: brain.objectionsOptIn,
       },
       { onConflict: 'user_id' },
     );
@@ -363,6 +366,7 @@ function mapReferenceStyleRow(row: any): ReferenceStyle {
     sourceType: row.source_type,
     sourceImagePath: row.source_image_path ?? undefined,
     sourceText: row.source_text ?? undefined,
+    sourceOwnership: row.source_ownership ?? 'other',
     structureDescription: row.structure_description,
     createdAt: row.created_at,
   };
@@ -384,6 +388,7 @@ export async function addReferenceStyle(userId: string, s: {
   sourceType: 'image' | 'text';
   sourceImagePath?: string;
   sourceText?: string;
+  sourceOwnership: 'own' | 'other';
   structureDescription: string;
 }): Promise<ReferenceStyle> {
   const { data, error } = await supabase
@@ -395,6 +400,7 @@ export async function addReferenceStyle(userId: string, s: {
       source_type: s.sourceType,
       source_image_path: s.sourceImagePath ?? null,
       source_text: s.sourceText ?? null,
+      source_ownership: s.sourceOwnership,
       structure_description: s.structureDescription,
     })
     .select('*')
@@ -416,6 +422,32 @@ export async function uploadReferenceImage(userId: string, file: File): Promise<
     .upload(path, file, { contentType: file.type || 'image/jpeg' });
   if (error) throw error;
   return path;
+}
+
+// ─── Sinais de inteligência comercial (objeções/dúvidas/sinais de compra) ──
+// Extraídos automaticamente pelo run-pipeline a partir da transcrição
+// anonimizada — só leitura aqui, nada de escrita client-side.
+
+function mapPatientSignalRow(row: any): PatientSignal {
+  return {
+    id: row.id,
+    sessionId: row.session_id,
+    kind: row.kind,
+    category: row.category,
+    label: row.label,
+    confidence: row.confidence,
+    createdAt: row.created_at,
+  };
+}
+
+export async function fetchPatientSignals(userId: string): Promise<PatientSignal[]> {
+  const { data, error } = await supabase
+    .from('patient_signals')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(mapPatientSignalRow);
 }
 
 // ─── Assinatura / plano ─────────────────────────────────────────────────────
