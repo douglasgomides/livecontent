@@ -19,7 +19,7 @@ import type { ContentFormat } from '@/types/session';
 const ALL_STAGES: { id: SessionStatus; label: string }[] = [
   { id: 'transcribing', label: 'Transcrição' },
   { id: 'anonymizing', label: 'Anonimização' },
-  { id: 'anonymization_review', label: 'Revisão PII' },
+  { id: 'anonymization_review', label: 'Revisar dados do paciente' },
   { id: 'extracting_topics', label: 'Extração de temas' },
   { id: 'topics_review', label: 'Revisão de temas' },
   { id: 'generating_content', label: 'Geração' },

@@ -16,9 +16,11 @@ import { Lightbulb, LayoutTemplate } from 'lucide-react';
 import { toast } from 'sonner';
 
 const STAGES: Topic['funnelStage'][] = ['C0', 'C1', 'C2', 'C3'];
-const STAGE_HINT: Record<Topic['funnelStage'], string> = {
-  C0: 'Desperta atenção — não sabe do problema',
-  C1: 'Sabe do problema, não da solução',
+// Rótulos em linguagem simples em vez dos códigos C0-C3 (jargão de marketing
+// que um médico leigo em ferramenta de conteúdo não teria por que conhecer).
+const STAGE_LABEL: Record<Topic['funnelStage'], string> = {
+  C0: 'Não sabe do problema',
+  C1: 'Sabe do problema',
   C2: 'Compara soluções',
   C3: 'Pronto para agendar',
 };
@@ -72,10 +74,9 @@ export default function TopicsReview({ session, onConfirm }: { session: Session;
                       onClick={() => update(t.id, { funnelStage: s })}
                       className={`text-xs px-2 py-1 rounded ${t.funnelStage === s ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground hover:text-foreground'}`}
                     >
-                      {s}
+                      {STAGE_LABEL[s]}
                     </button>
                   ))}
-                  <span className="text-xs text-muted-foreground ml-2">{STAGE_HINT[t.funnelStage]}</span>
                 </div>
               </div>
             </div>

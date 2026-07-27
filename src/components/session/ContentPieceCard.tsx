@@ -33,9 +33,9 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, onCha
     try {
       const updated = await rescoreContent({ ...piece, body });
       onChange(updated);
-      toast.success('CFM Score atualizado');
+      toast.success('Conformidade reavaliada');
     } catch (err: any) {
-      toast.error(`Falha ao avaliar CFM: ${err?.message ?? err}`);
+      toast.error(`Falha ao reavaliar conformidade: ${err?.message ?? err}`);
     } finally {
       setRescoring(false);
     }
@@ -69,7 +69,7 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, onCha
           <ScoreBadge score={cfm.score} blocked={blocked} warned={warned} />
         </div>
         <Button variant="ghost" size="sm" onClick={rescore} disabled={rescoring}>
-          {rescoring ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />} Rescan
+          {rescoring ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />} Reavaliar
         </Button>
       </div>
 
@@ -168,5 +168,6 @@ function MetaBlock({ meta }: { meta: NonNullable<ContentPiece['meta']> }) {
 
 function ScoreBadge({ score, blocked, warned }: { score: number; blocked: boolean; warned: boolean }) {
   const cls = blocked ? 'bg-destructive/15 text-destructive' : warned ? 'bg-warning/15 text-warning' : 'bg-success/15 text-success';
-  return <span className={`text-xs px-2 py-0.5 rounded-full ${cls}`}>CFM {score}</span>;
+  const label = blocked ? `CFM ${score} · bloqueado` : warned ? `CFM ${score} · revisar` : `CFM ${score} · conforme`;
+  return <span className={`text-xs px-2 py-0.5 rounded-full ${cls}`}>{label}</span>;
 }

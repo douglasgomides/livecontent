@@ -36,8 +36,12 @@ import { loadProfile } from '@/lib/storage';
 import { loadBrain, getCompleteness } from '@/lib/brainStorage';
 import { isRecordingActive, LEAVE_RECORDING_WARNING } from '@/lib/recordingGuard';
 
-const createItems = [
-  { title: 'Gravar consulta', url: '/app/record', icon: Mic },
+// Gravar consulta é a ação principal (renderizada em destaque, separada do
+// resto) — as outras formas de criar são variações menos comuns e não devem
+// competir visualmente com ela.
+const primaryCreateItem = { title: 'Gravar consulta', url: '/app/record', icon: Mic };
+
+const secondaryCreateItems = [
   { title: 'Palestra / áudio livre', url: '/app/new/audio-livre', icon: Radio },
   { title: 'Link (YouTube / artigo)', url: '/app/new/link', icon: Link2 },
   { title: 'Upload de áudio', url: '/app/new/upload', icon: Upload },
@@ -73,11 +77,16 @@ export function AppSidebar() {
 
   const brainPct = getCompleteness(loadBrain()).total;
 
-  const renderItem = (item: { title: string; url: string; icon: any; end?: boolean }) => {
+  const renderItem = (item: { title: string; url: string; icon: any; end?: boolean }, primary?: boolean) => {
     const showBadge = item.url === '/app/brain' && brainPct < 60 && !collapsed;
     return (
       <SidebarMenuItem key={item.url}>
-        <SidebarMenuButton asChild isActive={isActive(item.url, item.end)} tooltip={item.title}>
+        <SidebarMenuButton
+          asChild
+          isActive={isActive(item.url, item.end)}
+          tooltip={item.title}
+          className={primary ? 'bg-primary/10 text-primary font-semibold hover:bg-primary/15' : undefined}
+        >
           <NavLink
             to={item.url}
             end={item.end}
@@ -119,21 +128,28 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Criar</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>{createItems.map(renderItem)}</SidebarMenu>
+            <SidebarMenu>{renderItem(primaryCreateItem, true)}</SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Outras formas</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>{secondaryCreateItems.map(item => renderItem(item))}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
         <SidebarGroup>
           <SidebarGroupLabel>Trabalho</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>{workItems.map(renderItem)}</SidebarMenu>
+            <SidebarMenu>{workItems.map(item => renderItem(item))}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
         <SidebarGroup>
           <SidebarGroupLabel>Conta</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>{accountItems.map(renderItem)}</SidebarMenu>
+            <SidebarMenu>{accountItems.map(item => renderItem(item))}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
