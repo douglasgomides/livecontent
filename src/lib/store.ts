@@ -25,8 +25,6 @@ import {
 } from './db';
 import { normalizeSession } from './migrations';
 
-// ─── State ──────────────────────────────────────────────────────────────────
-
 let _userId: string | null = null;
 let _sessions: Session[] = [];
 let _brain: Brain = EMPTY_BRAIN;
@@ -38,17 +36,18 @@ let _channels: any[] = [];
 type Listener = () => void;
 const listeners = new Set<Listener>();
 
+let _version = 0;
+
 export function subscribe(fn: Listener): () => void {
   listeners.add(fn);
   return () => listeners.delete(fn);
 }
 function notify() {
+  _version++;
   listeners.forEach(l => {
     try { l(); } catch {}
   });
 }
-
-// ─── Getters (sync) ─────────────────────────────────────────────────────────
 
 export const getUserId = () => _userId;
 export const isHydrated = () => _hydrated;
@@ -56,8 +55,6 @@ export const getSessions = () => _sessions;
 export const getBrain = () => _brain;
 export const getJobs = () => _jobs;
 export const getSettings = () => _settings;
-
-// ─── Hydration ──────────────────────────────────────────────────────────────
 
 export async function hydrateStore(userId: string): Promise<void> {
   _userId = userId;
@@ -77,7 +74,7 @@ export async function hydrateStore(userId: string): Promise<void> {
     subscribeRealtime(userId);
   } catch (err) {
     console.error('[store] hydrate failed', err);
-    _hydrated = true; // still allow UI
+    _hydrated = true;
     notify();
   }
 }
@@ -120,13 +117,10 @@ function subscribeRealtime(userId: string) {
   _channels.push(ch);
 }
 
-// ─── Mutations ──────────────────────────────────────────────────────────────
-
 export async function upsertSession(s: Session): Promise<void> {
   if (!_userId) return;
   const clean = normalizeSession(s);
   if (!clean) return;
-  // optimistic
   _sessions = [clean, ..._sessions.filter(x => x.id !== clean.id)];
   notify();
   try {
@@ -199,11 +193,9 @@ export async function saveSettings(s: DoctorSettings): Promise<void> {
   }
 }
 
-// ─── React hook ─────────────────────────────────────────────────────────────
-
 import { useSyncExternalStore } from 'react';
 
-const getSnapshot = () => _hydrated ? '1' + _sessions.length + _brain.onboarded + _jobs.length : '0';
+const getSnapshot = () => _hydrated ? `1-${_version}` : '0';
 export function useStoreVersion() {
   return useSyncExternalStore(subscribe, getSnapshot, () => '0');
 }
