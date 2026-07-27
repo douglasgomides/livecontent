@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { rescoreContent } from '@/lib/pipeline';
 import { FORMAT_LABEL, FORMAT_ICON, EXPORT_MODE } from '@/lib/contentFormats';
-import { Copy, CheckCircle2, AlertTriangle, ShieldAlert, RefreshCw, Download, Loader2 } from 'lucide-react';
+import { Copy, CheckCircle2, AlertTriangle, ShieldAlert, RefreshCw, Download, Loader2, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import PieceArtwork from './PieceArtwork';
 import PiecePrompts from './PiecePrompts';
@@ -44,6 +44,17 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, onCha
   const copy = () => {
     navigator.clipboard.writeText(body);
     toast.success('Copiado');
+  };
+
+  // Compartilhar direto pro app que o médico já usa (WhatsApp, Instagram...) em vez
+  // de forçar copiar e trocar de app manualmente — só aparece onde o navegador suporta.
+  const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+  const share = async () => {
+    try {
+      await navigator.share({ title: topicTitle, text: body });
+    } catch {
+      // usuário cancelou o compartilhamento — nada a fazer
+    }
   };
 
   const download = () => {
@@ -125,6 +136,9 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, onCha
       <div className="px-4 py-3 border-t border-border/60 flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="sm" onClick={copy}><Copy className="h-3.5 w-3.5 mr-1" /> Copiar</Button>
+          {canShare && (
+            <Button variant="ghost" size="sm" onClick={share}><Share2 className="h-3.5 w-3.5 mr-1" /> Compartilhar</Button>
+          )}
           {exportMode === 'download' && (
             <Button variant="ghost" size="sm" onClick={download}><Download className="h-3.5 w-3.5 mr-1" /> Baixar</Button>
           )}
