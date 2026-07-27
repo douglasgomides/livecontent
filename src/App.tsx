@@ -14,6 +14,7 @@ import UploadAudio from "./pages/UploadAudio";
 import VoiceNote from "./pages/VoiceNote";
 import ScienceToContent from "./pages/ScienceToContent";
 import SessionDetail from "./pages/SessionDetail";
+import PieceDetail from "./pages/PieceDetail";
 import Library from "./pages/Library";
 import Approvals from "./pages/Approvals";
 import PublishQueue from "./pages/PublishQueue";
@@ -26,6 +27,7 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import EvidenceLibrary from "./pages/EvidenceLibrary";
 import ReferenceStyles from "./pages/ReferenceStyles";
+import BrandPhotos from "./pages/BrandPhotos";
 import Insights from "./pages/Insights";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
@@ -87,6 +89,7 @@ const App = () => (
               <Route path="new/link" element={<LinkImport />} />
               <Route path="new/science" element={<ScienceToContent />} />
               <Route path="session/:id" element={<SessionDetail />} />
+              <Route path="piece/:id" element={<PieceDetail />} />
               <Route path="library" element={<Library />} />
               <Route path="approvals" element={<Approvals />} />
               <Route path="publish-queue" element={<PublishQueue />} />
@@ -94,6 +97,7 @@ const App = () => (
               <Route path="evidence" element={<EvidenceLibrary />} />
               <Route path="insights" element={<Insights />} />
               <Route path="reference-styles" element={<ReferenceStyles />} />
+              <Route path="brand-photos" element={<BrandPhotos />} />
               <Route path="brain" element={<BrainPage />} />
               <Route path="settings" element={<Settings />} />
               <Route path="admin" element={<Admin />} />

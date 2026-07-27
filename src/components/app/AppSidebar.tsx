@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   LayoutTemplate,
   LineChart,
+  Image as ImageIcon,
 } from 'lucide-react';
 
 import {
@@ -60,6 +61,7 @@ const workItems = [
   { title: 'Inteligência de conversão', url: '/app/insights', icon: LineChart },
   { title: 'Evidências', url: '/app/evidence', icon: Microscope },
   { title: 'Estilos de referência', url: '/app/reference-styles', icon: LayoutTemplate },
+  { title: 'Fotos da marca', url: '/app/brand-photos', icon: ImageIcon },
 ];
 
 const accountItems = [

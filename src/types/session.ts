@@ -45,6 +45,10 @@ export interface ArtworkSlide {
   title?: string;
   body?: string;
   footer?: string;
+  // Categoria de foto de marca sugerida pra fundo deste slide (ex.: 'lifestyle'
+  // pro gancho emocional, 'clinic' pra mostrar o consultório) — só usada se o
+  // médico tiver fotos dessa categoria; sem isso, o slide fica só o cartão de texto.
+  photoCategory?: BrandPhotoCategory;
 }
 
 export interface Artwork {
@@ -120,6 +124,20 @@ export interface ReferenceStyle {
   // outra pessoa/conta (só estrutura abstrata, nunca texto — protege direito autoral).
   sourceOwnership: 'own' | 'other';
   structureDescription: string;
+  createdAt: string;
+  // Marca este estilo como o padrão aplicado automaticamente em toda geração
+  // nova (sem precisar escolher toda vez). Só um por médico — banco garante isso.
+  isDefault: boolean;
+}
+
+export type BrandPhotoCategory = 'working' | 'lifestyle' | 'family' | 'clinic' | 'team' | 'other';
+
+// Foto que o médico sobe (dele, da clínica, da equipe) pra IA usar como fundo
+// nas artes geradas — categorizada pra IA escolher a foto certa por contexto.
+export interface BrandPhoto {
+  id: string;
+  storagePath: string;
+  category: BrandPhotoCategory;
   createdAt: string;
 }
 
