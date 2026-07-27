@@ -65,6 +65,30 @@ export type Database = {
         }
         Relationships: []
       }
+      brand_photos: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          storage_path: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          id?: string
+          storage_path: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          storage_path?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       click_behavior: {
         Row: {
           click_id: string
@@ -672,6 +696,7 @@ export type Database = {
           created_at: string
           format_hint: string
           id: string
+          is_default: boolean
           name: string
           source_image_path: string | null
           source_ownership: string
@@ -685,6 +710,7 @@ export type Database = {
           created_at?: string
           format_hint?: string
           id?: string
+          is_default?: boolean
           name?: string
           source_image_path?: string | null
           source_ownership?: string
@@ -698,6 +724,7 @@ export type Database = {
           created_at?: string
           format_hint?: string
           id?: string
+          is_default?: boolean
           name?: string
           source_image_path?: string | null
           source_ownership?: string
