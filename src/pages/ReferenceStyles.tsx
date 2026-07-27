@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, LayoutTemplate, Upload, Loader2, Trash2, Sparkles, ImageIcon, Type, UserCheck, Users } from 'lucide-react';
+import { ArrowLeft, LayoutTemplate, Upload, Loader2, Trash2, Sparkles, ImageIcon, Type, UserCheck, Users, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,7 +11,7 @@ import {
 import { toast } from 'sonner';
 import type { ContentFormat, ReferenceStyle } from '@/types/session';
 import { FORMAT_LABEL, FORMAT_GROUPS } from '@/lib/contentFormats';
-import { fetchReferenceStyles, addReferenceStyle, deleteReferenceStyle, uploadReferenceImage } from '@/lib/db';
+import { fetchReferenceStyles, addReferenceStyle, deleteReferenceStyle, uploadReferenceImage, setDefaultReferenceStyle, unsetDefaultReferenceStyle } from '@/lib/db';
 import { analyzeReferenceStyle } from '@/lib/pipeline';
 import { getUserId } from '@/lib/store';
 
@@ -107,6 +107,23 @@ export default function ReferenceStyles() {
     }
   };
 
+  const toggleDefault = async (style: ReferenceStyle) => {
+    const uid = getUserId();
+    if (!uid) return;
+    try {
+      if (style.isDefault) {
+        await unsetDefaultReferenceStyle(style.id);
+        toast.success('Não é mais o padrão — toda geração nova volta a não usar nenhuma estrutura fixa, a menos que você escolha uma.');
+      } else {
+        await setDefaultReferenceStyle(uid, style.id);
+        toast.success('Marcado como padrão — toda consulta nova vai usar essa estrutura automaticamente.');
+      }
+      refresh();
+    } catch (err: any) {
+      toast.error(`Falha ao marcar padrão: ${err?.message ?? err}`);
+    }
+  };
+
   return (
     <div className="max-w-3xl mx-auto space-y-8 pb-24 md:pb-0">
       <Link to="/app" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
@@ -122,7 +139,8 @@ export default function ReferenceStyles() {
           Suba um carrossel ou post que você gostou. Se for seu, a IA pode adaptar de perto (copy real,
           cadência de frase). Se for de outra pessoa, ela extrai só a <strong>estrutura</strong> — formato,
           gancho, progressão, estilo visual e CTA — nunca o texto literal, pra não ter risco de direito
-          autoral. Depois, use essa estrutura como template pra gerar conteúdo sobre qualquer outro tema.
+          autoral. Depois, use essa estrutura como template pra gerar conteúdo sobre qualquer outro tema —
+          marque uma como <strong>padrão</strong> (☆) pra ela ser usada automaticamente em toda consulta nova.
         </p>
       </div>
 
@@ -262,9 +280,14 @@ export default function ReferenceStyles() {
         ) : (
           <div className="space-y-2">
             {styles.map(s => (
-              <div key={s.id} className="border border-border/60 rounded-lg p-3 flex items-start justify-between gap-3">
+              <div key={s.id} className={`border rounded-lg p-3 flex items-start justify-between gap-3 ${s.isDefault ? 'border-primary/50 bg-primary/5' : 'border-border/60'}`}>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
+                    {s.isDefault && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary text-primary-foreground font-medium flex items-center gap-1">
+                        <Star className="h-2.5 w-2.5 fill-current" /> Padrão
+                      </span>
+                    )}
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/15 text-primary">
                       {FORMAT_LABEL[s.formatHint as ContentFormat] ?? s.formatHint}
                     </span>
@@ -278,6 +301,14 @@ export default function ReferenceStyles() {
                   <div className="text-sm font-medium leading-snug">{s.name}</div>
                   <div className="text-xs text-muted-foreground mt-1 line-clamp-3">{s.structureDescription}</div>
                 </div>
+                <Button
+                  size="sm" variant="ghost"
+                  onClick={() => toggleDefault(s)}
+                  title={s.isDefault ? 'Remover como padrão' : 'Marcar como padrão'}
+                  className={`shrink-0 ${s.isDefault ? 'text-primary hover:text-primary' : 'text-muted-foreground hover:text-primary'}`}
+                >
+                  <Star className={`h-3.5 w-3.5 ${s.isDefault ? 'fill-current' : ''}`} />
+                </Button>
                 <Button size="sm" variant="ghost" onClick={() => remove(s.id)} className="shrink-0 text-destructive hover:text-destructive">
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
