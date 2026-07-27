@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, LineChart as LineChartIcon, Target, CheckCircle2, Hash, ShieldAlert, MessageCircleQuestion } from 'lucide-react';
+import { ArrowLeft, LineChart as LineChartIcon, Target, CheckCircle2, Hash, ShieldAlert, MessageCircleQuestion, Heart, Lightbulb } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { toast } from 'sonner';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
@@ -33,6 +33,10 @@ const QUESTION_LABEL: Record<string, string> = {
 const BUYING_LABEL: Record<string, string> = {
   ready_to_schedule: 'Pronto para agendar', asked_price_proactively: 'Perguntou preço direto',
   asked_next_steps: 'Perguntou próximos passos', requested_recommendation: 'Pediu recomendação', other: 'Outro',
+};
+const SENTIMENT_LABEL: Record<string, string> = {
+  hesitant: 'Hesitante', skeptical: 'Cético', anxious: 'Ansioso', excited: 'Animado',
+  frustrated: 'Frustrado', reassured: 'Tranquilizado', indifferent: 'Indiferente', other: 'Outro',
 };
 
 // Estágio de funil em linguagem simples — mesmo mapeamento usado em TopicsReview,
@@ -101,6 +105,44 @@ export default function Insights() {
       leadingCount,
       eligible: objSignals.length >= MIN_TOTAL_OBJECTIONS && leadingCount >= MIN_LEADING_CATEGORY,
     };
+  }, [signals]);
+
+  // Exemplos de argumento sugerido por objeção — pega o sinal mais confiável de
+  // cada uma das categorias líderes, pra dar uma resposta concreta e acionável
+  // junto do gráfico (não só a contagem "isso acontece muito").
+  const topObjectionExamples = useMemo(() => {
+    const objSignals = signals.filter(s => s.kind === 'objection' && s.actionTip);
+    const byCategory = new Map<string, PatientSignal>();
+    objSignals.forEach(s => {
+      const cur = byCategory.get(s.category);
+      if (!cur || s.confidence > cur.confidence) byCategory.set(s.category, s);
+    });
+    return Array.from(byCategory.values())
+      .sort((a, b) => b.confidence - a.confidence)
+      .slice(0, 5);
+  }, [signals]);
+
+  const sentimentData = useMemo(() => {
+    const counts = new Map<string, number>();
+    signals.filter(s => s.kind === 'sentiment').forEach(s => counts.set(s.category, (counts.get(s.category) ?? 0) + 1));
+    return Array.from(counts.entries())
+      .map(([category, quantidade]) => ({ category: SENTIMENT_LABEL[category] ?? category, quantidade }))
+      .sort((a, b) => b.quantidade - a.quantidade)
+      .slice(0, 8);
+  }, [signals]);
+
+  // Dicas de comunicação por sentimento — mesmo padrão dos argumentos de
+  // objeção: pega o exemplo mais confiável de cada sentimento identificado.
+  const sentimentTips = useMemo(() => {
+    const sentSignals = signals.filter(s => s.kind === 'sentiment' && s.actionTip);
+    const byCategory = new Map<string, PatientSignal>();
+    sentSignals.forEach(s => {
+      const cur = byCategory.get(s.category);
+      if (!cur || s.confidence > cur.confidence) byCategory.set(s.category, s);
+    });
+    return Array.from(byCategory.values())
+      .sort((a, b) => b.confidence - a.confidence)
+      .slice(0, 5);
   }, [signals]);
 
   const [objectionsOptIn, setObjectionsOptIn] = useState(() => loadBrain().objectionsOptIn);
@@ -187,9 +229,9 @@ export default function Insights() {
           <ArrowLeft className="h-3 w-3" /> Voltar
         </Link>
         <p className="text-primary text-xs tracking-[0.3em] uppercase mb-2 flex items-center gap-2">
-          <LineChartIcon className="h-3.5 w-3.5" /> Painel de padrões
+          <LineChartIcon className="h-3.5 w-3.5" /> Inteligência de conversão
         </p>
-        <h1 className="font-serif text-4xl mb-2">O que suas consultas revelam</h1>
+        <h1 className="font-serif text-4xl mb-2">Objeções, sentimento e argumentos pra vender melhor</h1>
         <p className="text-muted-foreground">
           Agregado automaticamente de {sessions.length} consulta(s), {totalTopics} tema(s) e {totalPieces} peça(s) já geradas —
           nenhum dado novo é coletado, isso é só o que você já tem organizado.
@@ -253,6 +295,24 @@ export default function Insights() {
                     <Bar dataKey="quantidade" fill="var(--color-quantidade)" radius={4} />
                   </BarChart>
                 </ChartContainer>
+                {topObjectionExamples.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      <Lightbulb className="h-3 w-3" /> Argumento sugerido por objeção
+                    </div>
+                    {topObjectionExamples.map(s => (
+                      <div key={s.id} className="border border-border/60 rounded-lg p-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/15 text-primary font-medium">
+                            {OBJECTION_LABEL[s.category] ?? s.category}
+                          </span>
+                        </div>
+                        <div className="text-xs text-muted-foreground italic mb-1">"{s.label}"</div>
+                        <div className="text-sm">{s.actionTip}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="mt-4 pt-4 border-t border-border/60 flex items-start justify-between gap-4">
                   <div>
                     <div className="text-sm font-medium">Usar essas objeções nas próximas gerações de conteúdo</div>
@@ -268,6 +328,56 @@ export default function Insights() {
                     onCheckedChange={handleToggleOptIn}
                   />
                 </div>
+              </>
+            )}
+          </section>
+
+          <section className="border border-border/60 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <Heart className="h-4 w-4 text-primary" />
+              <h2 className="font-serif text-xl">Sentimento dos seus pacientes</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              O tom com que os pacientes chegam na consulta — cada sentimento pede um jeito diferente
+              de comunicar no conteúdo (quem chega cético precisa de prova, quem chega ansioso precisa
+              de acolhimento antes do argumento).
+            </p>
+            {signalsLoading ? (
+              <p className="text-sm text-muted-foreground">Carregando…</p>
+            ) : sentimentData.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Ainda sem sentimento identificado. Grave mais consultas.</p>
+            ) : (
+              <>
+                <ChartContainer
+                  config={{ quantidade: { label: 'Ocorrências', color: 'hsl(var(--primary))' } }}
+                  className="aspect-auto h-56 w-full"
+                >
+                  <BarChart data={sentimentData} layout="vertical" margin={{ left: 8, right: 16 }}>
+                    <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+                    <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} />
+                    <YAxis type="category" dataKey="category" tickLine={false} axisLine={false} width={160} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="quantidade" fill="var(--color-quantidade)" radius={4} />
+                  </BarChart>
+                </ChartContainer>
+                {sentimentTips.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      <Lightbulb className="h-3 w-3" /> Ajuste de tom sugerido
+                    </div>
+                    {sentimentTips.map(s => (
+                      <div key={s.id} className="border border-border/60 rounded-lg p-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/15 text-primary font-medium">
+                            {SENTIMENT_LABEL[s.category] ?? s.category}
+                          </span>
+                        </div>
+                        <div className="text-xs text-muted-foreground italic mb-1">"{s.label}"</div>
+                        <div className="text-sm">{s.actionTip}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </>
             )}
           </section>
@@ -299,11 +409,18 @@ export default function Insights() {
                     <Bar dataKey="quantidade" fill="var(--color-quantidade)" radius={4} />
                   </BarChart>
                 </ChartContainer>
-                <div className="flex flex-wrap gap-2">
+                <div className="space-y-2">
                   {recentQuestionBuying.map(s => (
-                    <span key={s.id} className="text-xs px-2.5 py-1 rounded-full bg-secondary text-foreground">
-                      {s.label}
-                    </span>
+                    <div key={s.id} className="flex items-start gap-2 text-sm">
+                      <span className="text-xs px-2.5 py-1 rounded-full bg-secondary text-foreground shrink-0">
+                        {s.label}
+                      </span>
+                      {s.kind === 'buying_signal' && s.actionTip && (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Lightbulb className="h-3 w-3 shrink-0" /> {s.actionTip}
+                        </span>
+                      )}
+                    </div>
                   ))}
                 </div>
               </>

@@ -435,6 +435,7 @@ function mapPatientSignalRow(row: any): PatientSignal {
     kind: row.kind,
     category: row.category,
     label: row.label,
+    actionTip: row.action_tip ?? '',
     confidence: row.confidence,
     createdAt: row.created_at,
   };

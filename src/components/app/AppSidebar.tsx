@@ -57,7 +57,7 @@ const workItems = [
   { title: 'Calendário', url: '/app/calendar', icon: CalendarDays },
   { title: 'Fila de publicação', url: '/app/publish-queue', icon: Send },
   { title: 'Biblioteca', url: '/app/library', icon: Library },
-  { title: 'Painel de padrões', url: '/app/insights', icon: LineChart },
+  { title: 'Inteligência de conversão', url: '/app/insights', icon: LineChart },
   { title: 'Evidências', url: '/app/evidence', icon: Microscope },
   { title: 'Estilos de referência', url: '/app/reference-styles', icon: LayoutTemplate },
 ];

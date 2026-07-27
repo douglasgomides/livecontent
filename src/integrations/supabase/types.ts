@@ -534,6 +534,7 @@ export type Database = {
       }
       patient_signals: {
         Row: {
+          action_tip: string
           category: string
           confidence: number
           created_at: string
@@ -545,6 +546,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          action_tip?: string
           category?: string
           confidence?: number
           created_at?: string
@@ -556,6 +558,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          action_tip?: string
           category?: string
           confidence?: number
           created_at?: string

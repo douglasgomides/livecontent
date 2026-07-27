@@ -129,16 +129,20 @@ export interface ScienceSource {
   originalText: string;
 }
 
-export type PatientSignalKind = 'objection' | 'question' | 'buying_signal';
+export type PatientSignalKind = 'objection' | 'question' | 'buying_signal' | 'sentiment';
 
 // Sinal de inteligência comercial extraído automaticamente da transcrição
-// anonimizada — paráfrase curta, nunca frase literal do paciente.
+// anonimizada — expressão real do paciente (fiel, mas nunca com dado que
+// identifique alguém), mais uma dica de ação (actionTip) quando fizer sentido
+// pro tipo de sinal (contra-argumento pra objeção, próxima ação pra sinal de
+// compra, ajuste de tom pro sentimento).
 export interface PatientSignal {
   id: string;
   sessionId: string;
   kind: PatientSignalKind;
   category: string;
   label: string;
+  actionTip: string;
   confidence: number;
   createdAt: string;
 }
