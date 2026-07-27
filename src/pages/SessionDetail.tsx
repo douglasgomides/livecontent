@@ -13,6 +13,8 @@ import ContentPieceCard from '@/components/session/ContentPieceCard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ArrowLeft, Check, Circle, Loader2, Sparkles, FlaskConical, FileText, AlertTriangle, RefreshCw } from 'lucide-react';
+import { FORMAT_LABEL, FORMAT_ICON } from '@/lib/contentFormats';
+import type { ContentFormat } from '@/types/session';
 
 const ALL_STAGES: { id: SessionStatus; label: string }[] = [
   { id: 'transcribing', label: 'Transcrição' },
@@ -251,33 +253,52 @@ export default function SessionDetail() {
                   {(session.topics || []).filter(t => t.included).map(topic => {
                     const pieces = session.content!.filter(p => p.topicId === topic.id);
                     if (!pieces.length) return null;
+                    // Agrupado por formato dentro do tema — antes vinha tudo misturado
+                    // numa grade só (reel, carrossel, legenda, linkedin intercalados),
+                    // difícil de achar o que se procura.
+                    const byFormat = new Map<ContentFormat, typeof pieces>();
+                    pieces.forEach(p => {
+                      if (!byFormat.has(p.format)) byFormat.set(p.format, []);
+                      byFormat.get(p.format)!.push(p);
+                    });
                     return (
-                      <div key={topic.id} className="space-y-3">
+                      <div key={topic.id} className="space-y-5">
                         <div className="border-l-2 border-primary pl-4">
                           <div className="text-xs uppercase tracking-widest text-primary mb-1">Tema · {topic.funnelStage}</div>
                           <h3 className="font-serif text-2xl">{topic.title}</h3>
                           <p className="text-sm text-muted-foreground mt-1">{topic.summary}</p>
                         </div>
-                        <div className="grid md:grid-cols-2 gap-4">
-                          {pieces.map(p => (
-                            <ContentPieceCard
-                              key={p.id}
-                              piece={p}
-                              topic={topic}
-                              brain={loadBrain()}
-                              sessionId={session.id}
-                              onChange={(updated) => {
-                                const content = session.content!.map(c => c.id === updated.id ? updated : c);
-                                const s = { ...session, content }; upsertSession(s); setSession(s);
-                              }}
-                              onApprove={() => {
-                                const content = session.content!.map(c => c.id === p.id ? { ...c, approved: true } : c);
-                                const s = { ...session, content }; upsertSession(s); setSession(s);
-                              }}
-                            />
-                          ))}
-                        </div>
-
+                        {Array.from(byFormat.entries()).map(([format, formatPieces]) => {
+                          const Icon = FORMAT_ICON[format];
+                          return (
+                            <div key={format} className="space-y-2">
+                              <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground">
+                                <Icon className="h-3.5 w-3.5 text-primary" />
+                                {FORMAT_LABEL[format]}
+                                {formatPieces.length > 1 && <span>· {formatPieces.length}</span>}
+                              </div>
+                              <div className="grid md:grid-cols-2 gap-4">
+                                {formatPieces.map(p => (
+                                  <ContentPieceCard
+                                    key={p.id}
+                                    piece={p}
+                                    topic={topic}
+                                    brain={loadBrain()}
+                                    sessionId={session.id}
+                                    onChange={(updated) => {
+                                      const content = session.content!.map(c => c.id === updated.id ? updated : c);
+                                      const s = { ...session, content }; upsertSession(s); setSession(s);
+                                    }}
+                                    onApprove={() => {
+                                      const content = session.content!.map(c => c.id === p.id ? { ...c, approved: true } : c);
+                                      const s = { ...session, content }; upsertSession(s); setSession(s);
+                                    }}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     );
                   })}
