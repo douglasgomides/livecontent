@@ -41,6 +41,11 @@ export interface Brain {
   patient: PatientLayer;
   brand: BrandLayer;
   onboarded: boolean;
+  // Opt-in explícito do médico pra usar objeções inferidas automaticamente
+  // (patient_signals) nas próximas gerações — nunca ligado sozinho, mesmo com
+  // amostra suficiente. Fica na raiz (não em patient/*) pra não distorcer
+  // getCompleteness(), que itera Object.keys() de cada camada curada manualmente.
+  objectionsOptIn: boolean;
 }
 
 export const EMPTY_BRAIN: Brain = {
@@ -80,4 +85,5 @@ export const EMPTY_BRAIN: Brain = {
     fontHeading: 'Cormorant Garamond, Georgia, serif',
   },
   onboarded: false,
+  objectionsOptIn: false,
 };

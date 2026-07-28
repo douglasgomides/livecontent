@@ -104,7 +104,23 @@ function ensureFonts(): Promise<void> {
   return fontsReady;
 }
 
-export function renderSlideToPng(slide: ArtworkSlide, artwork: Artwork, brain?: Brain | null): string {
+// Desenha a imagem cobrindo o retângulo inteiro (mesmo comportamento de
+// background-size: cover), cortando o excesso pra não distorcer proporção.
+function drawImageCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number) {
+  const imgRatio = img.width / img.height;
+  const boxRatio = w / h;
+  let sx = 0, sy = 0, sw = img.width, sh = img.height;
+  if (imgRatio > boxRatio) {
+    sw = img.height * boxRatio;
+    sx = (img.width - sw) / 2;
+  } else {
+    sh = img.width / boxRatio;
+    sy = (img.height - sh) / 2;
+  }
+  ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+}
+
+export function renderSlideToPng(slide: ArtworkSlide, artwork: Artwork, brain?: Brain | null, photoImg?: HTMLImageElement): string {
   const brand = brain?.brand;
   const canvas = document.createElement('canvas');
   canvas.width = artwork.width;
@@ -124,21 +140,33 @@ export function renderSlideToPng(slide: ArtworkSlide, artwork: Artwork, brain?: 
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
-  // Vinheta dourada radial sutil no canto superior
-  const grad = ctx.createRadialGradient(W * 0.5, -H * 0.1, 0, W * 0.5, -H * 0.1, W * 0.9);
-  grad.addColorStop(0, hexWithAlpha(primary, 0.14));
-  grad.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, W, H);
+  if (photoImg) {
+    // Foto de fundo (categoria escolhida pela IA pro contexto do slide) + degradê
+    // escuro de baixo pra cima, garantindo legibilidade do texto por cima.
+    drawImageCover(ctx, photoImg, 0, 0, W, H);
+    const overlay = ctx.createLinearGradient(0, 0, 0, H);
+    overlay.addColorStop(0, hexWithAlpha(bg, 0.55));
+    overlay.addColorStop(0.5, hexWithAlpha(bg, 0.35));
+    overlay.addColorStop(1, hexWithAlpha(bg, 0.88));
+    ctx.fillStyle = overlay;
+    ctx.fillRect(0, 0, W, H);
+  } else {
+    // Vinheta dourada radial sutil no canto superior
+    const grad = ctx.createRadialGradient(W * 0.5, -H * 0.1, 0, W * 0.5, -H * 0.1, W * 0.9);
+    grad.addColorStop(0, hexWithAlpha(primary, 0.14));
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
 
-  // Grão sutil (poucos pontos, muito discreto)
-  ctx.save();
-  ctx.globalAlpha = 0.04;
-  ctx.fillStyle = text;
-  for (let i = 0; i < 60; i++) {
-    ctx.fillRect(Math.random() * W, Math.random() * H, 1, 1);
+    // Grão sutil (poucos pontos, muito discreto)
+    ctx.save();
+    ctx.globalAlpha = 0.04;
+    ctx.fillStyle = text;
+    for (let i = 0; i < 60; i++) {
+      ctx.fillRect(Math.random() * W, Math.random() * H, 1, 1);
+    }
+    ctx.restore();
   }
-  ctx.restore();
 
   const padX = Math.round(W * 0.075);
   const contentW = W - padX * 2;
@@ -216,10 +244,24 @@ export function renderSlideToPng(slide: ArtworkSlide, artwork: Artwork, brain?: 
   return canvas.toDataURL('image/png');
 }
 
-// Async render — waits for fonts, returns dataURL
-export async function renderSlideToPngAsync(slide: ArtworkSlide, artwork: Artwork, brain?: Brain | null): Promise<string> {
+function loadImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+// Async render — waits for fonts (e, se houver, a foto de fundo), returns dataURL
+export async function renderSlideToPngAsync(slide: ArtworkSlide, artwork: Artwork, brain?: Brain | null, photoUrl?: string): Promise<string> {
   await ensureFonts();
-  return renderSlideToPng(slide, artwork, brain);
+  let photoImg: HTMLImageElement | undefined;
+  if (photoUrl) {
+    try { photoImg = await loadImage(photoUrl); } catch { /* segue sem foto (cartão de texto normal) */ }
+  }
+  return renderSlideToPng(slide, artwork, brain, photoImg);
 }
 
 function wrapText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxW: number, lineH: number): number {

@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { loadSessions } from '@/lib/storage';
 import { ArrowRight, Search, LayoutGrid, List } from 'lucide-react';
-import type { ContentFormat } from '@/types/session';
-import { FORMAT_LABEL as LABELS, FORMAT_ICON as ICONS } from '@/lib/contentFormats';
+import type { ContentFormat, Session } from '@/types/session';
+import { FORMAT_LABEL as LABELS, FORMAT_ICON as ICONS, CHANNEL_LABEL, CHANNEL_ICON } from '@/lib/contentFormats';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -13,6 +13,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+
+const fmtWhen = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 
 export default function Library() {
   const sessions = loadSessions();
@@ -25,9 +27,10 @@ export default function Library() {
   const [format, setFormat] = useState<'all' | ContentFormat>('all');
   const [status, setStatus] = useState<'all' | 'approved' | 'pending' | 'blocked'>('all');
   const [view, setView] = useState<'grid' | 'list'>('grid');
-  // Agrupado por formato por padrão — misturar reel/carrossel/legenda/linkedin
-  // numa lista só ficava confuso de navegar.
-  const [groupBy, setGroupBy] = useState<'none' | 'session' | 'format'>('format');
+  // Padrão agora é "Consulta" — é assim que o médico pensa primeiro ("o que
+  // saiu daquela consulta de terça?"), com o tema dentro dela em seguida.
+  // Mídia/Formato ficam como visões alternativas, não a entrada principal.
+  const [groupBy, setGroupBy] = useState<'session' | 'channel' | 'format' | 'none'>('session');
 
   const filtered = useMemo(() => {
     return items.filter(({ session, piece, topicTitle }) => {
@@ -44,11 +47,29 @@ export default function Library() {
     });
   }, [items, q, format, status]);
 
-  const grouped = useMemo(() => {
+  // Hierarquia Consulta → Tema → Peça — cada consulta vira um grupo, e dentro
+  // dele as peças ficam sub-agrupadas por tema (o assunto debatido), não soltas.
+  const sessionGroups = useMemo(() => {
+    if (groupBy !== 'session') return null;
+    const bySession = new Map<string, { session: Session; topics: Map<string, { topicTitle: string; items: typeof filtered }> }>();
+    filtered.forEach(it => {
+      const sKey = it.session.id;
+      if (!bySession.has(sKey)) bySession.set(sKey, { session: it.session, topics: new Map() });
+      const sg = bySession.get(sKey)!;
+      const tKey = it.piece.topicId || 'none';
+      if (!sg.topics.has(tKey)) sg.topics.set(tKey, { topicTitle: it.topicTitle, items: [] });
+      sg.topics.get(tKey)!.items.push(it);
+    });
+    return Array.from(bySession.values())
+      .sort((a, b) => new Date(b.session.createdAt).getTime() - new Date(a.session.createdAt).getTime());
+  }, [filtered, groupBy]);
+
+  const flatGroups = useMemo(() => {
+    if (groupBy === 'session') return null;
     if (groupBy === 'none') return [{ key: '', label: '', items: filtered }];
     const map = new Map<string, typeof filtered>();
     filtered.forEach(it => {
-      const key = groupBy === 'session' ? it.session.title : LABELS[it.piece.format];
+      const key = groupBy === 'channel' ? CHANNEL_LABEL[it.piece.channel] : LABELS[it.piece.format];
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(it);
     });
@@ -97,8 +118,9 @@ export default function Library() {
           <Select value={groupBy} onValueChange={v => setGroupBy(v as any)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="format">Formato</SelectItem>
               <SelectItem value="session">Consulta</SelectItem>
+              <SelectItem value="channel">Mídia</SelectItem>
+              <SelectItem value="format">Formato</SelectItem>
               <SelectItem value="none">Sem agrupamento</SelectItem>
             </SelectContent>
           </Select>
@@ -120,12 +142,56 @@ export default function Library() {
         <div className="border border-dashed border-border rounded-xl p-12 text-center text-muted-foreground">
           {items.length === 0 ? 'Ainda vazio. Grave uma consulta para gerar conteúdo.' : 'Nenhuma peça corresponde aos filtros.'}
         </div>
+      ) : sessionGroups ? (
+        <div className="space-y-10">
+          {sessionGroups.map(({ session, topics }) => {
+            const total = Array.from(topics.values()).reduce((a, t) => a + t.items.length, 0);
+            return (
+              <div key={session.id} className="space-y-5">
+                <div className="border-l-2 border-primary pl-4">
+                  <div className="flex items-baseline justify-between gap-3 flex-wrap">
+                    <h2 className="font-serif text-2xl">{session.title}</h2>
+                    <span className="text-xs text-muted-foreground shrink-0">{fmtWhen(session.createdAt)} · {total} peça(s)</span>
+                  </div>
+                </div>
+                <div className="space-y-6 pl-2">
+                  {Array.from(topics.entries()).map(([tKey, { topicTitle, items: topicItems }]) => (
+                    <div key={tKey} className="space-y-3">
+                      <h3 className="text-xs uppercase tracking-widest text-muted-foreground">{topicTitle} · {topicItems.length}</h3>
+                      {view === 'grid' ? (
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {topicItems.map(({ session, piece, topicTitle }) => (
+                            <PieceCard key={piece.id} session={session} piece={piece} topicTitle={topicTitle} />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {topicItems.map(({ session, piece, topicTitle }) => (
+                            <PieceRow key={piece.id} session={session} piece={piece} topicTitle={topicTitle} />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ) : (
         <div className="space-y-8">
-          {grouped.map(g => (
+          {flatGroups!.map(g => {
+            const first = g.items[0];
+            const GroupIcon = groupBy === 'channel' && first ? CHANNEL_ICON[first.piece.channel]
+              : groupBy === 'format' && first ? ICONS[first.piece.format]
+              : null;
+            return (
             <div key={g.key || 'all'}>
               {g.label && (
-                <h2 className="text-xs uppercase tracking-widest text-primary mb-3">{g.label} · {g.items.length}</h2>
+                <h2 className="text-xs uppercase tracking-widest text-primary mb-3 flex items-center gap-1.5">
+                  {GroupIcon && <GroupIcon className="h-3.5 w-3.5" />}
+                  {g.label} · {g.items.length}
+                </h2>
               )}
               {view === 'grid' ? (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -141,7 +207,8 @@ export default function Library() {
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -159,7 +226,7 @@ function PieceCard({ session, piece, topicTitle }: any) {
   const Icon = ICONS[piece.format as ContentFormat];
   const pill = statusPill(piece);
   return (
-    <Link to={`/app/session/${session.id}`} className="border border-border/60 rounded-lg p-4 hover:border-primary/50 transition block">
+    <Link to={`/app/piece/${piece.id}`} className="border border-border/60 rounded-lg p-4 hover:border-primary/50 transition block">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Icon className="h-4 w-4 text-primary" />
@@ -184,7 +251,7 @@ function PieceRow({ session, piece, topicTitle }: any) {
   const Icon = ICONS[piece.format as ContentFormat];
   const pill = statusPill(piece);
   return (
-    <Link to={`/app/session/${session.id}`} className="border border-border/60 rounded-lg p-3 hover:border-primary/50 transition flex items-center gap-3">
+    <Link to={`/app/piece/${piece.id}`} className="border border-border/60 rounded-lg p-3 hover:border-primary/50 transition flex items-center gap-3">
       <Icon className="h-4 w-4 text-primary shrink-0" />
       <div className="min-w-0 flex-1">
         <div className="text-sm truncate">{piece.body.slice(0, 120)}</div>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { setRecordingActive, LEAVE_RECORDING_WARNING } from '@/lib/recordingGuard';
+import { setRecordingActive, isRecordingActive, LEAVE_RECORDING_WARNING } from '@/lib/recordingGuard';
 
 export type RecorderStatus = 'idle' | 'recording' | 'paused' | 'stopped';
 
@@ -46,13 +46,31 @@ export function useAudioRecorder(opts: UseAudioRecorderOptions = {}) {
   useEffect(() => {
     setRecordingActive(status === 'recording' || status === 'paused');
     if (status !== 'recording' && status !== 'paused') return;
+
     const handler = (e: BeforeUnloadEvent) => {
       e.preventDefault();
       e.returnValue = LEAVE_RECORDING_WARNING;
       return LEAVE_RECORDING_WARNING;
     };
     window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
+
+    // beforeunload só cobra fechar/atualizar a aba — voltar/avançar pelo
+    // navegador (SPA) não dispara isso. Empilha uma entrada sentinela pra
+    // interceptar o botão voltar via popstate; se o médico cancelar, empilha
+    // de novo pra "desfazer" o voltar.
+    window.history.pushState({ recordingGuard: true }, '');
+    const onPopState = () => {
+      if (!isRecordingActive()) return;
+      if (!window.confirm(LEAVE_RECORDING_WARNING)) {
+        window.history.pushState({ recordingGuard: true }, '');
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+
+    return () => {
+      window.removeEventListener('beforeunload', handler);
+      window.removeEventListener('popstate', onPopState);
+    };
   }, [status]);
 
   useEffect(() => {

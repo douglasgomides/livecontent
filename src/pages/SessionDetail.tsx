@@ -13,13 +13,13 @@ import ContentPieceCard from '@/components/session/ContentPieceCard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ArrowLeft, Check, Circle, Loader2, Sparkles, FlaskConical, FileText, AlertTriangle, RefreshCw } from 'lucide-react';
-import { FORMAT_LABEL, FORMAT_ICON } from '@/lib/contentFormats';
-import type { ContentFormat } from '@/types/session';
+import { CHANNEL_LABEL, CHANNEL_ICON } from '@/lib/contentFormats';
+import type { ContentChannel } from '@/types/session';
 
 const ALL_STAGES: { id: SessionStatus; label: string }[] = [
   { id: 'transcribing', label: 'Transcrição' },
   { id: 'anonymizing', label: 'Anonimização' },
-  { id: 'anonymization_review', label: 'Revisão PII' },
+  { id: 'anonymization_review', label: 'Revisar dados do paciente' },
   { id: 'extracting_topics', label: 'Extração de temas' },
   { id: 'topics_review', label: 'Revisão de temas' },
   { id: 'generating_content', label: 'Geração' },
@@ -253,13 +253,15 @@ export default function SessionDetail() {
                   {(session.topics || []).filter(t => t.included).map(topic => {
                     const pieces = session.content!.filter(p => p.topicId === topic.id);
                     if (!pieces.length) return null;
-                    // Agrupado por formato dentro do tema — antes vinha tudo misturado
-                    // numa grade só (reel, carrossel, legenda, linkedin intercalados),
-                    // difícil de achar o que se procura.
-                    const byFormat = new Map<ContentFormat, typeof pieces>();
+                    // Agrupado por MÍDIA (Instagram, LinkedIn, Blog...) em vez de por formato —
+                    // reel/carrossel/stories/legenda do Instagram ficam juntos num só bloco,
+                    // já que são publicados no mesmo lugar. Dentro do bloco, a legenda nunca
+                    // aparece solta: ela vira um complemento anexado ao post/reel/carrossel
+                    // (era o pedido — "legenda tem que tá junto, não pode tá solta").
+                    const byChannel = new Map<ContentChannel, typeof pieces>();
                     pieces.forEach(p => {
-                      if (!byFormat.has(p.format)) byFormat.set(p.format, []);
-                      byFormat.get(p.format)!.push(p);
+                      if (!byChannel.has(p.channel)) byChannel.set(p.channel, []);
+                      byChannel.get(p.channel)!.push(p);
                     });
                     return (
                       <div key={topic.id} className="space-y-5">
@@ -268,33 +270,45 @@ export default function SessionDetail() {
                           <h3 className="font-serif text-2xl">{topic.title}</h3>
                           <p className="text-sm text-muted-foreground mt-1">{topic.summary}</p>
                         </div>
-                        {Array.from(byFormat.entries()).map(([format, formatPieces]) => {
-                          const Icon = FORMAT_ICON[format];
+                        {Array.from(byChannel.entries()).map(([channel, channelPieces]) => {
+                          const Icon = CHANNEL_ICON[channel];
+                          const captionPiece = channelPieces.find(p => p.format === 'caption');
+                          const mainPieces = channelPieces.filter(p => p.format !== 'caption');
+                          // Se não há post/reel/carrossel pra anexar (só legenda foi gerada
+                          // pra esse canal), mostra a legenda sozinha mesmo.
+                          const toRender = mainPieces.length ? mainPieces : channelPieces;
                           return (
-                            <div key={format} className="space-y-2">
+                            <div key={channel} className="space-y-2">
                               <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground">
                                 <Icon className="h-3.5 w-3.5 text-primary" />
-                                {FORMAT_LABEL[format]}
-                                {formatPieces.length > 1 && <span>· {formatPieces.length}</span>}
+                                {CHANNEL_LABEL[channel]}
+                                {channelPieces.length > 1 && <span>· {channelPieces.length}</span>}
                               </div>
                               <div className="grid md:grid-cols-2 gap-4">
-                                {formatPieces.map(p => (
-                                  <ContentPieceCard
-                                    key={p.id}
-                                    piece={p}
-                                    topic={topic}
-                                    brain={loadBrain()}
-                                    sessionId={session.id}
-                                    onChange={(updated) => {
-                                      const content = session.content!.map(c => c.id === updated.id ? updated : c);
-                                      const s = { ...session, content }; upsertSession(s); setSession(s);
-                                    }}
-                                    onApprove={() => {
-                                      const content = session.content!.map(c => c.id === p.id ? { ...c, approved: true } : c);
-                                      const s = { ...session, content }; upsertSession(s); setSession(s);
-                                    }}
-                                  />
-                                ))}
+                                {toRender.map(p => {
+                                  const pairedCaption = mainPieces.length ? captionPiece : undefined;
+                                  return (
+                                    <ContentPieceCard
+                                      key={p.id}
+                                      piece={p}
+                                      topic={topic}
+                                      brain={loadBrain()}
+                                      sessionId={session.id}
+                                      companionCaption={pairedCaption}
+                                      onChange={(updated) => {
+                                        const content = session.content!.map(c => c.id === updated.id ? updated : c);
+                                        const s = { ...session, content }; upsertSession(s); setSession(s);
+                                      }}
+                                      onApprove={() => {
+                                        // Aprovar o post junto com a legenda anexada — são publicados
+                                        // como uma unidade só, não faz sentido aprovar em separado.
+                                        const idsToApprove = new Set([p.id, ...(pairedCaption ? [pairedCaption.id] : [])]);
+                                        const content = session.content!.map(c => idsToApprove.has(c.id) ? { ...c, approved: true } : c);
+                                        const s = { ...session, content }; upsertSession(s); setSession(s);
+                                      }}
+                                    />
+                                  );
+                                })}
                               </div>
                             </div>
                           );

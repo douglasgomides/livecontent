@@ -14,6 +14,21 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_admins: {
+        Row: {
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       brains: {
         Row: {
           brand: Json
@@ -61,6 +76,7 @@ export type Database = {
           format: Database["public"]["Enums"]["content_format"]
           id: string
           meta: Json | null
+          reference_style_id: string | null
           rejected: boolean
           rejected_note: string | null
           rejected_reason: string | null
@@ -83,6 +99,7 @@ export type Database = {
           format: Database["public"]["Enums"]["content_format"]
           id?: string
           meta?: Json | null
+          reference_style_id?: string | null
           rejected?: boolean
           rejected_note?: string | null
           rejected_reason?: string | null
@@ -105,6 +122,7 @@ export type Database = {
           format?: Database["public"]["Enums"]["content_format"]
           id?: string
           meta?: Json | null
+          reference_style_id?: string | null
           rejected?: boolean
           rejected_note?: string | null
           rejected_reason?: string | null
@@ -115,6 +133,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "content_pieces_reference_style_id_fkey"
+            columns: ["reference_style_id"]
+            isOneToOne: false
+            referencedRelation: "reference_styles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "content_pieces_session_id_fkey"
             columns: ["session_id"]
@@ -137,6 +162,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      doctor_settings: {
+        Row: {
+          created_at: string
+          preferred_formats: Json
+          updated_at: string
+          user_id: string
+          webhooks: Json
+        }
+        Insert: {
+          created_at?: string
+          preferred_formats?: Json
+          updated_at?: string
+          user_id: string
+          webhooks?: Json
+        }
+        Update: {
+          created_at?: string
+          preferred_formats?: Json
+          updated_at?: string
+          user_id?: string
+          webhooks?: Json
+        }
+        Relationships: []
       }
       evidence_sources: {
         Row: {
@@ -186,30 +235,6 @@ export type Database = {
           url?: string | null
           user_id?: string
           year?: number | null
-        }
-        Relationships: []
-      }
-      doctor_settings: {
-        Row: {
-          created_at: string
-          preferred_formats: Json
-          updated_at: string
-          user_id: string
-          webhooks: Json
-        }
-        Insert: {
-          created_at?: string
-          preferred_formats?: Json
-          updated_at?: string
-          user_id: string
-          webhooks?: Json
-        }
-        Update: {
-          created_at?: string
-          preferred_formats?: Json
-          updated_at?: string
-          user_id?: string
-          webhooks?: Json
         }
         Relationships: []
       }
@@ -272,6 +297,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      reference_styles: {
+        Row: {
+          created_at: string
+          format_hint: string
+          id: string
+          name: string
+          source_image_path: string | null
+          source_text: string | null
+          source_type: string
+          structure_description: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          format_hint?: string
+          id?: string
+          name?: string
+          source_image_path?: string | null
+          source_text?: string | null
+          source_type?: string
+          structure_description?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          format_hint?: string
+          id?: string
+          name?: string
+          source_image_path?: string | null
+          source_text?: string | null
+          source_type?: string
+          structure_description?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       sessions: {
         Row: {
@@ -357,45 +421,6 @@ export type Database = {
         }
         Relationships: []
       }
-      reference_styles: {
-        Row: {
-          created_at: string
-          format_hint: string
-          id: string
-          name: string
-          source_image_path: string | null
-          source_text: string | null
-          source_type: string
-          structure_description: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          format_hint?: string
-          id?: string
-          name?: string
-          source_image_path?: string | null
-          source_text?: string | null
-          source_type?: string
-          structure_description?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          format_hint?: string
-          id?: string
-          name?: string
-          source_image_path?: string | null
-          source_text?: string | null
-          source_type?: string
-          structure_description?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       topics: {
         Row: {
           created_at: string
@@ -448,7 +473,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_app_admin: { Args: { uid: string }; Returns: boolean }
     }
     Enums: {
       content_channel:
@@ -510,6 +535,7 @@ export type Database = {
         | "generating_content"
         | "ready"
         | "failed"
+      subscription_status: "active" | "canceled" | "past_due" | "none"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -702,6 +728,7 @@ export const Constants = {
         "ready",
         "failed",
       ],
+      subscription_status: ["active", "canceled", "past_due", "none"],
     },
   },
 } as const

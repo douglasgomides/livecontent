@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mic, Upload, MessageCircle, FlaskConical, Radio, ArrowRight, Clock, FileCheck2, Shield, Brain as BrainIcon, CalendarDays, Link2, Inbox, Send, CheckCircle2 } from 'lucide-react';
+import { Mic, Upload, MessageCircle, FlaskConical, Radio, ArrowRight, Clock, FileCheck2, Shield, Brain as BrainIcon, CalendarDays, Link2, Inbox, Send, CheckCircle2, ChevronDown, LineChart } from 'lucide-react';
 import { loadSessions, loadProfile } from '@/lib/storage';
 import { loadBrain, getCompleteness } from '@/lib/brainStorage';
 import { loadSchedule, upcoming } from '@/lib/scheduleStorage';
@@ -13,7 +14,7 @@ const STATUS_LABEL: Record<SessionStatus, string> = {
   recording: 'Gravando',
   transcribing: 'Transcrevendo',
   anonymizing: 'Anonimizando',
-  anonymization_review: 'Revisar PII',
+  anonymization_review: 'Revisar dados do paciente',
   extracting_topics: 'Extraindo temas',
   topics_review: 'Revisar temas',
   generating_content: 'Gerando',
@@ -21,8 +22,11 @@ const STATUS_LABEL: Record<SessionStatus, string> = {
   failed: 'Falhou',
 };
 
-const entries = [
-  { icon: Mic, title: 'Gravar consulta', hint: 'Ao vivo, no consultório', to: '/app/record', primary: true },
+// Uma única ação em destaque pra começar (gravar) — o resto são variações
+// menos comuns, escondidas atrás de "Outras formas de criar" pra não competir
+// visualmente com a ação principal. Médico leigo em ferramenta não deveria
+// precisar escolher entre 6 opções só pra começar.
+const secondaryEntries = [
   { icon: Radio, title: 'Palestra / áudio livre', hint: 'Aula, evento, WhatsApp', to: '/app/new/audio-livre' },
   { icon: Link2, title: 'Link (YouTube, artigo)', hint: 'Cole a URL, extrai temas', to: '/app/new/link' },
   { icon: Upload, title: 'Upload de áudio', hint: 'MP3, M4A, WAV, WebM', to: '/app/new/upload' },
@@ -35,6 +39,7 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2
 const fmtDur = (s: number) => `${Math.floor(s / 60)}min ${(s % 60).toString().padStart(2, '0')}s`;
 
 export default function Dashboard() {
+  const [showMore, setShowMore] = useState(false);
   const sessions = loadSessions();
   const profile = loadProfile();
   const firstName = profile?.name?.split(' ')[0] || 'Doutor(a)';
@@ -83,37 +88,68 @@ export default function Dashboard() {
         </Link>
       )}
 
+      {sessions.length > 0 && (
+        <Link to="/app/insights" className="flex items-center gap-3 border border-primary/40 bg-primary/5 rounded-lg p-4 hover:bg-primary/10 transition">
+          <LineChart className="h-5 w-5 text-primary shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="font-medium text-sm">Inteligência de conversão: objeções, sentimento e argumento sugerido</div>
+            <div className="text-xs text-muted-foreground">Extraído automaticamente da fala dos pacientes — veja o que eles realmente objetam, sentem e perguntam.</div>
+          </div>
+          <ArrowRight className="h-4 w-4 text-primary shrink-0" />
+        </Link>
+      )}
+
 
       <section>
         <h2 className="t-h2 mb-5">Começar agora</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {entries.map(e => (
-            <Link
-              key={e.to}
-              to={e.to}
-              className={`group border rounded-xl p-5 flex items-start gap-4 transition ${
-                e.primary
-                  ? 'border-primary/50 bg-primary/5 hover:bg-primary/10 gold-shadow'
-                  : 'border-border/60 hover:border-primary/50 hover:bg-primary/5'
-              }`}
-            >
-              <div className={`h-11 w-11 rounded-lg flex items-center justify-center shrink-0 ${e.primary ? 'bg-gold-gradient' : 'bg-secondary'}`}>
-                <e.icon className={`h-5 w-5 ${e.primary ? 'text-primary-foreground' : 'text-primary'}`} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-semibold">{e.title}</div>
-                <div className="t-micro text-muted-foreground mt-1">{e.hint}</div>
-              </div>
-              <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition shrink-0 mt-3" />
-            </Link>
-          ))}
-        </div>
+        <Link
+          to="/app/record"
+          className="group border border-primary/50 bg-primary/5 hover:bg-primary/10 gold-shadow rounded-xl p-6 flex items-center gap-4 transition"
+        >
+          <div className="h-14 w-14 rounded-lg flex items-center justify-center shrink-0 bg-gold-gradient">
+            <Mic className="h-6 w-6 text-primary-foreground" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-base font-semibold">Gravar consulta</div>
+            <div className="text-sm text-muted-foreground mt-1">Ao vivo, no consultório — a IA cuida do resto.</div>
+          </div>
+          <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition shrink-0" />
+        </Link>
+
+        <button
+          onClick={() => setShowMore(v => !v)}
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition mt-4"
+        >
+          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showMore ? 'rotate-180' : ''}`} />
+          Outras formas de criar conteúdo
+        </button>
+
+        {showMore && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+            {secondaryEntries.map(e => (
+              <Link
+                key={e.to}
+                to={e.to}
+                className="group border border-border/60 hover:border-primary/50 hover:bg-primary/5 rounded-xl p-4 flex items-start gap-3 transition"
+              >
+                <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 bg-secondary">
+                  <e.icon className="h-4 w-4 text-primary" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-semibold">{e.title}</div>
+                  <div className="t-micro text-muted-foreground mt-1">{e.hint}</div>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition shrink-0 mt-2" />
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <StatCard icon={Clock} label="Consultas este mês" value={thisMonth} />
         <StatCard icon={FileCheck2} label="Peças aprovadas" value={approved} />
-        <StatCard icon={Shield} label="Score CFM médio" value={avgCfm || '—'} />
+        <StatCard icon={Shield} label="Conformidade média (CFM)" value={avgCfm || '—'} />
       </section>
 
       {(pendingApproval > 0 || queueOpen > 0 || scheduledThisWeek > 0 || blockedCfm > 0) && (

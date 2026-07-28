@@ -3,6 +3,7 @@ import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { Button } from '@/components/ui/button';
 import { Mic } from 'lucide-react';
+import { isRecordingActive, LEAVE_RECORDING_WARNING } from '@/lib/recordingGuard';
 
 export default function AppShell() {
   return (
@@ -15,7 +16,12 @@ export default function AppShell() {
               <SidebarTrigger />
               <span className="font-serif font-semibold text-base text-foreground/90">Consulta Creator</span>
             </div>
-            <Link to="/app/record">
+            <Link
+              to="/app/record"
+              onClick={(e) => {
+                if (isRecordingActive() && !window.confirm(LEAVE_RECORDING_WARNING)) e.preventDefault();
+              }}
+            >
               <Button size="sm" className="bg-gold-gradient text-primary-foreground hover:opacity-90 shadow-gold-sm rounded-md font-medium">
                 <Mic className="h-4 w-4 mr-2" /> Iniciar consulta
               </Button>

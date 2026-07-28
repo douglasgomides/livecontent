@@ -4,6 +4,8 @@ import type { Brain } from '@/types/brain';
 import { renderSlideToPngAsync, downloadPng } from '@/lib/artRenderer';
 import { renderSlidesToWebm, downloadBlob } from '@/lib/videoRenderer';
 import { generateArtwork } from '@/lib/pipeline';
+import { fetchBrandPhotos, getBrandPhotoSignedUrl } from '@/lib/db';
+import { getUserId } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Download, ImageOff, Film, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
@@ -19,6 +21,27 @@ export default function PieceArtwork({ piece, brain, onChange }: {
   const [rendering, setRendering] = useState(false);
   const [makingVideo, setMakingVideo] = useState(false);
   const [generating, setGenerating] = useState(false);
+  // Fotos de marca do médico, agrupadas por categoria (URLs assinadas, já que o
+  // bucket é privado) — a IA sugere uma categoria por slide (photoCategory);
+  // aqui só resolvemos qual foto real usar, sorteada dentro da categoria certa.
+  const [photosByCategory, setPhotosByCategory] = useState<Record<string, string[]>>({});
+
+  useEffect(() => {
+    const uid = getUserId();
+    if (!uid) return;
+    let cancelled = false;
+    fetchBrandPhotos(uid).then(async (list) => {
+      const byCat: Record<string, string[]> = {};
+      list.forEach(p => { (byCat[p.category] ??= []).push(p.storagePath); });
+      const resolved: Record<string, string[]> = {};
+      for (const [cat, paths] of Object.entries(byCat)) {
+        resolved[cat] = await Promise.all(paths.map(p => getBrandPhotoSignedUrl(p).catch(() => '')));
+        resolved[cat] = resolved[cat].filter(Boolean);
+      }
+      if (!cancelled) setPhotosByCategory(resolved);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   const generate = async () => {
     setGenerating(true);
@@ -40,8 +63,10 @@ export default function PieceArtwork({ piece, brain, onChange }: {
     (async () => {
       const out: string[] = [];
       for (const s of art.slides) {
+        const candidates = s.photoCategory ? photosByCategory[s.photoCategory] : undefined;
+        const photoUrl = candidates?.length ? candidates[Math.floor(Math.random() * candidates.length)] : undefined;
         // eslint-disable-next-line no-await-in-loop
-        const url = await renderSlideToPngAsync(s, art, brain);
+        const url = await renderSlideToPngAsync(s, art, brain, photoUrl);
         out.push(url);
         if (cancelled) return;
       }
@@ -51,7 +76,7 @@ export default function PieceArtwork({ piece, brain, onChange }: {
       }
     })();
     return () => { cancelled = true; };
-  }, [art, brain, piece.id]);
+  }, [art, brain, piece.id, photosByCategory]);
 
   const isVideoFormat = useMemo(
     () => piece.format === 'reel' || piece.format === 'tiktok' || piece.format === 'youtube' || piece.format === 'stories' || piece.format === 'carousel',
@@ -150,8 +175,9 @@ export default function PieceArtwork({ piece, brain, onChange }: {
       </div>
 
       <p className="text-[11px] text-muted-foreground leading-relaxed">
-        Artes geradas com sua marca (cor, fonte, @) via Canvas. O vídeo é um teaser feito das próprias
-        lâminas — para o corte final use os prompts em <strong>Prompts</strong> com sua ferramenta (Sora, Runway, HeyGen).
+        Artes geradas com sua marca (cor, fonte, @) via Canvas, usando suas fotos de fundo quando
+        disponíveis. O vídeo é um teaser feito das próprias lâminas — para o corte final use os
+        prompts em <strong>Prompts</strong> com sua ferramenta (Sora, Runway, HeyGen).
       </p>
     </div>
   );

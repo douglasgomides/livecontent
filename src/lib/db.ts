@@ -11,6 +11,9 @@ import type {
   SessionStatus,
   EvidenceSource,
   ReferenceStyle,
+  PatientSignal,
+  BrandPhoto,
+  BrandPhotoCategory,
 } from '@/types/session';
 import type { Brain } from '@/types/brain';
 import { EMPTY_BRAIN } from '@/types/brain';
@@ -35,6 +38,7 @@ export async function fetchBrain(userId: string): Promise<Brain> {
     patient: { ...EMPTY_BRAIN.patient, ...(data.patient as any) },
     brand: { ...EMPTY_BRAIN.brand, ...(data.brand as any) },
     onboarded: !!data.onboarded,
+    objectionsOptIn: !!(data as any).objections_opt_in,
   };
 }
 
@@ -48,6 +52,7 @@ export async function saveBrainDb(userId: string, brain: Brain): Promise<void> {
         patient: brain.patient as any,
         brand: brain.brand as any,
         onboarded: brain.onboarded,
+        objections_opt_in: brain.objectionsOptIn,
       },
       { onConflict: 'user_id' },
     );
@@ -363,8 +368,10 @@ function mapReferenceStyleRow(row: any): ReferenceStyle {
     sourceType: row.source_type,
     sourceImagePath: row.source_image_path ?? undefined,
     sourceText: row.source_text ?? undefined,
+    sourceOwnership: row.source_ownership ?? 'other',
     structureDescription: row.structure_description,
     createdAt: row.created_at,
+    isDefault: !!row.is_default,
   };
 }
 
@@ -384,6 +391,7 @@ export async function addReferenceStyle(userId: string, s: {
   sourceType: 'image' | 'text';
   sourceImagePath?: string;
   sourceText?: string;
+  sourceOwnership: 'own' | 'other';
   structureDescription: string;
 }): Promise<ReferenceStyle> {
   const { data, error } = await supabase
@@ -395,6 +403,7 @@ export async function addReferenceStyle(userId: string, s: {
       source_type: s.sourceType,
       source_image_path: s.sourceImagePath ?? null,
       source_text: s.sourceText ?? null,
+      source_ownership: s.sourceOwnership,
       structure_description: s.structureDescription,
     })
     .select('*')
@@ -408,6 +417,21 @@ export async function deleteReferenceStyle(id: string): Promise<void> {
   if (error) throw error;
 }
 
+// Marca UM estilo como padrão (aplicado automaticamente em toda geração nova,
+// sem precisar escolher toda vez) — desmarca qualquer outro antes, já que o
+// banco garante só um padrão por médico (índice único parcial em is_default).
+export async function setDefaultReferenceStyle(userId: string, id: string): Promise<void> {
+  const { error: e1 } = await supabase.from('reference_styles').update({ is_default: false }).eq('user_id', userId);
+  if (e1) throw e1;
+  const { error: e2 } = await supabase.from('reference_styles').update({ is_default: true }).eq('id', id);
+  if (e2) throw e2;
+}
+
+export async function unsetDefaultReferenceStyle(id: string): Promise<void> {
+  const { error } = await supabase.from('reference_styles').update({ is_default: false }).eq('id', id);
+  if (error) throw error;
+}
+
 export async function uploadReferenceImage(userId: string, file: File): Promise<string> {
   const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
   const path = `${userId}/${crypto.randomUUID()}.${ext}`;
@@ -416,6 +440,84 @@ export async function uploadReferenceImage(userId: string, file: File): Promise<
     .upload(path, file, { contentType: file.type || 'image/jpeg' });
   if (error) throw error;
   return path;
+}
+
+// ─── Fotos de marca (médico/clínica/equipe) pra usar de fundo nas artes ─────
+
+function mapBrandPhotoRow(row: any): BrandPhoto {
+  return {
+    id: row.id,
+    storagePath: row.storage_path,
+    category: row.category,
+    createdAt: row.created_at,
+  };
+}
+
+export async function fetchBrandPhotos(userId: string): Promise<BrandPhoto[]> {
+  const { data, error } = await supabase
+    .from('brand_photos')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(mapBrandPhotoRow);
+}
+
+export async function uploadBrandPhoto(userId: string, file: File, category: BrandPhotoCategory): Promise<BrandPhoto> {
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+  const { error: upErr } = await supabase.storage
+    .from('brand-photos')
+    .upload(path, file, { contentType: file.type || 'image/jpeg' });
+  if (upErr) throw upErr;
+  const { data, error } = await supabase
+    .from('brand_photos')
+    .insert({ user_id: userId, storage_path: path, category })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return mapBrandPhotoRow(data);
+}
+
+export async function deleteBrandPhoto(id: string, storagePath: string): Promise<void> {
+  await supabase.storage.from('brand-photos').remove([storagePath]);
+  const { error } = await supabase.from('brand_photos').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function getBrandPhotoSignedUrl(path: string, ttlSec = 3600): Promise<string> {
+  const { data, error } = await supabase.storage
+    .from('brand-photos')
+    .createSignedUrl(path, ttlSec);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
+// ─── Sinais de inteligência comercial (objeções/dúvidas/sinais de compra) ──
+// Extraídos automaticamente pelo run-pipeline a partir da transcrição
+// anonimizada — só leitura aqui, nada de escrita client-side.
+
+function mapPatientSignalRow(row: any): PatientSignal {
+  return {
+    id: row.id,
+    sessionId: row.session_id,
+    kind: row.kind,
+    category: row.category,
+    label: row.label,
+    actionTip: row.action_tip ?? '',
+    confidence: row.confidence,
+    createdAt: row.created_at,
+  };
+}
+
+export async function fetchPatientSignals(userId: string): Promise<PatientSignal[]> {
+  const { data, error } = await supabase
+    .from('patient_signals')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(mapPatientSignalRow);
 }
 
 // ─── Assinatura / plano ─────────────────────────────────────────────────────

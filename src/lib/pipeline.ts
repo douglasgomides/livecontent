@@ -109,9 +109,9 @@ export async function fetchTrendingTopics(query?: string): Promise<{ query: stri
 
 // ─── Estilos de referência (extrai estrutura, nunca conteúdo literal) ───────
 
-export async function analyzeReferenceStyle(args: { imagePath?: string; text?: string; formatHint?: string }): Promise<string> {
+export async function analyzeReferenceStyle(args: { imagePath?: string; text?: string; formatHint?: string; sourceOwnership?: 'own' | 'other' }): Promise<string> {
   const { data, error } = await supabase.functions.invoke('analyze-reference-style', {
-    body: { image_path: args.imagePath, text: args.text, format_hint: args.formatHint },
+    body: { image_path: args.imagePath, text: args.text, format_hint: args.formatHint, source_ownership: args.sourceOwnership ?? 'other' },
   });
   if (error || !data?.structure_description) {
     throw new Error(await describeFunctionError(error, 'Falha ao analisar a referência'));
@@ -179,6 +179,70 @@ export async function fetchAdminOverview(): Promise<AdminOverview> {
   const { data, error } = await supabase.functions.invoke('admin-overview');
   if (error) throw new Error(await describeFunctionError(error, 'Falha ao carregar painel admin'));
   return data as AdminOverview;
+}
+
+// ─── Inteligência comercial (agregado cross-médico, admin-only) ────────────
+
+export interface CommercialArgumentStat {
+  categoria: string;
+  total: number;
+  fechou: number;
+  taxa: number;
+}
+
+export interface CommercialArgumentRanking {
+  argumento: string;
+  total: number;
+  fechou: number;
+  taxa: number;
+}
+
+export interface CommercialObjectionStat {
+  categoria: string;
+  total: number;
+  taxa_superacao: number | null;
+}
+
+export interface CommercialCrossing {
+  dor_categoria: string;
+  arg_categoria: string;
+  fechou_count: number;
+}
+
+export interface CommercialByDoctor {
+  user_id: string;
+  specialty: string;
+  total: number;
+  fechou: number;
+  taxa: number;
+}
+
+export interface CommercialBySpecialty {
+  specialty: string;
+  total: number;
+  fechou: number;
+  taxa: number;
+}
+
+export interface CommercialIntelligenceReport {
+  total_sessoes_com_oferta: number;
+  total_sessoes_com_resultado_decidido: number;
+  taxa_fechamento_geral: number | null;
+  por_categoria_argumento: CommercialArgumentStat[];
+  ranking_argumentos: CommercialArgumentRanking[];
+  ranking_argumentos_amostra_minima: number;
+  ranking_argumentos_total_distintos: number;
+  ranking_argumentos_omitidos_por_amostra_baixa: number;
+  objecoes: CommercialObjectionStat[];
+  cruzamento_dor_argumento: CommercialCrossing[];
+  por_medico: CommercialByDoctor[];
+  por_especialidade: CommercialBySpecialty[];
+}
+
+export async function fetchCommercialIntelligenceReport(): Promise<CommercialIntelligenceReport> {
+  const { data, error } = await supabase.functions.invoke('commercial-intelligence-report');
+  if (error) throw new Error(await describeFunctionError(error, 'Falha ao carregar inteligência comercial'));
+  return data as CommercialIntelligenceReport;
 }
 
 // ─── Pipeline real (Edge Function) ──────────────────────────────────────────

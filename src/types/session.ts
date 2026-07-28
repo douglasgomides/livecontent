@@ -45,6 +45,10 @@ export interface ArtworkSlide {
   title?: string;
   body?: string;
   footer?: string;
+  // Categoria de foto de marca sugerida pra fundo deste slide (ex.: 'lifestyle'
+  // pro gancho emocional, 'clinic' pra mostrar o consultório) — só usada se o
+  // médico tiver fotos dessa categoria; sem isso, o slide fica só o cartão de texto.
+  photoCategory?: BrandPhotoCategory;
 }
 
 export interface Artwork {
@@ -116,7 +120,24 @@ export interface ReferenceStyle {
   sourceType: 'image' | 'text';
   sourceImagePath?: string;
   sourceText?: string;
+  // 'own' = peça do próprio médico (adaptação fiel liberada); 'other' = peça de
+  // outra pessoa/conta (só estrutura abstrata, nunca texto — protege direito autoral).
+  sourceOwnership: 'own' | 'other';
   structureDescription: string;
+  createdAt: string;
+  // Marca este estilo como o padrão aplicado automaticamente em toda geração
+  // nova (sem precisar escolher toda vez). Só um por médico — banco garante isso.
+  isDefault: boolean;
+}
+
+export type BrandPhotoCategory = 'working' | 'lifestyle' | 'family' | 'clinic' | 'team' | 'other';
+
+// Foto que o médico sobe (dele, da clínica, da equipe) pra IA usar como fundo
+// nas artes geradas — categorizada pra IA escolher a foto certa por contexto.
+export interface BrandPhoto {
+  id: string;
+  storagePath: string;
+  category: BrandPhotoCategory;
   createdAt: string;
 }
 
@@ -124,6 +145,24 @@ export interface ScienceSource {
   reference: string;
   kind: 'abstract' | 'news' | 'guideline' | 'other';
   originalText: string;
+}
+
+export type PatientSignalKind = 'objection' | 'question' | 'buying_signal' | 'sentiment';
+
+// Sinal de inteligência comercial extraído automaticamente da transcrição
+// anonimizada — expressão real do paciente (fiel, mas nunca com dado que
+// identifique alguém), mais uma dica de ação (actionTip) quando fizer sentido
+// pro tipo de sinal (contra-argumento pra objeção, próxima ação pra sinal de
+// compra, ajuste de tom pro sentimento).
+export interface PatientSignal {
+  id: string;
+  sessionId: string;
+  kind: PatientSignalKind;
+  category: string;
+  label: string;
+  actionTip: string;
+  confidence: number;
+  createdAt: string;
 }
 
 export interface Session {

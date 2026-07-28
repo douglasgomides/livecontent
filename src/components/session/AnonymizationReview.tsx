@@ -54,7 +54,7 @@ export default function AnonymizationReview({ session, onConfirm }: { session: S
       <div className="grid md:grid-cols-2 gap-4">
         <div className="border border-destructive/30 rounded-lg overflow-hidden">
           <div className="bg-destructive/10 px-4 py-2 text-xs uppercase tracking-widest text-destructive flex items-center gap-2">
-            <AlertCircle className="h-3 w-3" /> Original — PII em destaque
+            <AlertCircle className="h-3 w-3" /> Original — dados do paciente em destaque
           </div>
           <div className="p-4 text-sm whitespace-pre-wrap leading-relaxed max-h-[500px] overflow-y-auto">
             {rawHighlighted.map((p, i) =>
