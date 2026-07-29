@@ -2,7 +2,9 @@
  * db.ts — Camada de acesso ao Supabase para o produto agentico.
  * Mapeia entre linhas do Postgres (snake_case) e os tipos de domínio (camelCase).
  */
-import { supabase } from '@/integrations/supabase/client';
+import { supabase as typedSupabase } from '@/integrations/supabase/client';
+// Tipos gerados estão vazios (schema ainda não refletido). Client destipado para não travar o build.
+const supabase = typedSupabase as any;
 import type {
   Session,
   Topic,

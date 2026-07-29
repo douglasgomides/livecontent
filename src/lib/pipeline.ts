@@ -5,7 +5,9 @@
  */
 import type { Session, ContentPiece, Topic, ContentFormat, CFMResult } from '@/types/session';
 import type { Brain } from '@/types/brain';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase as typedSupabase } from '@/integrations/supabase/client';
+// Tipos gerados estão vazios (schema ainda não refletido). Client destipado para não travar o build.
+const supabase = typedSupabase as any;
 import { uploadAudio } from './db';
 import { getUserId } from './store';
 import {
