@@ -53,7 +53,7 @@ export async function saveBrainDb(userId: string, brain: Brain): Promise<void> {
         brand: brain.brand as any,
         onboarded: brain.onboarded,
         objections_opt_in: brain.objectionsOptIn,
-      },
+      } as any,
       { onConflict: 'user_id' },
     );
   if (error) throw error;
@@ -405,7 +405,7 @@ export async function addReferenceStyle(userId: string, s: {
       source_text: s.sourceText ?? null,
       source_ownership: s.sourceOwnership,
       structure_description: s.structureDescription,
-    })
+    } as any)
     .select('*')
     .single();
   if (error) throw error;
@@ -421,14 +421,14 @@ export async function deleteReferenceStyle(id: string): Promise<void> {
 // sem precisar escolher toda vez) — desmarca qualquer outro antes, já que o
 // banco garante só um padrão por médico (índice único parcial em is_default).
 export async function setDefaultReferenceStyle(userId: string, id: string): Promise<void> {
-  const { error: e1 } = await supabase.from('reference_styles').update({ is_default: false }).eq('user_id', userId);
+  const { error: e1 } = await supabase.from('reference_styles').update({ is_default: false } as any).eq('user_id', userId);
   if (e1) throw e1;
-  const { error: e2 } = await supabase.from('reference_styles').update({ is_default: true }).eq('id', id);
+  const { error: e2 } = await supabase.from('reference_styles').update({ is_default: true } as any).eq('id', id);
   if (e2) throw e2;
 }
 
 export async function unsetDefaultReferenceStyle(id: string): Promise<void> {
-  const { error } = await supabase.from('reference_styles').update({ is_default: false }).eq('id', id);
+  const { error } = await supabase.from('reference_styles').update({ is_default: false } as any).eq('id', id);
   if (error) throw error;
 }
 
@@ -454,7 +454,7 @@ function mapBrandPhotoRow(row: any): BrandPhoto {
 }
 
 export async function fetchBrandPhotos(userId: string): Promise<BrandPhoto[]> {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('brand_photos')
     .select('*')
     .eq('user_id', userId)
@@ -470,7 +470,7 @@ export async function uploadBrandPhoto(userId: string, file: File, category: Bra
     .from('brand-photos')
     .upload(path, file, { contentType: file.type || 'image/jpeg' });
   if (upErr) throw upErr;
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('brand_photos')
     .insert({ user_id: userId, storage_path: path, category })
     .select('*')
@@ -481,7 +481,7 @@ export async function uploadBrandPhoto(userId: string, file: File, category: Bra
 
 export async function deleteBrandPhoto(id: string, storagePath: string): Promise<void> {
   await supabase.storage.from('brand-photos').remove([storagePath]);
-  const { error } = await supabase.from('brand_photos').delete().eq('id', id);
+  const { error } = await (supabase as any).from('brand_photos').delete().eq('id', id);
   if (error) throw error;
 }
 
@@ -511,7 +511,7 @@ function mapPatientSignalRow(row: any): PatientSignal {
 }
 
 export async function fetchPatientSignals(userId: string): Promise<PatientSignal[]> {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('patient_signals')
     .select('*')
     .eq('user_id', userId)
