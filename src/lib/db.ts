@@ -370,6 +370,7 @@ function mapReferenceStyleRow(row: any): ReferenceStyle {
     sourceText: row.source_text ?? undefined,
     sourceOwnership: row.source_ownership ?? 'other',
     structureDescription: row.structure_description,
+    extractedCopy: row.extracted_copy ?? undefined,
     createdAt: row.created_at,
     isDefault: !!row.is_default,
   };
@@ -393,6 +394,7 @@ export async function addReferenceStyle(userId: string, s: {
   sourceText?: string;
   sourceOwnership: 'own' | 'other';
   structureDescription: string;
+  extractedCopy?: string;
 }): Promise<ReferenceStyle> {
   const { data, error } = await supabase
     .from('reference_styles')
@@ -405,6 +407,7 @@ export async function addReferenceStyle(userId: string, s: {
       source_text: s.sourceText ?? null,
       source_ownership: s.sourceOwnership,
       structure_description: s.structureDescription,
+      extracted_copy: s.extractedCopy ?? null,
     } as any)
     .select('*')
     .single();

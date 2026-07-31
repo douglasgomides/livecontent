@@ -124,6 +124,10 @@ export interface ReferenceStyle {
   // outra pessoa/conta (só estrutura abstrata, nunca texto — protege direito autoral).
   sourceOwnership: 'own' | 'other';
   structureDescription: string;
+  // Transcrição literal da copy original — só existe quando sourceOwnership='own'
+  // (adaptação fiel é segura, é autoria do próprio médico). Ajuda a gerar mais
+  // próximo do original do que só a estrutura abstrata permitiria.
+  extractedCopy?: string;
   createdAt: string;
   // Marca este estilo como o padrão aplicado automaticamente em toda geração
   // nova (sem precisar escolher toda vez). Só um por médico — banco garante isso.

@@ -769,6 +769,7 @@ export type Database = {
       reference_styles: {
         Row: {
           created_at: string
+          extracted_copy: string | null
           format_hint: string
           id: string
           is_default: boolean
@@ -783,6 +784,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          extracted_copy?: string | null
           format_hint?: string
           id?: string
           is_default?: boolean
@@ -797,6 +799,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          extracted_copy?: string | null
           format_hint?: string
           id?: string
           is_default?: boolean

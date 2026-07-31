@@ -92,21 +92,24 @@ Deno.serve(async (req) => {
     // libera uma adaptação mais próxima nesse caso.
     let referenceStructure: string | null = null;
     let referenceOwnership: 'own' | 'other' = 'other';
+    let referenceExtractedCopy: string | null = null;
     if (reference_style_id) {
       const { data: refRow } = await supabase
-        .from('reference_styles').select('structure_description, source_ownership')
+        .from('reference_styles').select('structure_description, source_ownership, extracted_copy')
         .eq('id', reference_style_id).eq('user_id', userId).maybeSingle();
       referenceStructure = refRow?.structure_description ?? null;
       referenceOwnership = refRow?.source_ownership === 'own' ? 'own' : 'other';
+      referenceExtractedCopy = refRow?.extracted_copy ?? null;
     } else {
       // Sem escolha explícita nesta geração: usa o estilo marcado como padrão
       // (se o médico tiver um), pra não precisar escolher toda vez.
       const { data: defRow } = await supabase
-        .from('reference_styles').select('structure_description, source_ownership')
+        .from('reference_styles').select('structure_description, source_ownership, extracted_copy')
         .eq('user_id', userId).eq('is_default', true).maybeSingle();
       if (defRow) {
         referenceStructure = defRow.structure_description ?? null;
         referenceOwnership = defRow.source_ownership === 'own' ? 'own' : 'other';
+        referenceExtractedCopy = defRow.extracted_copy ?? null;
       }
     }
 
@@ -274,7 +277,7 @@ Deno.serve(async (req) => {
       const batch = jobs.slice(i, i + CONCURRENCY);
       const results = await Promise.all(batch.map(async ({ topic, format }) => {
         try {
-          const body = await claudeText(anthropicKey, buildGenSystem(format), buildGenUser(topic, format, anonymized, brain, evidence, referenceStructure, referenceOwnership, objectionsBlock));
+          const body = await claudeText(anthropicKey, buildGenSystem(format), buildGenUser(topic, format, anonymized, brain, evidence, referenceStructure, referenceOwnership, objectionsBlock, referenceExtractedCopy));
           const cfm = await scoreCFMSemantic(anthropicKey, body);
           const evidenceIds = matchCitedEvidence(body, evidence);
           return {
@@ -423,7 +426,7 @@ const OBJECTION_LABEL: Record<string, string> = {
   scheduling_time: 'Tempo/agenda', other: 'Outro',
 };
 
-function buildGenUser(topic: any, _format: string, transcript: string, brain: any, evidence: any[] = [], referenceStructure: string | null = null, referenceOwnership: 'own' | 'other' = 'other', objectionsBlock: string = '') {
+function buildGenUser(topic: any, _format: string, transcript: string, brain: any, evidence: any[] = [], referenceStructure: string | null = null, referenceOwnership: 'own' | 'other' = 'other', objectionsBlock: string = '', referenceExtractedCopy: string | null = null) {
   const funnelDesc: Record<string, string> = {
     C0: 'não sabe que o problema existe', C1: 'reconhece sintoma, tem crenças erradas',
     C2: 'quer saber o que fazer', C3: 'quase-paciente, precisa de prova',
@@ -432,10 +435,15 @@ function buildGenUser(topic: any, _format: string, transcript: string, brain: an
     ? `\n\n## Perfil do médico:\n${JSON.stringify(brain).slice(0, 1500)}`
     : '';
   // 'own': a referência é do próprio médico — pode adaptar de perto (cadência, conectores).
+  // Se também tiver a copy literal extraída (analyze-reference-style, via OpenAI), usa
+  // como o texto real a adaptar — muito mais fiel do que só a descrição de estrutura.
   // 'other': referência de terceiro — só o padrão estrutural, nunca frase literal.
   const refBlock = referenceStructure
     ? referenceOwnership === 'own'
-      ? `\n\n## Estrutura e estilo de uma peça sua anterior — adapte de perto (mesma cadência, mesmos conectores), só trocando tema/dados específicos\n${referenceStructure}`
+      ? `\n\n## Estrutura e estilo de uma peça sua anterior — adapte de perto (mesma cadência, mesmos conectores), só trocando tema/dados específicos\n${referenceStructure}` +
+        (referenceExtractedCopy
+          ? `\n\n## Texto literal da peça original (adapte de perto essa copy pro tema atual — mesma cadência e conectores, só troque o assunto/dados específicos)\n${referenceExtractedCopy}`
+          : '')
       : `\n\n## Estrutura de referência a seguir (formato/gancho/progressão/estilo — NUNCA copie frases, só o padrão)\n${referenceStructure}`
     : '';
   return `## Tema

@@ -72,7 +72,7 @@ export default function ReferenceStyles() {
       if (mode === 'image' && file) {
         imagePath = await uploadReferenceImage(uid, file);
       }
-      const structure = await analyzeReferenceStyle({
+      const { structureDescription, extractedCopy } = await analyzeReferenceStyle({
         imagePath,
         text: mode === 'text' ? text.trim() : undefined,
         formatHint,
@@ -85,7 +85,8 @@ export default function ReferenceStyles() {
         sourceImagePath: imagePath,
         sourceText: mode === 'text' ? text.trim() : undefined,
         sourceOwnership: ownership,
-        structureDescription: structure,
+        structureDescription,
+        extractedCopy,
       });
       toast.success('Estrutura extraída e salva na biblioteca');
       reset();
