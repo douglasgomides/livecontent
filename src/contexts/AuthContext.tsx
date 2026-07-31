@@ -9,8 +9,22 @@ interface AuthCtx {
   loading: boolean;
   hydrated: boolean;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
-  signUp: (email: string, password: string) => Promise<{ error?: string }>;
+  signUp: (email: string, password: string) => Promise<{ error?: string; alreadyRegistered?: boolean }>;
+  resetPassword: (email: string) => Promise<{ error?: string }>;
+  updatePassword: (newPassword: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
+}
+
+// Supabase retorna as mensagens de erro em inglês, cruas — traduz as mais comuns
+// pra algo acionável em português em vez de repassar o texto técnico direto.
+function friendlyAuthError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes('invalid login credentials')) return 'E-mail ou senha incorretos. Se esqueceu a senha, use "Esqueci minha senha".';
+  if (m.includes('user already registered')) return 'Esse e-mail já tem conta. Entre em vez de criar uma nova, ou use "Esqueci minha senha" se não lembrar a senha.';
+  if (m.includes('email not confirmed')) return 'Confirme seu e-mail antes de entrar — verifique sua caixa de entrada (e o spam).';
+  if (m.includes('password should be at least')) return 'A senha precisa ter pelo menos 8 caracteres.';
+  if (m.includes('rate limit') || m.includes('too many requests')) return 'Muitas tentativas seguidas. Aguarde alguns minutos e tente de novo.';
+  return message;
 }
 
 const Ctx = createContext<AuthCtx | null>(null);
@@ -49,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn: AuthCtx['signIn'] = async (email, password) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return error ? { error: error.message } : {};
+    return error ? { error: friendlyAuthError(error.message) } : {};
   };
 
   const signUp: AuthCtx['signUp'] = async (email, password) => {
@@ -58,7 +72,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
       options: { emailRedirectTo: `${window.location.origin}/app` },
     });
-    return error ? { error: error.message } : {};
+    if (!error) return {};
+    const alreadyRegistered = error.message.toLowerCase().includes('user already registered');
+    return { error: friendlyAuthError(error.message), alreadyRegistered };
+  };
+
+  const resetPassword: AuthCtx['resetPassword'] = async (email) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    return error ? { error: friendlyAuthError(error.message) } : {};
+  };
+
+  const updatePassword: AuthCtx['updatePassword'] = async (newPassword) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    return error ? { error: friendlyAuthError(error.message) } : {};
   };
 
   const signOut = async () => {
@@ -66,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <Ctx.Provider value={{ user: session?.user ?? null, session, loading, hydrated, signIn, signUp, signOut }}>
+    <Ctx.Provider value={{ user: session?.user ?? null, session, loading, hydrated, signIn, signUp, resetPassword, updatePassword, signOut }}>
       {children}
     </Ctx.Provider>
   );
