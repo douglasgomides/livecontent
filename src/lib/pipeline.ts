@@ -3,7 +3,7 @@
  * Chama a Edge Function `run-pipeline` para pipelines reais (áudio real).
  * Mantém helpers do mock para fluxos síncronos legados (voice_note, science).
  */
-import type { Session, ContentPiece, Topic, ContentFormat, CFMResult } from '@/types/session';
+import type { Session, ContentPiece, Topic, ContentFormat, CFMResult, TrendingContentIdea } from '@/types/session';
 import type { Brain } from '@/types/brain';
 import { supabase } from '@/integrations/supabase/client';
 import { uploadAudio } from './db';
@@ -262,6 +262,32 @@ export async function fetchCommercialBenchmark(): Promise<CommercialBenchmark> {
   const { data, error } = await supabase.functions.invoke('commercial-benchmark');
   if (error) throw new Error(await describeFunctionError(error, 'Falha ao carregar benchmark de mercado'));
   return data as CommercialBenchmark;
+}
+
+function mapTrendingIdeaRow(row: any): TrendingContentIdea {
+  return {
+    id: row.id,
+    specialty: row.specialty,
+    topic: row.topic,
+    whyItWorks: row.why_it_works,
+    suggestedFormat: row.suggested_format ?? null,
+    sourceTitle: row.source_title ?? null,
+    sourceUrl: row.source_url ?? null,
+    fetchedAt: row.fetched_at,
+  };
+}
+
+// Pesquisa real (web search do Claude) do que está performando em redes sociais
+// pra especialidade do médico — cacheado no backend por alguns dias.
+// refresh=true força nova pesquisa mesmo com cache válido.
+export async function fetchTrendingContentIdeas(refresh = false): Promise<TrendingContentIdea[]> {
+  const { data, error } = await supabase.functions.invoke('trending-content-ideas', {
+    body: { refresh },
+  });
+  if (error || !data?.ideas) {
+    throw new Error(await describeFunctionError(error, 'Falha ao buscar tendências'));
+  }
+  return (data.ideas as any[]).map(mapTrendingIdeaRow);
 }
 
 // ─── Pipeline real (Edge Function) ──────────────────────────────────────────

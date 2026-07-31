@@ -134,6 +134,38 @@ export interface ReferenceStyle {
   isDefault: boolean;
 }
 
+// Ideia de conteúdo em alta pra especialidade, pesquisada de verdade na web
+// (nunca inventada) — cacheada por alguns dias pra não pesquisar toda hora.
+export interface TrendingContentIdea {
+  id: string;
+  specialty: string;
+  topic: string;
+  whyItWorks: string;
+  suggestedFormat: string | null;
+  sourceTitle: string | null;
+  sourceUrl: string | null;
+  fetchedAt: string;
+}
+
+// Desempenho real de um post próprio (sincronizado via Windsor.ai) — mostra o
+// que já funcionou de verdade com a própria audiência, pra repetir o padrão.
+export interface SocialPostPerformance {
+  id: string;
+  platform: string;
+  externalMediaId: string;
+  permalink: string | null;
+  caption: string | null;
+  mediaType: string | null;
+  postedAt: string | null;
+  likes: number;
+  comments: number;
+  reach: number | null;
+  saved: number | null;
+  shares: number | null;
+  engagement: number | null;
+  syncedAt: string;
+}
+
 export type BrandPhotoCategory = 'working' | 'lifestyle' | 'family' | 'clinic' | 'team' | 'other';
 
 // Foto que o médico sobe (dele, da clínica, da equipe) pra IA usar como fundo

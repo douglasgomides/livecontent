@@ -30,6 +30,7 @@ import EvidenceLibrary from "./pages/EvidenceLibrary";
 import ReferenceStyles from "./pages/ReferenceStyles";
 import BrandPhotos from "./pages/BrandPhotos";
 import Insights from "./pages/Insights";
+import Trends from "./pages/Trends";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
@@ -98,6 +99,7 @@ const App = () => (
               <Route path="calendar" element={<CalendarPage />} />
               <Route path="evidence" element={<EvidenceLibrary />} />
               <Route path="insights" element={<Insights />} />
+              <Route path="trends" element={<Trends />} />
               <Route path="reference-styles" element={<ReferenceStyles />} />
               <Route path="brand-photos" element={<BrandPhotos />} />
               <Route path="brain" element={<BrainPage />} />

@@ -19,6 +19,7 @@ import {
   LayoutTemplate,
   LineChart,
   Image as ImageIcon,
+  TrendingUp,
 } from 'lucide-react';
 
 import {
@@ -59,6 +60,7 @@ const workItems = [
   { title: 'Fila de publicação', url: '/app/publish-queue', icon: Send },
   { title: 'Biblioteca', url: '/app/library', icon: Library },
   { title: 'Inteligência de conversão', url: '/app/insights', icon: LineChart },
+  { title: 'Tendências', url: '/app/trends', icon: TrendingUp },
   { title: 'Evidências', url: '/app/evidence', icon: Microscope },
   { title: 'Estilos de referência', url: '/app/reference-styles', icon: LayoutTemplate },
   { title: 'Fotos da marca', url: '/app/brand-photos', icon: ImageIcon },

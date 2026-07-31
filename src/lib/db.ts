@@ -14,6 +14,7 @@ import type {
   PatientSignal,
   BrandPhoto,
   BrandPhotoCategory,
+  SocialPostPerformance,
 } from '@/types/session';
 import type { Brain } from '@/types/brain';
 import { EMPTY_BRAIN } from '@/types/brain';
@@ -543,4 +544,36 @@ export async function fetchSubscription(userId: string): Promise<Subscription> {
     status: (data?.status as any) ?? 'none',
     currentPeriodEnd: data?.current_period_end ?? null,
   };
+}
+
+// ─── Desempenho de posts próprios (sincronizado via Windsor.ai) ────────────
+
+function mapSocialPostRow(row: any): SocialPostPerformance {
+  return {
+    id: row.id,
+    platform: row.platform,
+    externalMediaId: row.external_media_id,
+    permalink: row.permalink ?? null,
+    caption: row.caption ?? null,
+    mediaType: row.media_type ?? null,
+    postedAt: row.posted_at ?? null,
+    likes: row.likes ?? 0,
+    comments: row.comments ?? 0,
+    reach: row.reach ?? null,
+    saved: row.saved ?? null,
+    shares: row.shares ?? null,
+    engagement: row.engagement ?? null,
+    syncedAt: row.synced_at,
+  };
+}
+
+export async function fetchTopOwnPosts(userId: string, limit = 10): Promise<SocialPostPerformance[]> {
+  const { data, error } = await (supabase as any)
+    .from('social_post_performance')
+    .select('*')
+    .eq('user_id', userId)
+    .order('engagement', { ascending: false, nullsFirst: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []).map(mapSocialPostRow);
 }
