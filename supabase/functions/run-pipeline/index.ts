@@ -4,6 +4,7 @@
 import { corsHeaders } from '../_shared/cors.ts';
 import { scoreCFMSemantic } from '../_shared/cfm.ts';
 import { extractPatientSignals } from '../_shared/patientSignals.ts';
+import { extractCommercialIntelligence } from '../_shared/commercialIntelligence.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const CLAUDE = 'claude-sonnet-4-5';
@@ -97,6 +98,16 @@ Deno.serve(async (req) => {
         .eq('id', reference_style_id).eq('user_id', userId).maybeSingle();
       referenceStructure = refRow?.structure_description ?? null;
       referenceOwnership = refRow?.source_ownership === 'own' ? 'own' : 'other';
+    } else {
+      // Sem escolha explícita nesta geração: usa o estilo marcado como padrão
+      // (se o médico tiver um), pra não precisar escolher toda vez.
+      const { data: defRow } = await supabase
+        .from('reference_styles').select('structure_description, source_ownership')
+        .eq('user_id', userId).eq('is_default', true).maybeSingle();
+      if (defRow) {
+        referenceStructure = defRow.structure_description ?? null;
+        referenceOwnership = defRow.source_ownership === 'own' ? 'own' : 'other';
+      }
     }
 
     // Objeções aprendidas (opt-in): agregação on-demand, nada pré-computado guardado
@@ -243,10 +254,18 @@ Deno.serve(async (req) => {
       for (const format of genFormats) jobs.push({ topic, format });
     }
 
-    // Inteligência comercial: roda em paralelo à geração de conteúdo, nunca bloqueia
-    // nem derruba a sessão — só a transcrição ANONIMIZADA é usada, e uma falha aqui
-    // vira warning silencioso, nunca setError (é analytics, não caminho crítico).
+    // Inteligência comercial (sinais soltos): roda em paralelo à geração de conteúdo,
+    // nunca bloqueia nem derruba a sessão — só a transcrição ANONIMIZADA é usada, e
+    // uma falha aqui vira warning silencioso, nunca setError (é analytics, não caminho crítico).
     const signalsPromise = extractPatientSignals(anthropicKey, anonymized).catch(() => []);
+
+    // Inteligência comercial (estruturada — argumentos, objeções, resultado da oferta):
+    // só faz sentido em consulta real com paciente (recording/upload) — palestra, nota de
+    // voz solta, link importado e science-to-content não têm oferta comercial pra analisar.
+    const isRealConsultation = session.source === 'recording' || session.source === 'upload';
+    const commercialIntelPromise = isRealConsultation
+      ? extractCommercialIntelligence(anthropicKey, anonymized).catch(() => null)
+      : Promise.resolve(null);
 
     const CONCURRENCY = 3;
     const pieces: any[] = [];
@@ -299,6 +318,26 @@ Deno.serve(async (req) => {
         signals.map(s => ({ user_id: userId, session_id, topic_id: null, ...s })),
       );
       if (sigErr) console.warn('[signals] insert failed', sigErr.message);
+    }
+
+    const commercialIntel = await commercialIntelPromise;
+    if (commercialIntel) {
+      const { error: ciErr } = await supabase.from('commercial_intelligence').insert({
+        user_id: userId,
+        session_id,
+        specialty: brain?.doctor?.specialty ?? '',
+        houve_oferta_comercial: commercialIntel.houve_oferta_comercial,
+        resultado: commercialIntel.resultado,
+        motivo_resultado: commercialIntel.motivo_resultado,
+        argumentos_utilizados: commercialIntel.argumentos_utilizados,
+        objecoes_paciente: commercialIntel.objecoes_paciente,
+        dores_identificadas: commercialIntel.dores_identificadas,
+        procedimentos_mencionados: commercialIntel.procedimentos_mencionados,
+        condicoes_comerciais: commercialIntel.condicoes_comerciais,
+        proxima_acao: commercialIntel.proxima_acao,
+        resumo_comercial: commercialIntel.resumo_comercial,
+      });
+      if (ciErr) console.warn('[commercial-intel] insert failed', ciErr.message);
     }
 
     await setStatus('ready');

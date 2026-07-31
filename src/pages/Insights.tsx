@@ -10,6 +10,7 @@ import { loadSessions } from '@/lib/storage';
 import { getUserId } from '@/lib/store';
 import { loadBrain, saveBrain } from '@/lib/brainStorage';
 import { fetchPatientSignals } from '@/lib/db';
+import { fetchCommercialBenchmark, type CommercialBenchmark } from '@/lib/pipeline';
 import { FORMAT_LABEL } from '@/lib/contentFormats';
 import type { ContentFormat, PatientSignal } from '@/types/session';
 
@@ -83,6 +84,18 @@ export default function Insights() {
       .then(setSignals)
       .catch(() => setSignals([]))
       .finally(() => setSignalsLoading(false));
+  }, []);
+
+  // Benchmark de mercado (cross-médico, anonimizado) — carrega independente do
+  // volume próprio, pra não deixar o médico novo com tela vazia no dia 1.
+  const [benchmark, setBenchmark] = useState<CommercialBenchmark | null>(null);
+  const [benchmarkLoading, setBenchmarkLoading] = useState(true);
+
+  useEffect(() => {
+    fetchCommercialBenchmark()
+      .then(setBenchmark)
+      .catch(() => setBenchmark(null))
+      .finally(() => setBenchmarkLoading(false));
   }, []);
 
   const objectionData = useMemo(() => {
@@ -251,6 +264,71 @@ export default function Insights() {
           nenhum dado novo é coletado, isso é só o que você já tem organizado.
         </p>
       </div>
+
+      <section className="border border-border/60 rounded-xl p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <Target className="h-4 w-4 text-primary" />
+          <h2 className="font-serif text-xl">Benchmark de mercado</h2>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          Agregado anonimizado de outros médicos na Consulta Creator — nunca mostra texto,
+          consulta ou identidade de ninguém, só taxas por categoria. Enquanto sua própria
+          base de consultas cresce, use isso como referência do que fecha mais no mercado.
+        </p>
+        {benchmarkLoading ? (
+          <p className="text-sm text-muted-foreground">Carregando…</p>
+        ) : !benchmark?.eligible ? (
+          <p className="text-sm text-muted-foreground">
+            Ainda não há amostra suficiente no mercado pra montar um benchmark confiável
+            {typeof benchmark?.sampleSize === 'number' && typeof benchmark?.minRequired === 'number'
+              ? ` (${benchmark.sampleSize} de ${benchmark.minRequired} consultas com oferta comercial necessárias).`
+              : '.'}
+            {' '}Volte em breve.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-baseline gap-2">
+              <span className="t-numeric text-foreground">
+                {benchmark.closingRate !== null ? `${Math.round(benchmark.closingRate * 100)}%` : '—'}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                taxa de fechamento {benchmark.scope === 'specialty' ? `na sua especialidade` : 'no mercado geral'}
+                {' '}· baseado em {benchmark.sampleSize} consulta(s) com oferta comercial de outros médicos
+              </span>
+            </div>
+            {benchmark.topArguments.length > 0 && (
+              <div>
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                  Argumentos que mais fecham no mercado
+                </div>
+                <div className="space-y-1.5">
+                  {benchmark.topArguments.map(a => (
+                    <div key={a.categoria} className="flex items-center justify-between text-sm">
+                      <span>{a.label}</span>
+                      <span className="text-muted-foreground text-xs">{Math.round(a.taxaFechamento * 100)}% fecham · {a.amostras} amostras</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {benchmark.topObjections.length > 0 && (
+              <div>
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                  Objeções mais comuns no mercado
+                </div>
+                <div className="space-y-1.5">
+                  {benchmark.topObjections.map(o => (
+                    <div key={o.categoria} className="flex items-center justify-between text-sm">
+                      <span>{o.label}</span>
+                      <span className="text-muted-foreground text-xs">{o.pctDasOfertas}% das ofertas</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
 
       {empty ? (
         <div className="border border-dashed border-border rounded-xl p-12 text-center text-muted-foreground">

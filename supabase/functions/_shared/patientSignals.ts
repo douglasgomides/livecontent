@@ -1,13 +1,13 @@
 // Extrai sinais de inteligência comercial (objeções, dúvidas, sinais de decisão de
-// compra) da transcrição JÁ ANONIMIZADA de uma consulta. Nunca deve receber
-// raw_transcript — só anonymized_transcript, mesma disciplina do resto do pipeline.
-// Mesmo padrão de _shared/cfm.ts: prompt fixo, JSON forçado, FALLBACK que nunca
-// derruba o chamador (run-pipeline chama isso best-effort, sem setError em falha).
+// compra, sentimento) da transcrição JÁ ANONIMIZADA de uma consulta. Nunca deve
+// receber raw_transcript — só anonymized_transcript, mesma disciplina do resto do
+// pipeline. Mesmo padrão de _shared/cfm.ts: prompt fixo, JSON forçado, FALLBACK que
+// nunca derruba o chamador (run-pipeline chama isso best-effort, sem setError em falha).
 const MODEL = 'claude-sonnet-4-5';
 
-const SIGNAL_SYSTEM = `Você é um analista de inteligência comercial para consultórios médicos brasileiros.
-Recebe a transcrição JÁ ANONIMIZADA de uma consulta e identifica, de forma factual, sinais de
-objeção, dúvida ou intenção de compra que o PACIENTE expressou. Nunca invente nada que não esteja
+const SIGNAL_SYSTEM = `Você é um analista de inteligência comercial e de conversão para consultórios
+médicos brasileiros. Recebe a transcrição JÁ ANONIMIZADA de uma consulta e identifica, de forma
+factual, sinais que ajudam o médico a vender e converter melhor. Nunca invente nada que não esteja
 no texto. Trabalhe SOMENTE com o texto fornecido.
 
 ## Taxonomia (use exatamente estes valores)
@@ -17,20 +17,32 @@ kind="question": category ∈ {symptom_cause, procedure_details, safety_side_eff
   cost_insurance, recovery_aftercare, alternatives, other}
 kind="buying_signal": category ∈ {ready_to_schedule, asked_price_proactively,
   asked_next_steps, requested_recommendation, other}
+kind="sentiment": category ∈ {hesitant, skeptical, anxious, excited, frustrated, reassured, indifferent, other}
 
-Para cada sinal real e claro, gere um "label" curto (máx 140 caracteres) que PARAFRASEIA o que o
-paciente deu a entender — NUNCA copie a frase literal da transcrição (reduz ainda mais qualquer
-risco de algo sensível aparecer num resumo). Se não houver sinal claro, não force — retorne menos
-itens ou array vazio.
+## Para cada item, gere:
+- "label": a expressão real do paciente, o mais fiel possível às palavras e à cadência que a pessoa
+  usou (pode soar como quase uma citação) — isso ajuda o médico a entender a língua real do seu
+  público e reaproveitar esse jeito de falar no conteúdo. EXCEÇÃO NÃO-NEGOCIÁVEL: se a frase
+  contiver qualquer nome, apelido, endereço, contato, ou outro dado que possa identificar alguém —
+  mesmo que a anonimização tenha deixado passar — generalize só essa parte específica, nunca a
+  frase inteira. Máx 160 caracteres.
+- "actionTip": só para kind="objection" (o contra-argumento ou reformulação que desarma essa
+  objeção específica), kind="buying_signal" (a próxima ação concreta a tomar agora) e
+  kind="sentiment" (um ajuste de tom/abordagem de comunicação adequado a esse sentimento). Curto,
+  prático, 1 frase, específico ao contexto real da consulta — não genérico de manual de vendas.
+  Para kind="question" deixe "" (a própria pergunta já direciona o conteúdo a responder).
+
+Se não houver sinal real e claro, não force — retorne menos itens ou array vazio.
 
 Retorne SÓ um JSON array (pode ser vazio):
-[{"kind":"objection|question|buying_signal","category":"...","label":"...","confidence":0-100}]
-Sem markdown, sem texto fora do JSON. Máximo 12 itens.`;
+[{"kind":"objection|question|buying_signal|sentiment","category":"...","label":"...","actionTip":"...","confidence":0-100}]
+Sem markdown, sem texto fora do JSON. Máximo 16 itens.`;
 
 export interface PatientSignalRow {
-  kind: 'objection' | 'question' | 'buying_signal';
+  kind: 'objection' | 'question' | 'buying_signal' | 'sentiment';
   category: string;
   label: string;
+  action_tip: string;
   confidence: number;
 }
 
@@ -42,7 +54,7 @@ export async function extractPatientSignals(anthropicKey: string, anonymizedTran
       method: 'POST',
       headers: { 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify({
-        model: MODEL, max_tokens: 2000, system: SIGNAL_SYSTEM,
+        model: MODEL, max_tokens: 2500, system: SIGNAL_SYSTEM,
         messages: [{ role: 'user', content: anonymizedTranscript }],
       }),
     });
@@ -51,14 +63,15 @@ export async function extractPatientSignals(anthropicKey: string, anonymizedTran
     const text = (data.content?.[0]?.text ?? '').trim().replace(/^```json\s*|\s*```$/g, '');
     const parsed = JSON.parse(text);
     if (!Array.isArray(parsed)) return FALLBACK;
-    const VALID_KIND = new Set(['objection', 'question', 'buying_signal']);
+    const VALID_KIND = new Set(['objection', 'question', 'buying_signal', 'sentiment']);
     return parsed
       .filter((s: any) => VALID_KIND.has(s.kind))
-      .slice(0, 12)
+      .slice(0, 16)
       .map((s: any) => ({
         kind: s.kind,
         category: String(s.category || 'other'),
         label: String(s.label || '').slice(0, 160),
+        action_tip: String(s.actionTip || '').slice(0, 220),
         confidence: Math.max(0, Math.min(100, Number(s.confidence) || 60)),
       }));
   } catch (e) {

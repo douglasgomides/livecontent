@@ -245,6 +245,25 @@ export async function fetchCommercialIntelligenceReport(): Promise<CommercialInt
   return data as CommercialIntelligenceReport;
 }
 
+export interface CommercialBenchmark {
+  eligible: boolean;
+  scope: 'specialty' | 'market';
+  specialty: string | null;
+  sampleSize: number;
+  minRequired?: number;
+  closingRate: number | null;
+  topArguments: Array<{ categoria: string; label: string; taxaFechamento: number; amostras: number }>;
+  topObjections: Array<{ categoria: string; label: string; ocorrencias: number; pctDasOfertas: number }>;
+}
+
+// Benchmark de mercado (cross-médico, anonimizado, só agregado por categoria) —
+// qualquer médico pode chamar, diferente do relatório admin-only acima.
+export async function fetchCommercialBenchmark(): Promise<CommercialBenchmark> {
+  const { data, error } = await supabase.functions.invoke('commercial-benchmark');
+  if (error) throw new Error(await describeFunctionError(error, 'Falha ao carregar benchmark de mercado'));
+  return data as CommercialBenchmark;
+}
+
 // ─── Pipeline real (Edge Function) ──────────────────────────────────────────
 
 export async function uploadAudioForSession(sessionId: string, blob: Blob, ext = 'webm'): Promise<string> {
