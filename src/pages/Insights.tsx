@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, LineChart as LineChartIcon, Target, CheckCircle2, Hash, ShieldAlert, MessageCircleQuestion, Heart, Lightbulb } from 'lucide-react';
+import { ArrowLeft, LineChart as LineChartIcon, Target, CheckCircle2, Hash, ShieldAlert, MessageCircleQuestion, Heart, Lightbulb, Mic } from 'lucide-react';
+import KpiCard from '@/components/app/KpiCard';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { toast } from 'sonner';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
@@ -220,6 +221,19 @@ export default function Insights() {
   const totalTopics = sessions.reduce((a, s) => a + (s.topics?.filter(t => t.included).length ?? 0), 0);
   const totalPieces = sessions.reduce((a, s) => a + (s.content?.length ?? 0), 0);
 
+  // KPIs de topo — leitura em 3 segundos do que o dashboard de baixo detalha.
+  const avgApproval = useMemo(() => {
+    if (!formatStats.length) return null;
+    const totalPieces = formatStats.reduce((a, f) => a + f.total, 0);
+    const approvedPieces = formatStats.reduce((a, f) => a + Math.round((f.aprovacao / 100) * f.total), 0);
+    return totalPieces ? Math.round((approvedPieces / totalPieces) * 100) : null;
+  }, [formatStats]);
+
+  const topStage = useMemo(() => {
+    const leader = [...stageData].sort((a, b) => b.quantidade - a.quantidade)[0];
+    return leader && leader.quantidade > 0 ? leader.stage : null;
+  }, [stageData]);
+
   const empty = sessions.length === 0;
 
   return (
@@ -244,6 +258,28 @@ export default function Insights() {
         </div>
       ) : (
         <>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <KpiCard icon={Mic} label="Consultas analisadas" value={sessions.length} sublabel={`${totalTopics} temas extraídos`} />
+            <KpiCard
+              icon={Lightbulb}
+              label="Sinais comerciais"
+              value={signalsLoading ? '—' : signals.length}
+              sublabel="objeções, dúvidas, sinais de compra"
+            />
+            <KpiCard
+              icon={CheckCircle2}
+              label="Aprovação de conteúdo"
+              value={avgApproval !== null ? `${avgApproval}%` : '—'}
+              sublabel={`${totalPieces} peças geradas`}
+            />
+            <KpiCard
+              icon={Target}
+              label="Estágio de funil predominante"
+              value={topStage ?? '—'}
+              sublabel="onde seu conteúdo mais fala hoje"
+            />
+          </div>
+
           <section className="border border-border/60 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-1">
               <Target className="h-4 w-4 text-primary" />

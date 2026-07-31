@@ -76,11 +76,11 @@ export default {
         mono: ['ui-monospace', 'SF Mono', 'Menlo', 'monospace'],
       },
       backgroundImage: {
-        'gold-gradient': 'linear-gradient(180deg, hsl(42 55% 54%) 0%, hsl(42 55% 54%) 100%)',
+        'gold-gradient': 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.85) 100%)',
       },
       boxShadow: {
-        'gold': '0 20px 60px -20px hsl(42 55% 54% / 0.4)',
-        'gold-sm': '0 8px 24px -8px hsl(42 55% 54% / 0.35)',
+        'gold': '0 12px 32px -12px hsl(var(--primary) / 0.35)',
+        'gold-sm': '0 6px 16px -6px hsl(var(--primary) / 0.3)',
       },
       keyframes: {
         "accordion-down": { from: { height: "0" }, to: { height: "var(--radix-accordion-content-height)" } },
