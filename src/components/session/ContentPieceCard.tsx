@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import PieceArtwork from './PieceArtwork';
 import PiecePrompts from './PiecePrompts';
 import PiecePublish from './PiecePublish';
+import ViralityBadge from '@/components/ViralityBadge';
 
 export default function ContentPieceCard({ piece, topic, brain, sessionId, companionCaption, onChange, onApprove }: {
   piece: ContentPiece;
@@ -32,11 +33,11 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, compa
   const rescore = async () => {
     setRescoring(true);
     try {
-      const updated = await rescoreContent({ ...piece, body });
+      const updated = await rescoreContent({ ...piece, body }, topic?.title);
       onChange(updated);
-      toast.success('Conformidade reavaliada');
+      toast.success('Conformidade e potencial de viralização reavaliados');
     } catch (err: any) {
-      toast.error(`Falha ao reavaliar conformidade: ${err?.message ?? err}`);
+      toast.error(`Falha ao reavaliar: ${err?.message ?? err}`);
     } finally {
       setRescoring(false);
     }
@@ -79,6 +80,7 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, compa
           <Icon className="h-4 w-4 text-primary shrink-0" />
           <span className="text-xs uppercase tracking-widest text-primary truncate">{FORMAT_LABEL[piece.format]}</span>
           <ScoreBadge score={cfm.score} blocked={blocked} warned={warned} />
+          <ViralityBadge virality={piece.virality} />
         </div>
         <Button variant="ghost" size="sm" onClick={rescore} disabled={rescoring}>
           {rescoring ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />} Reavaliar

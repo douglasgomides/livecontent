@@ -3,7 +3,7 @@
  * Chama a Edge Function `run-pipeline` para pipelines reais (áudio real).
  * Mantém helpers do mock para fluxos síncronos legados (voice_note, science).
  */
-import type { Session, ContentPiece, Topic, ContentFormat, CFMResult, TrendingContentIdea, EvidenceSource, DebateSegment } from '@/types/session';
+import type { Session, ContentPiece, Topic, ContentFormat, CFMResult, TrendingContentIdea, EvidenceSource, DebateSegment, ViralityResult } from '@/types/session';
 import type { Brain } from '@/types/brain';
 import { supabase } from '@/integrations/supabase/client';
 import { uploadAudio } from './db';
@@ -58,9 +58,12 @@ export { createBlankSession, seedPipeline, seedScience };
 
 // ─── CFM (scoring semântico via Edge Function — julga contexto, não palavra-chave) ──
 
-export async function rescoreContent(piece: ContentPiece): Promise<ContentPiece> {
-  const cfm = await scoreCFMRemote(piece.body);
-  return { ...piece, cfm };
+export async function rescoreContent(piece: ContentPiece, topicTitle?: string): Promise<ContentPiece> {
+  const [cfm, virality] = await Promise.all([
+    scoreCFMRemote(piece.body),
+    scoreViralityRemote({ title: topicTitle, text: piece.body, contentType: 'peca' }),
+  ]);
+  return { ...piece, cfm, virality };
 }
 
 export async function scoreCFMRemote(body: string): Promise<CFMResult> {
@@ -69,6 +72,17 @@ export async function scoreCFMRemote(body: string): Promise<CFMResult> {
     throw new Error(await describeFunctionError(error, 'Falha ao avaliar CFM'));
   }
   return data as CFMResult;
+}
+
+// ─── Viralização/qualidade (estilo Opus Clip) — mesma ideia do CFM, mas avalia
+// gancho/retenção/compartilhabilidade em vez de conformidade ────────────────
+
+export async function scoreViralityRemote(input: { title?: string; text: string; contentType: 'tema' | 'artigo' | 'noticia' | 'peca' }): Promise<ViralityResult> {
+  const { data, error } = await supabase.functions.invoke('score-virality', { body: input });
+  if (error || !data) {
+    throw new Error(await describeFunctionError(error, 'Falha ao avaliar potencial de viralização'));
+  }
+  return data as ViralityResult;
 }
 
 // ─── Busca real de evidência científica (PubMed) ────────────────────────────

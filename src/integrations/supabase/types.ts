@@ -268,6 +268,7 @@ export type Database = {
           topic_id: string | null
           updated_at: string
           user_id: string
+          virality: Json | null
         }
         Insert: {
           approved?: boolean
@@ -290,6 +291,7 @@ export type Database = {
           topic_id?: string | null
           updated_at?: string
           user_id: string
+          virality?: Json | null
         }
         Update: {
           approved?: boolean
@@ -312,6 +314,7 @@ export type Database = {
           topic_id?: string | null
           updated_at?: string
           user_id?: string
+          virality?: Json | null
         }
         Relationships: [
           {
@@ -417,6 +420,7 @@ export type Database = {
           updated_at: string
           url: string | null
           user_id: string
+          virality: Json | null
           year: number | null
         }
         Insert: {
@@ -436,6 +440,7 @@ export type Database = {
           updated_at?: string
           url?: string | null
           user_id: string
+          virality?: Json | null
           year?: number | null
         }
         Update: {
@@ -455,6 +460,7 @@ export type Database = {
           updated_at?: string
           url?: string | null
           user_id?: string
+          virality?: Json | null
           year?: number | null
         }
         Relationships: []
@@ -468,6 +474,7 @@ export type Database = {
           summary: string
           title: string
           user_id: string
+          virality: Json | null
           watch_id: string
         }
         Insert: {
@@ -478,6 +485,7 @@ export type Database = {
           summary: string
           title: string
           user_id: string
+          virality?: Json | null
           watch_id: string
         }
         Update: {
@@ -488,6 +496,7 @@ export type Database = {
           summary?: string
           title?: string
           user_id?: string
+          virality?: Json | null
           watch_id?: string
         }
         Relationships: [
@@ -1239,6 +1248,7 @@ export type Database = {
           title: string
           updated_at: string
           user_id: string
+          virality: Json | null
         }
         Insert: {
           created_at?: string
@@ -1251,6 +1261,7 @@ export type Database = {
           title: string
           updated_at?: string
           user_id: string
+          virality?: Json | null
         }
         Update: {
           created_at?: string
@@ -1263,6 +1274,7 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+          virality?: Json | null
         }
         Relationships: [
           {

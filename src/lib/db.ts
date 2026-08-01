@@ -111,6 +111,7 @@ export async function fetchAllSessions(userId: string): Promise<Session[]> {
       summary: t.summary,
       funnelStage: t.funnel_stage,
       included: t.included,
+      virality: t.virality,
     }));
     topicsBySession.set(t.session_id, list);
   });
@@ -135,6 +136,7 @@ export async function fetchAllSessions(userId: string): Promise<Session[]> {
       externalPrompts: p.external_prompts ?? undefined,
       evidenceIds: p.evidence_ids ?? undefined,
       referenceStyleId: p.reference_style_id ?? undefined,
+      virality: p.virality,
     }));
     piecesBySession.set(p.session_id, list);
   });
@@ -174,6 +176,7 @@ export async function upsertSessionDb(userId: string, s: Session): Promise<void>
       funnel_stage: t.funnelStage,
       included: t.included,
       position: i,
+      virality: (t.virality ?? null) as any,
     }));
     const { error: e2 } = await supabase.from('topics').insert(rows);
     if (e2) throw e2;
@@ -191,6 +194,7 @@ export async function upsertSessionDb(userId: string, s: Session): Promise<void>
       channel: p.channel,
       body: p.body,
       cfm: p.cfm as any,
+      virality: (p.virality ?? null) as any,
       approved: p.approved,
       rejected: !!p.rejected,
       rejected_reason: p.rejectedReason ?? null,
@@ -326,6 +330,7 @@ function mapEvidenceRow(row: any): EvidenceSource {
     source: row.source,
     createdAt: row.created_at,
     audioSummaryPath: row.audio_summary_path ?? null,
+    virality: row.virality ?? null,
   };
 }
 
@@ -363,6 +368,11 @@ export async function addEvidenceSource(userId: string, s: Omit<EvidenceSource, 
 
 export async function deleteEvidenceSource(id: string): Promise<void> {
   const { error } = await supabase.from('evidence_sources').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function updateEvidenceSourceVirality(id: string, virality: EvidenceSource['virality']): Promise<void> {
+  const { error } = await supabase.from('evidence_sources').update({ virality: virality as any }).eq('id', id);
   if (error) throw error;
 }
 
@@ -848,6 +858,7 @@ function mapTopicUpdateRow(row: any): EvidenceTopicUpdate {
     sourceTitle: row.source_title ?? null,
     sourceUrl: row.source_url ?? null,
     foundAt: row.found_at,
+    virality: row.virality ?? null,
   };
 }
 

@@ -4,6 +4,7 @@
 // se falhar (o cliente só loga o warning, a fonte continua existindo sem
 // embedding até uma nova tentativa).
 import { corsHeaders } from '../_shared/cors.ts';
+import { scoreViralitySemantic } from '../_shared/virality.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 Deno.serve(async (req) => {
@@ -13,6 +14,7 @@ Deno.serve(async (req) => {
     if (!authHeader?.startsWith('Bearer ')) return json({ error: 'Unauthorized' }, 401);
     const openaiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openaiKey) return json({ error: 'OPENAI_API_KEY not configured' }, 500);
+    const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -44,9 +46,18 @@ Deno.serve(async (req) => {
     const vector: number[] = embData.data?.[0]?.embedding ?? [];
     if (!vector.length) return json({ error: 'Empty embedding' }, 502);
 
+    // Pontua o potencial de viralização do artigo como matéria-prima — best-effort,
+    // nunca bloqueia o embedding (que é o que a busca semântica realmente depende).
+    const update: Record<string, unknown> = { embedding: `[${vector.join(',')}]` };
+    if (anthropicKey) {
+      update.virality = await scoreViralitySemantic(anthropicKey, {
+        title: source.title, text: source.summary || source.title, contentType: 'artigo',
+      });
+    }
+
     const { error: upErr } = await supabase
       .from('evidence_sources')
-      .update({ embedding: `[${vector.join(',')}]` })
+      .update(update)
       .eq('id', source_id);
     if (upErr) return json({ error: upErr.message }, 500);
 

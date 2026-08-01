@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Session, Topic, ReferenceStyle, ContentFormat } from '@/types/session';
 import { upsertSession } from '@/lib/storage';
-import { runPipeline } from '@/lib/pipeline';
+import { runPipeline, scoreViralityRemote } from '@/lib/pipeline';
 import { fetchReferenceStyles, fetchSettings } from '@/lib/db';
 import { getUserId } from '@/lib/store';
 import { Button } from '@/components/ui/button';
@@ -12,9 +12,10 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Lightbulb, LayoutTemplate, Radio } from 'lucide-react';
+import { Lightbulb, LayoutTemplate, Radio, RefreshCw, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import FormatPicker from './FormatPicker';
+import ViralityBadge from '@/components/ViralityBadge';
 
 const STAGES: Topic['funnelStage'][] = ['C0', 'C1', 'C2', 'C3'];
 // Rótulos em linguagem simples em vez dos códigos C0-C3 (jargão de marketing
@@ -31,7 +32,25 @@ export default function TopicsReview({ session, onConfirm }: { session: Session;
   const [styles, setStyles] = useState<ReferenceStyle[]>([]);
   const [styleId, setStyleId] = useState<string>('none');
   const [formats, setFormats] = useState<ContentFormat[]>([]);
+  const [sortByVirality, setSortByVirality] = useState(false);
+  const [rescoringId, setRescoringId] = useState<string | null>(null);
   const update = (id: string, patch: Partial<Topic>) => setTopics(t => t.map(x => x.id === id ? { ...x, ...patch } : x));
+
+  const rescoreTopic = async (t: Topic) => {
+    setRescoringId(t.id);
+    try {
+      const virality = await scoreViralityRemote({ title: t.title, text: t.summary, contentType: 'tema' });
+      update(t.id, { virality });
+    } catch (err: any) {
+      toast.error(`Falha ao reavaliar potencial: ${err?.message ?? err}`);
+    } finally {
+      setRescoringId(null);
+    }
+  };
+
+  const orderedTopics = sortByVirality
+    ? [...topics].sort((a, b) => (b.virality?.score ?? -1) - (a.virality?.score ?? -1))
+    : topics;
 
   useEffect(() => {
     const uid = getUserId();
@@ -55,9 +74,14 @@ export default function TopicsReview({ session, onConfirm }: { session: Session;
   return (
     <div className="space-y-6">
       <div>
-        <div className="flex items-center gap-2 mb-2">
-          <Lightbulb className="h-5 w-5 text-primary" />
-          <h2 className="font-serif text-3xl">Temas extraídos</h2>
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
+          <div className="flex items-center gap-2">
+            <Lightbulb className="h-5 w-5 text-primary" />
+            <h2 className="font-serif text-3xl">Temas extraídos</h2>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setSortByVirality(v => !v)}>
+            {sortByVirality ? 'Ordem original' : 'Priorizar por potencial'}
+          </Button>
         </div>
         <p className="text-muted-foreground">
           {includedCount} de {topics.length} selecionados. Ajuste títulos, estágio de funil e escolha o que vira conteúdo.
@@ -65,12 +89,20 @@ export default function TopicsReview({ session, onConfirm }: { session: Session;
       </div>
 
       <div className="space-y-3">
-        {topics.map(t => (
+        {orderedTopics.map(t => (
           <div key={t.id} className={`border rounded-lg p-4 transition ${t.included ? 'border-primary/40 bg-primary/5' : 'border-border/60 opacity-60'}`}>
             <div className="flex items-start gap-4">
               <Switch checked={t.included} onCheckedChange={v => update(t.id, { included: v })} className="mt-1" />
               <div className="flex-1 space-y-2">
-                <Input value={t.title} onChange={e => update(t.id, { title: e.target.value })} className="font-medium bg-transparent border-0 px-0 focus-visible:ring-0 text-base" />
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <Input value={t.title} onChange={e => update(t.id, { title: e.target.value })} className="font-medium bg-transparent border-0 px-0 focus-visible:ring-0 text-base flex-1 min-w-[200px]" />
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <ViralityBadge virality={t.virality} />
+                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" disabled={rescoringId === t.id} onClick={() => rescoreTopic(t)}>
+                      {rescoringId === t.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                    </Button>
+                  </div>
+                </div>
                 <Textarea value={t.summary} onChange={e => update(t.id, { summary: e.target.value })} rows={2} className="text-sm bg-transparent border-0 px-0 focus-visible:ring-0 resize-none" />
                 <div className="flex flex-wrap items-center gap-2">
                   {STAGES.map(s => (

@@ -3,6 +3,7 @@
 // Atualiza sessions.status a cada etapa (Realtime).
 import { corsHeaders } from '../_shared/cors.ts';
 import { scoreCFMSemantic } from '../_shared/cfm.ts';
+import { scoreViralitySemantic } from '../_shared/virality.ts';
 import { extractPatientSignals } from '../_shared/patientSignals.ts';
 import { extractCommercialIntelligence } from '../_shared/commercialIntelligence.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -218,6 +219,13 @@ Deno.serve(async (req) => {
       if (!topRes.ok) { await setError(`topics: ${topRes.error}`); return json({ error: topRes.error }, 502); }
       const arr = Array.isArray(topRes.data) ? topRes.data : [];
       if (!arr.length) { await setError('No topics extracted'); return json({ error: 'No topics' }, 502); }
+      // Pontua o potencial de viralização de cada tema como matéria-prima (antes de
+      // virar conteúdo) — ajuda o médico a escolher quais temas priorizar na revisão.
+      // Best-effort: se falhar pra algum, scoreViralitySemantic já devolve um fallback
+      // neutro em vez de derrubar a extração inteira.
+      const topicVirality = await Promise.all(arr.map((t: any) =>
+        scoreViralitySemantic(anthropicKey, { title: String(t.title ?? ''), text: String(t.summary ?? ''), contentType: 'tema' }),
+      ));
       const rows = arr.map((t: any, i: number) => ({
         user_id: userId,
         session_id,
@@ -226,6 +234,7 @@ Deno.serve(async (req) => {
         funnel_stage: ['C0', 'C1', 'C2', 'C3'].includes(t.funnelStage) ? t.funnelStage : 'C1',
         included: true,
         position: i,
+        virality: topicVirality[i],
       }));
       const { data: inserted, error: insErr } = await supabase.from('topics').insert(rows).select('*');
       if (insErr) { await setError(insErr.message); return json({ error: insErr.message }, 500); }
@@ -296,7 +305,10 @@ Deno.serve(async (req) => {
       const results = await Promise.all(batch.map(async ({ topic, format }) => {
         try {
           const body = await claudeText(anthropicKey, buildGenSystem(format), buildGenUser(topic, format, anonymized, brain, evidence, referenceStructure, referenceOwnership, objectionsBlock, referenceExtractedCopy));
-          const cfm = await scoreCFMSemantic(anthropicKey, body);
+          const [cfm, virality] = await Promise.all([
+            scoreCFMSemantic(anthropicKey, body),
+            scoreViralitySemantic(anthropicKey, { title: topic.title, text: body, contentType: 'peca' }),
+          ]);
           const evidenceIds = matchCitedEvidence(body, evidence);
           return {
             user_id: userId,
@@ -306,6 +318,7 @@ Deno.serve(async (req) => {
             channel: FORMAT_CHANNEL[format] ?? 'instagram',
             body,
             cfm,
+            virality,
             artwork: null,
             evidence_ids: evidenceIds,
             reference_style_id: reference_style_id ?? null,

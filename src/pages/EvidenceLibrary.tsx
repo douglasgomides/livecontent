@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Microscope, Search, Loader2, Plus, Trash2, ExternalLink, BookMarked, TrendingUp, Sparkles, Volume2, Link as LinkIcon, Radar, Mic2 } from 'lucide-react';
+import { ArrowLeft, Microscope, Search, Loader2, Plus, Trash2, ExternalLink, BookMarked, TrendingUp, Sparkles, Volume2, Link as LinkIcon, Radar, Mic2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,9 +10,10 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import type { EvidenceLevel, EvidenceSource, EvidenceTopicWatch, EvidenceTopicUpdate, DebateSegment } from '@/types/session';
-import { fetchEvidenceSources, addEvidenceSource, deleteEvidenceSource, fetchEvidenceUsage, type EvidenceUsage, fetchTopicWatches, addTopicWatch, deleteTopicWatch, fetchTopicUpdates } from '@/lib/db';
-import { searchPubmed, searchEvidenceSemantic, embedEvidenceSource, fetchEvidenceAudioSummary, fetchEvidenceAudioDebate, type PubmedResult } from '@/lib/pipeline';
+import { fetchEvidenceSources, addEvidenceSource, deleteEvidenceSource, fetchEvidenceUsage, type EvidenceUsage, fetchTopicWatches, addTopicWatch, deleteTopicWatch, fetchTopicUpdates, updateEvidenceSourceVirality } from '@/lib/db';
+import { searchPubmed, searchEvidenceSemantic, embedEvidenceSource, fetchEvidenceAudioSummary, fetchEvidenceAudioDebate, scoreViralityRemote, type PubmedResult } from '@/lib/pipeline';
 import { getUserId } from '@/lib/store';
+import ViralityBadge from '@/components/ViralityBadge';
 
 const LEVEL_LABEL: Record<EvidenceLevel, string> = {
   meta_analysis: 'Meta-análise',
@@ -117,6 +118,20 @@ export default function EvidenceLibrary() {
       setWatches(prev => prev.filter(w => w.id !== id));
     } catch (err: any) {
       toast.error(`Falha ao remover: ${err?.message ?? err}`);
+    }
+  };
+
+  const [viralityRescoringId, setViralityRescoringId] = useState<string | null>(null);
+  const rescoreVirality = async (source: EvidenceSource) => {
+    setViralityRescoringId(source.id);
+    try {
+      const virality = await scoreViralityRemote({ title: source.title, text: source.summary || source.title, contentType: 'artigo' });
+      await updateEvidenceSourceVirality(source.id, virality);
+      setSources(prev => prev.map(s => s.id === source.id ? { ...s, virality } : s));
+    } catch (err: any) {
+      toast.error(`Falha ao reavaliar potencial: ${err?.message ?? err}`);
+    } finally {
+      setViralityRescoringId(null);
     }
   };
 
@@ -316,7 +331,8 @@ export default function EvidenceLibrary() {
             ) : semResults.map(s => (
               <SourceCard key={s.id} s={s} usage={usage.get(s.id)} onRemove={remove}
                 onPlayAudio={playAudioSummary} audioUrl={audioBySource.get(s.id)} audioLoading={audioLoadingId === s.id}
-                onPlayDebate={playDebate} debateSegments={debateBySource.get(s.id)} debateLoading={debateLoadingId === s.id} />
+                onPlayDebate={playDebate} debateSegments={debateBySource.get(s.id)} debateLoading={debateLoadingId === s.id}
+                onRescoreVirality={rescoreVirality} viralityRescoring={viralityRescoringId === s.id} />
             ))}
           </div>
         )}
@@ -364,7 +380,10 @@ export default function EvidenceLibrary() {
                     <div className="space-y-2 mt-2">
                       {updates.map(u => (
                         <div key={u.id} className="border border-border/60 rounded-lg p-2.5 bg-background">
-                          <div className="text-xs font-medium">{u.title}</div>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="text-xs font-medium">{u.title}</div>
+                            <ViralityBadge virality={u.virality} className="shrink-0" />
+                          </div>
                           <div className="text-[11px] text-muted-foreground mt-0.5">{u.summary}</div>
                           {u.sourceUrl && (
                             <a href={u.sourceUrl} target="_blank" rel="noreferrer" className="text-[11px] text-primary inline-flex items-center gap-1 mt-1 hover:underline">
@@ -405,7 +424,8 @@ export default function EvidenceLibrary() {
           {sources.map(s => (
             <SourceCard key={s.id} s={s} usage={usage.get(s.id)} onRemove={remove}
               onPlayAudio={playAudioSummary} audioUrl={audioBySource.get(s.id)} audioLoading={audioLoadingId === s.id}
-              onPlayDebate={playDebate} debateSegments={debateBySource.get(s.id)} debateLoading={debateLoadingId === s.id} />
+              onPlayDebate={playDebate} debateSegments={debateBySource.get(s.id)} debateLoading={debateLoadingId === s.id}
+              onRescoreVirality={rescoreVirality} viralityRescoring={viralityRescoringId === s.id} />
           ))}
         </div>
       )}
@@ -414,7 +434,7 @@ export default function EvidenceLibrary() {
   );
 }
 
-function SourceCard({ s, usage, onRemove, onPlayAudio, audioUrl, audioLoading, onPlayDebate, debateSegments, debateLoading }: {
+function SourceCard({ s, usage, onRemove, onPlayAudio, audioUrl, audioLoading, onPlayDebate, debateSegments, debateLoading, onRescoreVirality, viralityRescoring }: {
   s: EvidenceSource;
   usage?: EvidenceUsage[];
   onRemove: (id: string) => void;
@@ -424,6 +444,8 @@ function SourceCard({ s, usage, onRemove, onPlayAudio, audioUrl, audioLoading, o
   onPlayDebate: (s: EvidenceSource) => void;
   debateSegments?: DebateSegment[];
   debateLoading: boolean;
+  onRescoreVirality: (s: EvidenceSource) => void;
+  viralityRescoring: boolean;
 }) {
   return (
     <div className="border border-border/60 rounded-lg p-3 flex items-start justify-between gap-3">
@@ -434,6 +456,10 @@ function SourceCard({ s, usage, onRemove, onPlayAudio, audioUrl, audioLoading, o
           </span>
           {s.year && <span className="text-[11px] text-muted-foreground">{s.year}</span>}
           {s.source === 'pubmed' && <span className="text-[10px] text-muted-foreground">PubMed</span>}
+          <ViralityBadge virality={s.virality} />
+          <Button size="sm" variant="ghost" className="h-5 w-5 p-0" disabled={viralityRescoring} onClick={() => onRescoreVirality(s)}>
+            {viralityRescoring ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+          </Button>
           {usage && usage.length > 0 && (
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary flex items-center gap-1">
               <LinkIcon className="h-2.5 w-2.5" /> Usada em {usage.length} {usage.length === 1 ? 'peça' : 'peças'}

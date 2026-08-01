@@ -4,6 +4,7 @@
 // a última checagem e grava em evidence_topic_updates. Só busca tema que não
 // foi checado nos últimos CHECK_INTERVAL_DAYS — evita repesquisar todo dia.
 import { corsHeaders } from '../_shared/cors.ts';
+import { scoreViralitySemantic } from '../_shared/virality.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const MODEL = 'claude-sonnet-4-5';
@@ -67,7 +68,7 @@ Deno.serve(async (req) => {
       try { items = JSON.parse(rawText); } catch { items = []; }
 
       if (Array.isArray(items) && items.length) {
-        const rows = items.slice(0, 5).map((it: any) => ({
+        const candidates = items.slice(0, 5).map((it: any) => ({
           watch_id: watch.id,
           user_id: watch.user_id,
           title: String(it.title ?? '').slice(0, 300),
@@ -75,6 +76,12 @@ Deno.serve(async (req) => {
           source_title: it.source_title ? String(it.source_title).slice(0, 300) : null,
           source_url: it.source_url ? String(it.source_url).slice(0, 500) : null,
         })).filter(row => row.title && row.source_url);
+        // Pontua o potencial de viralização de cada notícia encontrada como
+        // matéria-prima — best-effort, uma falha aqui não impede salvar a novidade.
+        const rows = await Promise.all(candidates.map(async row => ({
+          ...row,
+          virality: await scoreViralitySemantic(anthropicKey, { title: row.title, text: row.summary, contentType: 'noticia' }),
+        })));
         if (rows.length) {
           const { error: insErr } = await supabase.from('evidence_topic_updates').insert(rows);
           if (insErr) errors.push(`${watch.topic}: ${insErr.message}`);

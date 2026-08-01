@@ -121,8 +121,8 @@ export default function Approvals() {
     if (!editRow) return;
     setSavingEdit(true);
     try {
-      const rescored = await rescoreContent({ ...editRow.piece, body });
-      patchPiece(editRow, { body, cfm: rescored.cfm });
+      const rescored = await rescoreContent({ ...editRow.piece, body }, editRow.topicTitle);
+      patchPiece(editRow, { body, cfm: rescored.cfm, virality: rescored.virality });
       const stillBlocked = rescored.cfm.flags.some(f => f.severity === 'block');
       toast.success(stillBlocked ? 'Editada — ainda com bloqueio CFM' : 'Editada — CFM liberado');
       setEditRow(null);

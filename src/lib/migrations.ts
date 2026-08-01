@@ -22,6 +22,17 @@ const asNumber = (v: unknown, fb = 0): number => (typeof v === 'number' && !isNa
 const asBool = (v: unknown): boolean => Boolean(v);
 const asArray = <T,>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
 
+function normalizeVirality(raw: any): { score: number; hook: number; retention: number; shareability: number; reasons: string[] } | null {
+  if (!raw || typeof raw !== 'object') return null;
+  return {
+    score: asNumber(raw.score, 0),
+    hook: asNumber(raw.hook, 0),
+    retention: asNumber(raw.retention, 0),
+    shareability: asNumber(raw.shareability, 0),
+    reasons: asArray<string>(raw.reasons),
+  };
+}
+
 export function normalizePiece(raw: any): ContentPiece {
   const p = raw && typeof raw === 'object' ? raw : {};
   const format: ContentFormat = VALID_FORMAT.includes(p.format) ? p.format : 'caption';
@@ -60,6 +71,7 @@ export function normalizePiece(raw: any): ContentPiece {
     externalPrompts: p.externalPrompts && typeof p.externalPrompts === 'object' ? p.externalPrompts : undefined,
     evidenceIds: asArray<string>(p.evidenceIds),
     referenceStyleId: typeof p.referenceStyleId === 'string' ? p.referenceStyleId : undefined,
+    virality: normalizeVirality(p.virality),
   };
 }
 
@@ -72,6 +84,7 @@ export function normalizeTopic(raw: any): Topic {
     summary: asString(t.summary, ''),
     funnelStage: stage,
     included: t.included !== false,
+    virality: normalizeVirality(t.virality),
   };
 }
 

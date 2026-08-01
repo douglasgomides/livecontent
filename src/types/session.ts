@@ -32,11 +32,27 @@ export interface Topic {
   summary: string;
   funnelStage: 'C0' | 'C1' | 'C2' | 'C3';
   included: boolean;
+  // Potencial de viralização da matéria-prima (o tema em si, antes de virar
+  // conteúdo) — calculado automaticamente ao extrair os temas; null até isso rodar.
+  virality?: ViralityResult | null;
 }
 
 export interface CFMResult {
   score: number; // 0-100
   flags: { label: string; severity: 'info' | 'warning' | 'block' }[];
+}
+
+// Nota de potencial de viralização/qualidade, estilo Opus Clip — gancho, retenção
+// e "vontade de compartilhar", cada um 0-100 (score final é a média dos três).
+// Aplicada tanto em matéria-prima ainda não virou conteúdo (tema de consulta,
+// artigo, notícia monitorada) quanto na peça já gerada — pra apontar o que vale
+// mais a pena puxar/gerar primeiro, e o que priorizar na hora de publicar.
+export interface ViralityResult {
+  score: number;
+  hook: number;
+  retention: number;
+  shareability: number;
+  reasons: string[];
 }
 
 export interface ArtworkSlide {
@@ -70,6 +86,9 @@ export interface ContentPiece {
   channel: ContentChannel;
   body: string;
   cfm: CFMResult;
+  // Potencial de viralização da peça já gerada — pra saber o que priorizar
+  // publicar primeiro. null até rodar (rescoring manual reavalia junto com CFM).
+  virality?: ViralityResult | null;
   approved: boolean;
   rejected?: boolean;
   rejectedReason?: RejectReason;
@@ -114,6 +133,9 @@ export interface EvidenceSource {
   // Caminho no storage do resumo em áudio já gerado (cache — evita reprocessar
   // toda vez). Null até a primeira vez que o médico pede o resumo em áudio.
   audioSummaryPath?: string | null;
+  // Potencial de viralização/qualidade do artigo como matéria-prima de conteúdo —
+  // calculado ao cadastrar (best-effort, pode ficar null se a IA falhar).
+  virality?: ViralityResult | null;
 }
 
 export interface ReferenceStyle {
@@ -248,6 +270,9 @@ export interface EvidenceTopicUpdate {
   sourceTitle: string | null;
   sourceUrl: string | null;
   foundAt: string;
+  // Potencial de viralização/qualidade dessa notícia como matéria-prima —
+  // calculado automaticamente pela busca periódica (check-evidence-topic-watches).
+  virality?: ViralityResult | null;
 }
 
 // Um turno do resumo em áudio "debatido" (duas vozes) sobre uma fonte de

@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import ViralityBadge from '@/components/ViralityBadge';
 
 const fmtWhen = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 
@@ -31,9 +32,10 @@ export default function Library() {
   // saiu daquela consulta de terça?"), com o tema dentro dela em seguida.
   // Mídia/Formato ficam como visões alternativas, não a entrada principal.
   const [groupBy, setGroupBy] = useState<'session' | 'channel' | 'format' | 'none'>('session');
+  const [sortByVirality, setSortByVirality] = useState(false);
 
   const filtered = useMemo(() => {
-    return items.filter(({ session, piece, topicTitle }) => {
+    const list = items.filter(({ session, piece, topicTitle }) => {
       if (format !== 'all' && piece.format !== format) return false;
       const blocked = piece.cfm.flags.some(f => f.severity === 'block');
       if (status === 'approved' && !piece.approved) return false;
@@ -45,7 +47,12 @@ export default function Library() {
       }
       return true;
     });
-  }, [items, q, format, status]);
+    if (sortByVirality) {
+      // Prioriza o que vale mais a pena publicar primeiro — peça sem nota fica no fim.
+      return [...list].sort((a, b) => (b.piece.virality?.score ?? -1) - (a.piece.virality?.score ?? -1));
+    }
+    return list;
+  }, [items, q, format, status, sortByVirality]);
 
   // Hierarquia Consulta → Tema → Peça — cada consulta vira um grupo, e dentro
   // dele as peças ficam sub-agrupadas por tema (o assunto debatido), não soltas.
@@ -78,9 +85,14 @@ export default function Library() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-serif text-4xl mb-1">Biblioteca</h1>
-        <p className="text-muted-foreground">{items.length} peça(s) · {filtered.length} exibida(s)</p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="font-serif text-4xl mb-1">Biblioteca</h1>
+          <p className="text-muted-foreground">{items.length} peça(s) · {filtered.length} exibida(s)</p>
+        </div>
+        <Button variant="ghost" size="sm" onClick={() => setSortByVirality(v => !v)}>
+          {sortByVirality ? 'Ordem padrão' : 'Priorizar publicação'}
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-[1fr_160px_160px_160px_auto] gap-3">
@@ -232,7 +244,10 @@ function PieceCard({ session, piece, topicTitle }: any) {
           <Icon className="h-4 w-4 text-primary" />
           <span className="text-xs uppercase tracking-widest text-muted-foreground">{LABELS[piece.format as ContentFormat]}</span>
         </div>
-        <span className={`text-xs px-2 py-0.5 rounded-full ${pill.cls}`}>{pill.label}</span>
+        <div className="flex items-center gap-1.5">
+          <ViralityBadge virality={piece.virality} />
+          <span className={`text-xs px-2 py-0.5 rounded-full ${pill.cls}`}>{pill.label}</span>
+        </div>
       </div>
       <p className="text-sm line-clamp-4 text-muted-foreground mb-3">{piece.body.slice(0, 200)}</p>
       <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -257,6 +272,7 @@ function PieceRow({ session, piece, topicTitle }: any) {
         <div className="text-sm truncate">{piece.body.slice(0, 120)}</div>
         <div className="text-xs text-muted-foreground truncate mt-0.5">{topicTitle} · {session.title}</div>
       </div>
+      <ViralityBadge virality={piece.virality} className="shrink-0" />
       <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${pill.cls}`}>{pill.label}</span>
       <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
     </Link>
