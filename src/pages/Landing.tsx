@@ -4,7 +4,8 @@ import {
   Mic, Upload, MessageCircle, Radio, FlaskConical, Youtube, Instagram, Link2,
   ArrowRight, FileText, Linkedin, MapPin, Stethoscope, Globe, Music, Camera,
   ShieldCheck, Sparkles, ListChecks, LineChart, Plus, TrendingUp, Wand2,
-  Lock, Trash2, KeyRound, ShieldAlert, Check, HelpCircle,
+  Lock, Trash2, KeyRound, ShieldAlert, Check, HelpCircle, MessageSquareWarning,
+  RefreshCw, Zap, Microscope, CalendarDays, Send,
 } from 'lucide-react';
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
@@ -45,9 +46,9 @@ const steps = [
 ];
 
 const benefits = [
-  { icon: Sparkles, title: 'Nunca mais trave na hora de postar', text: 'Uma consulta gravada já sai como semanas de conteúdo pronto pra revisar e publicar.' },
+  { icon: Zap, title: 'Ela trabalha enquanto você atende', text: 'Enquanto você está com o próximo paciente, a máquina já está extraindo temas, gerando peças e atualizando sua biblioteca de tendências.' },
   { icon: ShieldCheck, title: 'Conformidade CFM verificada em cada peça', text: 'Score automático contra as Resoluções 1.974/2011, 2.126/2015 e 2.336/2023 antes de aprovar.' },
-  { icon: TrendingUp, title: 'Cada consulta vira inteligência comercial', text: 'Objeções, dúvidas e sinais de compra reais dos pacientes viram argumento pro próximo contato.' },
+  { icon: TrendingUp, title: 'Cada consulta vira inteligência comercial', text: 'Objeções, dúvidas e sinais de compra reais dos pacientes viram argumento pro próximo contato — e oportunidade de aumentar o ticket.' },
   { icon: Wand2, title: 'No seu tom, não genérico', text: 'A Brain aprende seu perfil, seu paciente ideal e o estilo das suas peças anteriores.' },
 ];
 
@@ -107,8 +108,9 @@ export default function Landing() {
           <span className="text-primary">conteúdo médico assertivo</span>
         </h1>
         <p className="mt-5 t-lead max-w-xl mx-auto">
-          Grave a consulta, uma palestra ou cole um link. A IA anonimiza, extrai os temas e gera
-          conteúdo pronto pra publicar — em cada canal, no seu tom.
+          Grave a consulta, uma palestra ou cole um link — o resto é com a máquina. Ela anonimiza,
+          extrai os temas, gera conteúdo pra cada canal, lê os sinais reais dos pacientes e mantém
+          sua biblioteca de tendências sempre atualizada. Você só aprova.
         </p>
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -207,7 +209,7 @@ export default function Landing() {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid md:grid-cols-3 gap-4">
           <div className="border border-border/60 rounded-2xl p-6 bg-card/40">
             <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
               <TrendingUp className="h-4 w-4 text-primary" />
@@ -223,6 +225,59 @@ export default function Landing() {
             </div>
             <div className="mt-2 inline-flex items-center gap-1.5 border border-border/60 rounded-full px-2.5 py-1 t-micro font-medium">
               <TrendingUp className="h-3 w-3 text-primary" /> Oportunidade: plano recorrente
+            </div>
+          </div>
+
+          <div className="border border-border/60 rounded-2xl p-6 bg-card/40">
+            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+              <MessageSquareWarning className="h-4 w-4 text-primary" />
+            </div>
+            <h3 className="t-h3 mb-2">Ouve o que o paciente realmente diz</h3>
+            <p className="t-body text-muted-foreground mb-4">
+              Objeções, dúvidas, sinais de compra e sentimento extraídos automaticamente da fala —
+              cada um já com uma sugestão de ação, sem você precisar reler a transcrição.
+            </p>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2 border border-border/60 rounded-lg px-3 py-2">
+                <span className="t-micro font-semibold px-2 py-0.5 rounded-full bg-destructive/10 text-destructive shrink-0">Objeção</span>
+                <span className="text-sm truncate flex-1">"Achei meio caro..."</span>
+              </div>
+              <div className="flex items-center justify-between gap-2 border border-border/60 rounded-lg px-3 py-2">
+                <span className="t-micro font-semibold px-2 py-0.5 rounded-full bg-success/10 text-success shrink-0">Sinal de compra</span>
+                <span className="text-sm truncate flex-1">"Quando dá pra agendar?"</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="border border-border/60 rounded-2xl p-6 bg-card/40">
+            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+              <Microscope className="h-4 w-4 text-primary" />
+            </div>
+            <h3 className="t-h3 mb-2">Evidência científica, não achismo</h3>
+            <p className="t-body text-muted-foreground mb-4">
+              Sua biblioteca de estudos e diretrizes é a única fonte de citação — a IA nunca inventa
+              referência, autor ou estatística que não esteja lá.
+            </p>
+            <div className="flex items-center gap-2 border border-border/60 rounded-lg px-3.5 py-2.5">
+              <FlaskConical className="h-3.5 w-3.5 text-primary shrink-0" />
+              <span className="text-sm font-medium truncate">RCT · Nível de evidência A</span>
+            </div>
+          </div>
+
+          <div className="border border-border/60 rounded-2xl p-6 bg-card/40">
+            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+              <RefreshCw className="h-4 w-4 text-primary" />
+            </div>
+            <h3 className="t-h3 mb-2">Tendências sempre atualizadas</h3>
+            <p className="t-body text-muted-foreground mb-4">
+              Uma biblioteca que pesquisa sozinha o que está funcionando na sua especialidade e
+              cruza com o desempenho real dos seus próprios posts — sem você ter que procurar.
+            </p>
+            <div className="flex items-center justify-between gap-3 border border-border/60 rounded-lg px-3.5 py-2.5">
+              <span className="text-sm font-medium truncate">Mitos sobre recuperação pós-cirúrgica</span>
+              <span className="t-micro font-semibold text-success shrink-0 flex items-center gap-1">
+                <Zap className="h-3 w-3" /> em alta
+              </span>
             </div>
           </div>
 
@@ -244,6 +299,21 @@ export default function Landing() {
               <span className="t-micro font-medium px-3 py-1.5 rounded-full border border-success/30 bg-success/10 text-success flex items-center gap-1">
                 <Check className="h-3 w-3" /> Estilo padrão
               </span>
+            </div>
+          </div>
+
+          <div className="border border-border/60 rounded-2xl p-6 bg-card/40">
+            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+              <CalendarDays className="h-4 w-4 text-primary" />
+            </div>
+            <h3 className="t-h3 mb-2">Calendário e fila de publicação</h3>
+            <p className="t-body text-muted-foreground mb-4">
+              Aprovou, agendou. Cada peça segue pra fila de publicação com data e canal definidos —
+              sem planilha, sem post-it.
+            </p>
+            <div className="flex items-center gap-2 border border-border/60 rounded-lg px-3.5 py-2.5">
+              <Send className="h-3.5 w-3.5 text-primary shrink-0" />
+              <span className="text-sm font-medium truncate">3 peças agendadas essa semana</span>
             </div>
           </div>
         </div>
