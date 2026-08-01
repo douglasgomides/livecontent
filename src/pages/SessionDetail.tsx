@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import type { Session, SessionStatus } from '@/types/session';
+import type { Session, SessionStatus, SessionCommercialIntelligence } from '@/types/session';
 import { getSession, upsertSession } from '@/lib/storage';
 import { retryPipeline } from '@/lib/pipeline';
+import { fetchCommercialIntelligenceForSession } from '@/lib/db';
 import { loadBrain } from '@/lib/brainStorage';
 import { useStoreVersion } from '@/lib/store';
 import { toast } from 'sonner';
@@ -12,7 +13,7 @@ import TopicsReview from '@/components/session/TopicsReview';
 import ContentPieceCard from '@/components/session/ContentPieceCard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ArrowLeft, Check, Circle, Loader2, Sparkles, FlaskConical, FileText, AlertTriangle, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Check, Circle, Loader2, Sparkles, FlaskConical, FileText, AlertTriangle, RefreshCw, Target, Lightbulb, TrendingUp } from 'lucide-react';
 import { CHANNEL_LABEL, CHANNEL_ICON } from '@/lib/contentFormats';
 import type { ContentChannel } from '@/types/session';
 
@@ -34,7 +35,7 @@ function stagesFor(source: Session['source']): typeof ALL_STAGES {
 }
 
 
-type TabId = 'pipeline' | 'transcript' | 'anon' | 'topics' | 'content';
+type TabId = 'pipeline' | 'transcript' | 'anon' | 'topics' | 'content' | 'commercial';
 
 function defaultTabFor(session: Session): TabId {
   if (session.status === 'ready') return 'content';
@@ -51,6 +52,8 @@ export default function SessionDetail() {
   const session: Session | null = id ? getSession(id) || null : null;
   const [tab, setTab] = useState<TabId>(() => session ? defaultTabFor(session) : 'pipeline');
   const [retrying, setRetrying] = useState(false);
+  const [commercial, setCommercial] = useState<SessionCommercialIntelligence | null>(null);
+  const [commercialLoading, setCommercialLoading] = useState(true);
 
   const stages = useMemo(() => session ? stagesFor(session.source) : ALL_STAGES, [session?.source]);
   const setSession = (s: Session | null) => { if (s) upsertSession(s); };
@@ -59,6 +62,17 @@ export default function SessionDetail() {
   useEffect(() => {
     if (session) setTab(defaultTabFor(session));
   }, [session?.status]);
+
+  // Inteligência comercial só existe pra consulta real com paciente (recording/upload)
+  // e só depois que o pipeline gerou conteúdo — nunca bloqueia a tela se falhar.
+  useEffect(() => {
+    if (!session || session.status !== 'ready') { setCommercialLoading(false); return; }
+    if (session.source !== 'recording' && session.source !== 'upload') { setCommercialLoading(false); return; }
+    fetchCommercialIntelligenceForSession(session.id)
+      .then(setCommercial)
+      .catch(() => setCommercial(null))
+      .finally(() => setCommercialLoading(false));
+  }, [session?.id, session?.status]);
 
   // O avanço entre etapas (transcrição -> anonimização -> tópicos -> conteúdo) é
   // feito pelo backend real (Edge Function run-pipeline) via Realtime — nada é
@@ -77,6 +91,7 @@ export default function SessionDetail() {
   const currentIdx = stages.findIndex(s => s.id === session.status);
   const showAnon = session.source !== 'science';
   const showTopics = session.source !== 'voice_note';
+  const showCommercial = session.source === 'recording' || session.source === 'upload';
   const contentPieces = session.content || [];
   const avgCfm = contentPieces.length ? Math.round(contentPieces.reduce((a, p) => a + p.cfm.score, 0) / contentPieces.length) : null;
   const approvedCount = contentPieces.filter(p => p.approved).length;
@@ -118,6 +133,7 @@ export default function SessionDetail() {
               {showAnon && <TabsTrigger value="anon" disabled={!session.anonymizedTranscript && session.status !== 'anonymization_review'}>Anonimização</TabsTrigger>}
               {showTopics && <TabsTrigger value="topics" disabled={!session.topics}>Temas</TabsTrigger>}
               <TabsTrigger value="content">Conteúdo</TabsTrigger>
+              {showCommercial && <TabsTrigger value="commercial" disabled={session.status !== 'ready'}>Comercial</TabsTrigger>}
             </TabsList>
 
             <TabsContent value="pipeline" className="space-y-4">
@@ -323,6 +339,123 @@ export default function SessionDetail() {
                 <EmptyState icon={Sparkles} label="Conteúdo aparece aqui quando o pipeline concluir." />
               )}
             </TabsContent>
+
+            {showCommercial && (
+              <TabsContent value="commercial" className="space-y-5">
+                {commercialLoading ? (
+                  <p className="text-sm text-muted-foreground">Carregando…</p>
+                ) : !commercial ? (
+                  <EmptyState icon={Target} label="Sem inteligência comercial extraída dessa consulta." />
+                ) : !commercial.houveOfertaComercial ? (
+                  <EmptyState icon={Target} label="Nenhuma oferta comercial identificada nesta consulta." />
+                ) : (
+                  <>
+                    <div className="border border-border/60 rounded-lg p-4">
+                      <div className="flex items-center justify-between gap-3 mb-2">
+                        <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-primary">
+                          <Target className="h-3.5 w-3.5" /> Resumo comercial
+                        </div>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                          commercial.resultado === 'fechou' ? 'bg-success/15 text-success'
+                          : commercial.resultado === 'nao_fechou' ? 'bg-destructive/15 text-destructive'
+                          : 'bg-secondary text-muted-foreground'
+                        }`}>
+                          {commercial.resultado === 'fechou' ? 'Fechou' : commercial.resultado === 'nao_fechou' ? 'Não fechou' : commercial.resultado === 'indefinido' ? 'Indefinido' : '—'}
+                        </span>
+                      </div>
+                      <p className="text-sm">{commercial.resumoComercial}</p>
+                      {commercial.motivoResultado && (
+                        <p className="text-xs text-muted-foreground mt-2">{commercial.motivoResultado}</p>
+                      )}
+                    </div>
+
+                    {commercial.argumentoRecomendadoProximoContato && (
+                      <div className="border border-primary/40 bg-primary/5 rounded-lg p-4">
+                        <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-primary mb-2">
+                          <Lightbulb className="h-3.5 w-3.5" /> Argumento recomendado pro próximo contato
+                        </div>
+                        <p className="text-sm">{commercial.argumentoRecomendadoProximoContato}</p>
+                      </div>
+                    )}
+
+                    {commercial.oportunidadesUpsell.length > 0 && (
+                      <div className="border border-border/60 rounded-lg p-4">
+                        <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-primary mb-3">
+                          <TrendingUp className="h-3.5 w-3.5" /> Oportunidades de aumentar o ticket
+                        </div>
+                        <div className="space-y-2">
+                          {commercial.oportunidadesUpsell.map((u, i) => (
+                            <div key={i} className="border border-border/60 rounded-lg p-3">
+                              <div className="text-sm font-medium">{u.oportunidade}</div>
+                              <div className="text-xs text-muted-foreground mt-1">{u.racional}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {commercial.objecoesPaciente.length > 0 && (
+                      <div className="border border-border/60 rounded-lg p-4">
+                        <div className="text-xs uppercase tracking-widest text-primary mb-3">Objeções e como foram respondidas</div>
+                        <div className="space-y-2">
+                          {commercial.objecoesPaciente.map((o, i) => (
+                            <div key={i} className="border border-border/60 rounded-lg p-3">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-sm font-medium">{o.objecao}</span>
+                                {o.objecaoSuperada !== null && (
+                                  <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 ${o.objecaoSuperada ? 'bg-success/15 text-success' : 'bg-warning/15 text-warning'}`}>
+                                    {o.objecaoSuperada ? 'Superada' : 'Não superada'}
+                                  </span>
+                                )}
+                              </div>
+                              {o.comoFoiRespondida && <div className="text-xs text-muted-foreground mt-1">{o.comoFoiRespondida}</div>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {commercial.doresIdentificadas.length > 0 && (
+                      <div className="border border-border/60 rounded-lg p-4">
+                        <div className="text-xs uppercase tracking-widest text-primary mb-3">Dores identificadas</div>
+                        <div className="flex flex-wrap gap-2">
+                          {commercial.doresIdentificadas.map((d, i) => (
+                            <span key={i} className="text-xs px-2.5 py-1 rounded-full bg-secondary text-foreground">{d.dor}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {commercial.argumentosUtilizados.length > 0 && (
+                      <div className="border border-border/60 rounded-lg p-4">
+                        <div className="text-xs uppercase tracking-widest text-primary mb-3">Argumentos usados nessa consulta</div>
+                        <div className="space-y-2">
+                          {commercial.argumentosUtilizados.map((a, i) => (
+                            <div key={i} className="flex items-center justify-between gap-2 text-sm">
+                              <span>{a.argumento}</span>
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 ${
+                                a.reacaoPercebidaDoPaciente === 'positiva' ? 'bg-success/15 text-success'
+                                : a.reacaoPercebidaDoPaciente === 'negativa' ? 'bg-destructive/15 text-destructive'
+                                : 'bg-secondary text-muted-foreground'
+                              }`}>
+                                {a.reacaoPercebidaDoPaciente}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {commercial.proximaAcao && (
+                      <div className="border border-border/60 rounded-lg p-4">
+                        <div className="text-xs uppercase tracking-widest text-primary mb-2">Próxima ação combinada</div>
+                        <p className="text-sm">{commercial.proximaAcao}</p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </TabsContent>
+            )}
           </Tabs>
         </div>
 

@@ -145,6 +145,7 @@ export type Database = {
       }
       commercial_intelligence: {
         Row: {
+          argumento_recomendado_proximo_contato: string | null
           argumentos_utilizados: Json
           condicoes_comerciais: Json
           created_at: string
@@ -153,6 +154,7 @@ export type Database = {
           id: string
           motivo_resultado: string | null
           objecoes_paciente: Json
+          oportunidades_upsell: Json
           procedimentos_mencionados: string[]
           proxima_acao: string | null
           resultado: string
@@ -162,6 +164,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          argumento_recomendado_proximo_contato?: string | null
           argumentos_utilizados?: Json
           condicoes_comerciais?: Json
           created_at?: string
@@ -170,6 +173,7 @@ export type Database = {
           id?: string
           motivo_resultado?: string | null
           objecoes_paciente?: Json
+          oportunidades_upsell?: Json
           procedimentos_mencionados?: string[]
           proxima_acao?: string | null
           resultado?: string
@@ -179,6 +183,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          argumento_recomendado_proximo_contato?: string | null
           argumentos_utilizados?: Json
           condicoes_comerciais?: Json
           created_at?: string
@@ -187,6 +192,7 @@ export type Database = {
           id?: string
           motivo_resultado?: string | null
           objecoes_paciente?: Json
+          oportunidades_upsell?: Json
           procedimentos_mencionados?: string[]
           proxima_acao?: string | null
           resultado?: string

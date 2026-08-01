@@ -134,6 +134,44 @@ export interface ReferenceStyle {
   isDefault: boolean;
 }
 
+// Inteligência comercial extraída dessa consulta específica (run-pipeline) —
+// nunca mostrada antes na tela da própria consulta, só no agregado do admin.
+export interface CommercialArgument {
+  argumento: string;
+  categoria: string;
+  momentoDaConsulta: string;
+  reacaoPercebidaDoPaciente: string;
+}
+export interface CommercialObjection {
+  objecao: string;
+  categoria: string;
+  comoFoiRespondida: string | null;
+  objecaoSuperada: boolean | null;
+}
+export interface CommercialPain {
+  dor: string;
+  categoria: string;
+}
+export interface UpsellOpportunity {
+  oportunidade: string;
+  tipo: string;
+  racional: string;
+}
+export interface SessionCommercialIntelligence {
+  houveOfertaComercial: boolean;
+  resultado: 'fechou' | 'nao_fechou' | 'indefinido' | 'nao_se_aplica';
+  motivoResultado: string | null;
+  argumentosUtilizados: CommercialArgument[];
+  objecoesPaciente: CommercialObjection[];
+  doresIdentificadas: CommercialPain[];
+  procedimentosMencionados: string[];
+  condicoesComerciais: { precoMencionado: boolean; parcelamentoMencionado: boolean; descontoOferecido: boolean; detalhes: string | null };
+  proximaAcao: string | null;
+  resumoComercial: string;
+  oportunidadesUpsell: UpsellOpportunity[];
+  argumentoRecomendadoProximoContato: string | null;
+}
+
 // Ideia de conteúdo em alta pra especialidade, pesquisada de verdade na web
 // (nunca inventada) — cacheada por alguns dias pra não pesquisar toda hora.
 export interface TrendingContentIdea {

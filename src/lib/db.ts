@@ -15,6 +15,7 @@ import type {
   BrandPhoto,
   BrandPhotoCategory,
   SocialPostPerformance,
+  SessionCommercialIntelligence,
 } from '@/types/session';
 import type { Brain } from '@/types/brain';
 import { EMPTY_BRAIN } from '@/types/brain';
@@ -576,4 +577,47 @@ export async function fetchTopOwnPosts(userId: string, limit = 10): Promise<Soci
     .limit(limit);
   if (error) throw error;
   return (data ?? []).map(mapSocialPostRow);
+}
+
+// ─── Inteligência comercial por consulta (extraída no run-pipeline) ────────
+
+function mapCommercialIntelligenceRow(row: any): SessionCommercialIntelligence {
+  const cond = row.condicoes_comerciais ?? {};
+  return {
+    houveOfertaComercial: !!row.houve_oferta_comercial,
+    resultado: row.resultado ?? 'nao_se_aplica',
+    motivoResultado: row.motivo_resultado ?? null,
+    argumentosUtilizados: (row.argumentos_utilizados ?? []).map((a: any) => ({
+      argumento: a.argumento, categoria: a.categoria,
+      momentoDaConsulta: a.momento_da_consulta, reacaoPercebidaDoPaciente: a.reacao_percebida_do_paciente,
+    })),
+    objecoesPaciente: (row.objecoes_paciente ?? []).map((o: any) => ({
+      objecao: o.objecao, categoria: o.categoria,
+      comoFoiRespondida: o.como_foi_respondida ?? null, objecaoSuperada: o.objecao_superada ?? null,
+    })),
+    doresIdentificadas: (row.dores_identificadas ?? []).map((d: any) => ({ dor: d.dor, categoria: d.categoria })),
+    procedimentosMencionados: row.procedimentos_mencionados ?? [],
+    condicoesComerciais: {
+      precoMencionado: !!cond.preco_mencionado,
+      parcelamentoMencionado: !!cond.parcelamento_mencionado,
+      descontoOferecido: !!cond.desconto_oferecido,
+      detalhes: cond.detalhes ?? null,
+    },
+    proximaAcao: row.proxima_acao ?? null,
+    resumoComercial: row.resumo_comercial ?? '',
+    oportunidadesUpsell: (row.oportunidades_upsell ?? []).map((u: any) => ({
+      oportunidade: u.oportunidade, tipo: u.tipo, racional: u.racional,
+    })),
+    argumentoRecomendadoProximoContato: row.argumento_recomendado_proximo_contato ?? null,
+  };
+}
+
+export async function fetchCommercialIntelligenceForSession(sessionId: string): Promise<SessionCommercialIntelligence | null> {
+  const { data, error } = await supabase
+    .from('commercial_intelligence')
+    .select('*')
+    .eq('session_id', sessionId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapCommercialIntelligenceRow(data) : null;
 }

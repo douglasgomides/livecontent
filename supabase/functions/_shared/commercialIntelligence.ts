@@ -15,6 +15,13 @@ apelido, endereço, contato ou outro dado identificável aparecer na transcriç�
 anonimização tenha deixado passar), generalize só essa parte antes de incluir no resultado — nunca
 repasse o dado identificável adiante.
 
+Além da análise retrospectiva, gere também recomendações PROSPECTIVAS específicas PRA ESTE
+paciente — não genéricas de manual de vendas: (1) oportunidades de aumentar o ticket/LTV desse
+paciente especificamente (plano recorrente, combo de procedimentos, upgrade de pacote, manutenção
+periódica, indicação familiar) baseadas SÓ no que foi dito na consulta — nunca invente um produto
+que a clínica não mencionou; (2) um argumento recomendado pro PRÓXIMO contato com esse paciente
+específico, considerando as objeções que ainda não foram resolvidas e as dores identificadas.
+
 Retorne SÓ um JSON no formato exato abaixo — sem markdown, sem texto fora do JSON:
 {
   "houve_oferta_comercial": boolean,
@@ -26,14 +33,17 @@ Retorne SÓ um JSON no formato exato abaixo — sem markdown, sem texto fora do 
   "procedimentos_tratamentos_mencionados": [string],
   "condicoes_comerciais_mencionadas": {"preco_mencionado": boolean, "parcelamento_mencionado": boolean, "desconto_oferecido": boolean, "detalhes": string ou null},
   "proxima_acao_combinada": string ou null,
-  "resumo_comercial": string
+  "resumo_comercial": string,
+  "oportunidades_upsell": [{"oportunidade": string, "tipo": "plano_recorrente|combo_procedimentos|upgrade_pacote|manutencao_periodica|indicacao_familiar|outro", "racional": string}],
+  "argumento_recomendado_proximo_contato": string ou null
 }
 
 Regras:
 - Nunca invente informação que não está na transcrição.
 - Se não houver contexto comercial na consulta, retorne "houve_oferta_comercial": false, "resultado": "nao_se_aplica" e os arrays vazios.
 - "resumo_comercial" tem no máximo 3 frases.
-- Máximo 10 itens por array (argumentos, objeções, dores, procedimentos).`;
+- "argumento_recomendado_proximo_contato" é null se não houver objeção pendente ou próximo contato previsto.
+- Máximo 10 itens por array (argumentos, objeções, dores, procedimentos, oportunidades de upsell).`;
 
 export interface CommercialArgument {
   argumento: string;
@@ -61,6 +71,12 @@ export interface CommercialConditions {
   detalhes: string | null;
 }
 
+export interface UpsellOpportunity {
+  oportunidade: string;
+  tipo: string;
+  racional: string;
+}
+
 export interface CommercialIntelligenceRow {
   houve_oferta_comercial: boolean;
   resultado: 'fechou' | 'nao_fechou' | 'indefinido' | 'nao_se_aplica';
@@ -72,6 +88,8 @@ export interface CommercialIntelligenceRow {
   condicoes_comerciais: CommercialConditions;
   proxima_acao: string | null;
   resumo_comercial: string;
+  oportunidades_upsell: UpsellOpportunity[];
+  argumento_recomendado_proximo_contato: string | null;
 }
 
 const FALLBACK: CommercialIntelligenceRow = {
@@ -85,6 +103,8 @@ const FALLBACK: CommercialIntelligenceRow = {
   condicoes_comerciais: { preco_mencionado: false, parcelamento_mencionado: false, desconto_oferecido: false, detalhes: null },
   proxima_acao: null,
   resumo_comercial: '',
+  oportunidades_upsell: [],
+  argumento_recomendado_proximo_contato: null,
 };
 
 const VALID_RESULTADO = new Set(['fechou', 'nao_fechou', 'indefinido', 'nao_se_aplica']);
@@ -93,6 +113,7 @@ const VALID_MOMENTO = new Set(['abertura', 'meio', 'fechamento']);
 const VALID_REACAO = new Set(['positiva', 'neutra', 'negativa', 'nao_identificavel']);
 const VALID_OBJ_CATEGORIA = new Set(['preco', 'tempo', 'medo_dor', 'duvida_eficacia', 'precisa_pensar', 'terceiros_opiniao', 'outro']);
 const VALID_DOR_CATEGORIA = new Set(['estetica', 'funcional', 'emocional', 'social', 'financeira', 'outro']);
+const VALID_UPSELL_TIPO = new Set(['plano_recorrente', 'combo_procedimentos', 'upgrade_pacote', 'manutencao_periodica', 'indicacao_familiar', 'outro']);
 
 export async function extractCommercialIntelligence(anthropicKey: string, anonymizedTranscript: string): Promise<CommercialIntelligenceRow> {
   try {
@@ -148,6 +169,14 @@ export async function extractCommercialIntelligence(anthropicKey: string, anonym
       detalhes: cond.detalhes ? String(cond.detalhes).slice(0, 300) : null,
     };
 
+    const oportunidadesUpsell: UpsellOpportunity[] = Array.isArray(parsed.oportunidades_upsell)
+      ? parsed.oportunidades_upsell.slice(0, 10).map((u: any) => ({
+          oportunidade: String(u?.oportunidade || '').slice(0, 200),
+          tipo: VALID_UPSELL_TIPO.has(u?.tipo) ? u.tipo : 'outro',
+          racional: String(u?.racional || '').slice(0, 300),
+        }))
+      : [];
+
     return {
       houve_oferta_comercial: !!parsed.houve_oferta_comercial,
       resultado,
@@ -159,6 +188,10 @@ export async function extractCommercialIntelligence(anthropicKey: string, anonym
       condicoes_comerciais: condicoesComerciais,
       proxima_acao: parsed.proxima_acao_combinada ? String(parsed.proxima_acao_combinada).slice(0, 300) : null,
       resumo_comercial: String(parsed.resumo_comercial || '').slice(0, 600),
+      oportunidades_upsell: oportunidadesUpsell,
+      argumento_recomendado_proximo_contato: parsed.argumento_recomendado_proximo_contato
+        ? String(parsed.argumento_recomendado_proximo_contato).slice(0, 400)
+        : null,
     };
   } catch (e) {
     console.warn('[commercial-intel] failed', e);

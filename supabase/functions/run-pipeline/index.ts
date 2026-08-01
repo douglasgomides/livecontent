@@ -339,6 +339,8 @@ Deno.serve(async (req) => {
         condicoes_comerciais: commercialIntel.condicoes_comerciais,
         proxima_acao: commercialIntel.proxima_acao,
         resumo_comercial: commercialIntel.resumo_comercial,
+        oportunidades_upsell: commercialIntel.oportunidades_upsell,
+        argumento_recomendado_proximo_contato: commercialIntel.argumento_recomendado_proximo_contato,
       });
       if (ciErr) console.warn('[commercial-intel] insert failed', ciErr.message);
     }
