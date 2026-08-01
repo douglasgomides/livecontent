@@ -732,6 +732,42 @@ export type Database = {
           },
         ]
       }
+      products: {
+        Row: {
+          active: boolean
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          price_range: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          price_range?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          price_range?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

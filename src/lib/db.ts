@@ -17,6 +17,8 @@ import type {
   SocialPostPerformance,
   SessionCommercialIntelligence,
   PreConsultationResponse,
+  Product,
+  ProductCategory,
 } from '@/types/session';
 import type { Brain } from '@/types/brain';
 import { EMPTY_BRAIN } from '@/types/brain';
@@ -608,6 +610,8 @@ function mapCommercialIntelligenceRow(row: any): SessionCommercialIntelligence {
     resumoComercial: row.resumo_comercial ?? '',
     oportunidadesUpsell: (row.oportunidades_upsell ?? []).map((u: any) => ({
       oportunidade: u.oportunidade, tipo: u.tipo, racional: u.racional,
+      produtoCatalogoId: u.produto_catalogo_id ?? null,
+      produtoCatalogoNome: u.produto_catalogo_nome ?? null,
     })),
     argumentoRecomendadoProximoContato: row.argumento_recomendado_proximo_contato ?? null,
   };
@@ -680,4 +684,55 @@ export async function fetchRecentSessionsForLinking(userId: string, limit = 20):
     .limit(limit);
   if (error) throw error;
   return (data ?? []).map((r: any) => ({ id: r.id, title: r.title, createdAt: r.created_at }));
+}
+
+// ─── Catálogo de produtos/procedimentos ────────────────────────────────────
+
+function mapProductRow(row: any): Product {
+  return {
+    id: row.id,
+    name: row.name,
+    category: row.category,
+    description: row.description ?? null,
+    priceRange: row.price_range ?? null,
+    active: row.active,
+    createdAt: row.created_at,
+  };
+}
+
+export async function fetchProducts(userId: string): Promise<Product[]> {
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(mapProductRow);
+}
+
+export async function addProduct(
+  userId: string,
+  name: string,
+  category: ProductCategory,
+  description: string,
+  priceRange: string,
+): Promise<void> {
+  const { error } = await supabase.from('products').insert({
+    user_id: userId,
+    name,
+    category,
+    description: description || null,
+    price_range: priceRange || null,
+  });
+  if (error) throw error;
+}
+
+export async function updateProductActive(productId: string, active: boolean): Promise<void> {
+  const { error } = await supabase.from('products').update({ active }).eq('id', productId);
+  if (error) throw error;
+}
+
+export async function deleteProduct(productId: string): Promise<void> {
+  const { error } = await supabase.from('products').delete().eq('id', productId);
+  if (error) throw error;
 }

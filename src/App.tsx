@@ -32,6 +32,7 @@ import EvidenceLibrary from "./pages/EvidenceLibrary";
 import ReferenceStyles from "./pages/ReferenceStyles";
 import BrandPhotos from "./pages/BrandPhotos";
 import Insights from "./pages/Insights";
+import Products from "./pages/Products";
 import Trends from "./pages/Trends";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
@@ -106,6 +107,7 @@ const App = () => (
               <Route path="reference-styles" element={<ReferenceStyles />} />
               <Route path="brand-photos" element={<BrandPhotos />} />
               <Route path="pre-consulta" element={<PreConsultation />} />
+              <Route path="products" element={<Products />} />
               <Route path="brain" element={<BrainPage />} />
               <Route path="settings" element={<Settings />} />
               <Route path="admin" element={<Admin />} />

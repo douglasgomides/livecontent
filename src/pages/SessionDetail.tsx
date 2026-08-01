@@ -386,7 +386,14 @@ export default function SessionDetail() {
                         <div className="space-y-2">
                           {commercial.oportunidadesUpsell.map((u, i) => (
                             <div key={i} className="border border-border/60 rounded-lg p-3">
-                              <div className="text-sm font-medium">{u.oportunidade}</div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm font-medium">{u.oportunidade}</span>
+                                {u.produtoCatalogoNome && (
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/15 text-primary shrink-0">
+                                    {u.produtoCatalogoNome}
+                                  </span>
+                                )}
+                              </div>
                               <div className="text-xs text-muted-foreground mt-1">{u.racional}</div>
                             </div>
                           ))}

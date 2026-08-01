@@ -277,8 +277,15 @@ Deno.serve(async (req) => {
           .join('\n');
       }
     }
+    let productCatalog: { id: string; name: string }[] = [];
+    if (isRealConsultation) {
+      const { data: productRows } = await supabase
+        .from('products').select('id, name')
+        .eq('user_id', userId).eq('active', true).limit(50);
+      productCatalog = (productRows ?? []).map(p => ({ id: p.id, name: p.name }));
+    }
     const commercialIntelPromise = isRealConsultation
-      ? extractCommercialIntelligence(anthropicKey, anonymized, preConsultContext).catch(() => null)
+      ? extractCommercialIntelligence(anthropicKey, anonymized, preConsultContext, productCatalog).catch(() => null)
       : Promise.resolve(null);
 
     const CONCURRENCY = 3;

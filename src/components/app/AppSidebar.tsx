@@ -21,6 +21,7 @@ import {
   Image as ImageIcon,
   TrendingUp,
   ClipboardList,
+  Package,
 } from 'lucide-react';
 
 import {
@@ -62,6 +63,7 @@ const workItems = [
   { title: 'Biblioteca', url: '/app/library', icon: Library },
   { title: 'Inteligência de conversão', url: '/app/insights', icon: LineChart },
   { title: 'Pré-consulta', url: '/app/pre-consulta', icon: ClipboardList },
+  { title: 'Produtos', url: '/app/products', icon: Package },
   { title: 'Tendências', url: '/app/trends', icon: TrendingUp },
   { title: 'Evidências', url: '/app/evidence', icon: Microscope },
   { title: 'Estilos de referência', url: '/app/reference-styles', icon: LayoutTemplate },

@@ -29,6 +29,12 @@ deixar as oportunidades de upsell e o argumento pro próximo contato mais espec�
 genéricos, mas nunca cite o formulário como fonte no texto (fale como se fosse conhecimento natural
 da consulta).
 
+Se vier junto um bloco de "Catálogo de produtos/procedimentos da clínica", cada oportunidade de
+upsell deve, sempre que fizer sentido, apontar pro item exato do catálogo (pelo ID fornecido) em
+vez de uma sugestão genérica — nunca invente um produto que não esteja no catálogo. Se nenhum item
+do catálogo se aplicar à oportunidade identificada, deixe "produto_catalogo_id" null (a
+oportunidade continua válida, só sem produto específico associado).
+
 Retorne SÓ um JSON no formato exato abaixo — sem markdown, sem texto fora do JSON:
 {
   "houve_oferta_comercial": boolean,
@@ -41,7 +47,7 @@ Retorne SÓ um JSON no formato exato abaixo — sem markdown, sem texto fora do 
   "condicoes_comerciais_mencionadas": {"preco_mencionado": boolean, "parcelamento_mencionado": boolean, "desconto_oferecido": boolean, "detalhes": string ou null},
   "proxima_acao_combinada": string ou null,
   "resumo_comercial": string,
-  "oportunidades_upsell": [{"oportunidade": string, "tipo": "plano_recorrente|combo_procedimentos|upgrade_pacote|manutencao_periodica|indicacao_familiar|outro", "racional": string}],
+  "oportunidades_upsell": [{"oportunidade": string, "tipo": "plano_recorrente|combo_procedimentos|upgrade_pacote|manutencao_periodica|indicacao_familiar|outro", "racional": string, "produto_catalogo_id": string ou null}],
   "argumento_recomendado_proximo_contato": string ou null
 }
 
@@ -82,6 +88,13 @@ export interface UpsellOpportunity {
   oportunidade: string;
   tipo: string;
   racional: string;
+  produto_catalogo_id: string | null;
+  produto_catalogo_nome: string | null;
+}
+
+export interface ProductCatalogItem {
+  id: string;
+  name: string;
 }
 
 export interface CommercialIntelligenceRow {
@@ -126,11 +139,16 @@ export async function extractCommercialIntelligence(
   anthropicKey: string,
   anonymizedTranscript: string,
   preConsultContext: string | null = null,
+  productCatalog: ProductCatalogItem[] = [],
 ): Promise<CommercialIntelligenceRow> {
   try {
-    const userContent = preConsultContext
+    const catalogById = new Map(productCatalog.map(p => [p.id, p.name]));
+    const catalogBlock = productCatalog.length
+      ? `\n\n## Catálogo de produtos/procedimentos da clínica (use o ID exato quando aplicável)\n${productCatalog.map(p => `- ${p.name} (id: ${p.id})`).join('\n')}`
+      : '';
+    const userContent = (preConsultContext
       ? `## Respostas do paciente no formulário de pré-consulta (preenchido antes desta consulta)\n${preConsultContext}\n\n## Transcrição da consulta\n${anonymizedTranscript}`
-      : anonymizedTranscript;
+      : anonymizedTranscript) + catalogBlock;
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
@@ -184,11 +202,20 @@ export async function extractCommercialIntelligence(
     };
 
     const oportunidadesUpsell: UpsellOpportunity[] = Array.isArray(parsed.oportunidades_upsell)
-      ? parsed.oportunidades_upsell.slice(0, 10).map((u: any) => ({
-          oportunidade: String(u?.oportunidade || '').slice(0, 200),
-          tipo: VALID_UPSELL_TIPO.has(u?.tipo) ? u.tipo : 'outro',
-          racional: String(u?.racional || '').slice(0, 300),
-        }))
+      ? parsed.oportunidades_upsell.slice(0, 10).map((u: any) => {
+          // Só aceita o ID se ele realmente existir no catálogo que enviamos — nunca
+          // confia cegamente no que o modelo devolveu (evita produto "inventado").
+          const catalogId = typeof u?.produto_catalogo_id === 'string' && catalogById.has(u.produto_catalogo_id)
+            ? u.produto_catalogo_id
+            : null;
+          return {
+            oportunidade: String(u?.oportunidade || '').slice(0, 200),
+            tipo: VALID_UPSELL_TIPO.has(u?.tipo) ? u.tipo : 'outro',
+            racional: String(u?.racional || '').slice(0, 300),
+            produto_catalogo_id: catalogId,
+            produto_catalogo_nome: catalogId ? catalogById.get(catalogId)! : null,
+          };
+        })
       : [];
 
     return {

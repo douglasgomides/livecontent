@@ -156,6 +156,10 @@ export interface UpsellOpportunity {
   oportunidade: string;
   tipo: string;
   racional: string;
+  // Preenchido só quando a IA casa a oportunidade com um item real do catálogo
+  // de produtos do médico (nunca inventado) — null quando não há correspondência.
+  produtoCatalogoId: string | null;
+  produtoCatalogoNome: string | null;
 }
 export interface SessionCommercialIntelligence {
   houveOfertaComercial: boolean;
@@ -214,6 +218,20 @@ export interface PreConsultationResponse {
   answers: Record<string, string>;
   submittedAt: string;
   linkedSessionId: string | null;
+}
+
+// Catálogo de produtos/procedimentos do médico — cadastrado uma vez, usado pra
+// a inteligência comercial sugerir upsell casando com algo real que existe.
+export type ProductCategory = 'procedimento' | 'pacote' | 'plano_recorrente' | 'produto' | 'servico' | 'outro';
+
+export interface Product {
+  id: string;
+  name: string;
+  category: ProductCategory;
+  description: string | null;
+  priceRange: string | null;
+  active: boolean;
+  createdAt: string;
 }
 
 export type BrandPhotoCategory = 'working' | 'lifestyle' | 'family' | 'clinic' | 'team' | 'other';
