@@ -90,6 +90,9 @@ export interface UpsellOpportunity {
   racional: string;
   produto_catalogo_id: string | null;
   produto_catalogo_nome: string | null;
+  // Sempre 'pendente' na extração — só o médico marca aceito/recusado depois,
+  // nunca a IA. É esse dado real que alimenta a probabilidade de fechar.
+  status: 'pendente';
 }
 
 export interface ProductCatalogItem {
@@ -214,6 +217,7 @@ export async function extractCommercialIntelligence(
             racional: String(u?.racional || '').slice(0, 300),
             produto_catalogo_id: catalogId,
             produto_catalogo_nome: catalogId ? catalogById.get(catalogId)! : null,
+            status: 'pendente' as const,
           };
         })
       : [];

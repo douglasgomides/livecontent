@@ -812,6 +812,7 @@ export type Database = {
       products: {
         Row: {
           active: boolean
+          avg_price: number | null
           category: string
           created_at: string
           description: string | null
@@ -823,6 +824,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          avg_price?: number | null
           category?: string
           created_at?: string
           description?: string | null
@@ -834,6 +836,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          avg_price?: number | null
           category?: string
           created_at?: string
           description?: string | null

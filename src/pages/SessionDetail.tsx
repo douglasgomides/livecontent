@@ -3,7 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import type { Session, SessionStatus, SessionCommercialIntelligence } from '@/types/session';
 import { getSession, upsertSession } from '@/lib/storage';
 import { retryPipeline } from '@/lib/pipeline';
-import { fetchCommercialIntelligenceForSession } from '@/lib/db';
+import { fetchCommercialIntelligenceForSession, updateUpsellOpportunityStatus } from '@/lib/db';
 import { loadBrain } from '@/lib/brainStorage';
 import { useStoreVersion } from '@/lib/store';
 import { toast } from 'sonner';
@@ -13,7 +13,7 @@ import TopicsReview from '@/components/session/TopicsReview';
 import ContentPieceCard from '@/components/session/ContentPieceCard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ArrowLeft, Check, Circle, Loader2, Sparkles, FlaskConical, FileText, AlertTriangle, RefreshCw, Target, Lightbulb, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Check, Circle, Loader2, Sparkles, FlaskConical, FileText, AlertTriangle, RefreshCw, Target, Lightbulb, TrendingUp, X } from 'lucide-react';
 import { CHANNEL_LABEL, CHANNEL_ICON } from '@/lib/contentFormats';
 import type { ContentChannel } from '@/types/session';
 
@@ -73,6 +73,19 @@ export default function SessionDetail() {
       .catch(() => setCommercial(null))
       .finally(() => setCommercialLoading(false));
   }, [session?.id, session?.status]);
+
+  const markUpsellStatus = async (index: number, status: 'aceito' | 'recusado') => {
+    if (!session) return;
+    try {
+      await updateUpsellOpportunityStatus(session.id, index, status);
+      setCommercial(prev => prev && {
+        ...prev,
+        oportunidadesUpsell: prev.oportunidadesUpsell.map((u, i) => i === index ? { ...u, status } : u),
+      });
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Falha ao marcar oportunidade');
+    }
+  };
 
   // O avanço entre etapas (transcrição -> anonimização -> tópicos -> conteúdo) é
   // feito pelo backend real (Edge Function run-pipeline) via Realtime — nada é
@@ -395,6 +408,23 @@ export default function SessionDetail() {
                                 )}
                               </div>
                               <div className="text-xs text-muted-foreground mt-1">{u.racional}</div>
+                              <div className="mt-2">
+                                {u.status === 'pendente' ? (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] text-muted-foreground">O que aconteceu com essa oportunidade?</span>
+                                    <Button size="sm" variant="outline" className="h-6 text-[11px] px-2" onClick={() => markUpsellStatus(i, 'aceito')}>
+                                      <Check className="h-3 w-3 mr-1 text-success" /> Aceito
+                                    </Button>
+                                    <Button size="sm" variant="outline" className="h-6 text-[11px] px-2" onClick={() => markUpsellStatus(i, 'recusado')}>
+                                      <X className="h-3 w-3 mr-1 text-destructive" /> Recusado
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${u.status === 'aceito' ? 'bg-success/15 text-success' : 'bg-destructive/15 text-destructive'}`}>
+                                    {u.status === 'aceito' ? 'Aceito' : 'Recusado'}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           ))}
                         </div>

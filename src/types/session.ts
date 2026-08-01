@@ -155,6 +155,12 @@ export interface CommercialPain {
   dor: string;
   categoria: string;
 }
+// Status real da oportunidade — NUNCA gerado pela IA, só o médico marca depois
+// de saber o que de fato aconteceu. É essa marcação que vira dado real pra
+// calcular taxa de conversão/probabilidade — sem isso não existe previsão
+// honesta possível, só achismo.
+export type UpsellStatus = 'pendente' | 'aceito' | 'recusado';
+
 export interface UpsellOpportunity {
   oportunidade: string;
   tipo: string;
@@ -163,6 +169,7 @@ export interface UpsellOpportunity {
   // de produtos do médico (nunca inventado) — null quando não há correspondência.
   produtoCatalogoId: string | null;
   produtoCatalogoNome: string | null;
+  status: UpsellStatus;
 }
 export interface SessionCommercialIntelligence {
   houveOfertaComercial: boolean;
@@ -261,6 +268,9 @@ export interface Product {
   category: ProductCategory;
   description: string | null;
   priceRange: string | null;
+  // Valor numérico único (opcional) — só isso permite projetar receita de
+  // verdade; priceRange é texto livre pro médico, não dá pra somar.
+  avgPrice: number | null;
   active: boolean;
   createdAt: string;
 }

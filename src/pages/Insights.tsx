@@ -1,23 +1,50 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, LineChart as LineChartIcon, Target, CheckCircle2, Hash, ShieldAlert, MessageCircleQuestion, Heart, Lightbulb, Mic } from 'lucide-react';
+import { ArrowLeft, LineChart as LineChartIcon, Target, CheckCircle2, Hash, ShieldAlert, MessageCircleQuestion, Heart, Lightbulb, Mic, TrendingUp, Wallet, Gauge } from 'lucide-react';
 import KpiCard from '@/components/app/KpiCard';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Legend } from 'recharts';
 import { toast } from 'sonner';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegendContent } from '@/components/ui/chart';
 import { Switch } from '@/components/ui/switch';
 import { loadSessions } from '@/lib/storage';
 import { getUserId } from '@/lib/store';
 import { loadBrain, saveBrain } from '@/lib/brainStorage';
-import { fetchPatientSignals } from '@/lib/db';
+import { fetchPatientSignals, fetchAllCommercialIntelligence, fetchProducts, type CommercialIntelligenceWithMeta } from '@/lib/db';
 import { fetchCommercialBenchmark, type CommercialBenchmark } from '@/lib/pipeline';
 import { FORMAT_LABEL } from '@/lib/contentFormats';
-import type { ContentFormat, PatientSignal } from '@/types/session';
+import type { ContentFormat, PatientSignal, Product } from '@/types/session';
 
 // Pisos mínimos antes de liberar o opt-in — mesma cautela de qualquer padrão
 // aprendido com poucos exemplos: amostra pequena demais vira ruído, não sinal.
 const MIN_TOTAL_OBJECTIONS = 8;
 const MIN_LEADING_CATEGORY = 3;
+// Mesma cautela pra probabilidade de fechar upsell — sem isso, 1 aceito de 1
+// vira "100% de chance" e engana o médico.
+const MIN_UPSELL_SAMPLE = 3;
+const MIN_WEEKS_FOR_FORECAST = 3;
+
+const UPSELL_TIPO_LABEL: Record<string, string> = {
+  plano_recorrente: 'Plano recorrente', combo_procedimentos: 'Combo de procedimentos',
+  upgrade_pacote: 'Upgrade de pacote', manutencao_periodica: 'Manutenção periódica',
+  indicacao_familiar: 'Indicação familiar', outro: 'Outro',
+};
+
+// Semana começando na segunda-feira, formatada como chave e label estáveis —
+// mesmo cálculo pro forecast de volume e pra tendência de objeções.
+function weekStart(dateStr: string): Date {
+  const d = new Date(dateStr);
+  const day = d.getDay();
+  const diff = (day === 0 ? -6 : 1) - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+function weekKey(d: Date): string { return d.toISOString().slice(0, 10); }
+function weekLabel(d: Date): string { return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); }
+
+// Cores fixas por categoria (não por posição/rank) — a mesma objeção sempre
+// tem a mesma cor, mesmo que o filtro mude e a ordem de frequência mude.
+const TREND_COLOR_BY_RANK = ['hsl(var(--primary))', 'hsl(var(--warning))', 'hsl(var(--destructive))', 'hsl(var(--success))'];
 
 // Rótulos de exibição pra taxonomia fixa de supabase/functions/_shared/patientSignals.ts —
 // duplicado de propósito (é só apresentação, a fonte de verdade é o extrator no backend).
@@ -96,6 +123,22 @@ export default function Insights() {
       .then(setBenchmark)
       .catch(() => setBenchmark(null))
       .finally(() => setBenchmarkLoading(false));
+  }, []);
+
+  // Previsibilidade: precisa de todas as consultas com inteligência comercial
+  // (pra taxa de conversão real por tipo de upsell) e do catálogo de produtos
+  // (pro valor a projetar) — nada disso vem da hidratação síncrona do store.
+  const [commercialRows, setCommercialRows] = useState<CommercialIntelligenceWithMeta[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [predictLoading, setPredictLoading] = useState(true);
+
+  useEffect(() => {
+    const uid = getUserId();
+    if (!uid) { setPredictLoading(false); return; }
+    Promise.all([fetchAllCommercialIntelligence(uid), fetchProducts(uid)])
+      .then(([rows, prods]) => { setCommercialRows(rows); setProducts(prods); })
+      .catch(() => { setCommercialRows([]); setProducts([]); })
+      .finally(() => setPredictLoading(false));
   }, []);
 
   const objectionData = useMemo(() => {
@@ -230,6 +273,102 @@ export default function Insights() {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 14);
   }, [sessions]);
+
+  // ─── Previsibilidade ──────────────────────────────────────────────────────
+
+  // Taxa de conversão REAL por tipo de upsell — só existe porque o médico marca
+  // aceito/recusado depois (nunca a IA). Amostra abaixo do piso não vira taxa.
+  const upsellProbabilityByTipo = useMemo(() => {
+    const counts = new Map<string, { aceito: number; recusado: number }>();
+    commercialRows.forEach(r => r.oportunidadesUpsell.forEach(u => {
+      if (u.status === 'pendente') return;
+      const cur = counts.get(u.tipo) ?? { aceito: 0, recusado: 0 };
+      if (u.status === 'aceito') cur.aceito++; else cur.recusado++;
+      counts.set(u.tipo, cur);
+    }));
+    const probability = new Map<string, number>();
+    const list = Array.from(counts.entries()).map(([tipo, v]) => {
+      const total = v.aceito + v.recusado;
+      const hasEnough = total >= MIN_UPSELL_SAMPLE;
+      if (hasEnough) probability.set(tipo, v.aceito / total);
+      return { tipo, label: UPSELL_TIPO_LABEL[tipo] ?? tipo, aceito: v.aceito, recusado: v.recusado, total, hasEnough, taxa: hasEnough ? Math.round((v.aceito / total) * 100) : null };
+    }).sort((a, b) => b.total - a.total);
+    return { list, probability };
+  }, [commercialRows]);
+
+  // Receita projetada = soma do valor médio do produto × probabilidade real de
+  // aceitar aquele tipo de upsell — só pras oportunidades ainda pendentes, com
+  // produto do catálogo com preço e amostra histórica suficiente. Nunca inventa
+  // valor pra oportunidade sem essas 3 condições — só conta ela à parte.
+  const projectedRevenue = useMemo(() => {
+    const productById = new Map(products.map(p => [p.id, p]));
+    let total = 0;
+    let estimatedCount = 0;
+    let unestimatedCount = 0;
+    commercialRows.forEach(r => r.oportunidadesUpsell.forEach(u => {
+      if (u.status !== 'pendente') return;
+      const product = u.produtoCatalogoId ? productById.get(u.produtoCatalogoId) : undefined;
+      const prob = upsellProbabilityByTipo.probability.get(u.tipo);
+      if (!product || product.avgPrice == null || prob === undefined) { unestimatedCount++; return; }
+      total += product.avgPrice * prob;
+      estimatedCount++;
+    }));
+    return { total, estimatedCount, unestimatedCount };
+  }, [commercialRows, products, upsellProbabilityByTipo]);
+
+  // Previsão de volume: média simples das últimas 8 semanas, projetada pras
+  // próximas 4 — sem regressão sofisticada, só uma baseline honesta.
+  const volumeForecast = useMemo(() => {
+    const byWeek = new Map<string, number>();
+    sessions.forEach(s => {
+      const k = weekKey(weekStart(s.createdAt));
+      byWeek.set(k, (byWeek.get(k) ?? 0) + 1);
+    });
+    const weekKeys = Array.from(byWeek.keys()).sort();
+    const last8 = weekKeys.slice(-8);
+    const avg = last8.length ? last8.reduce((a, k) => a + byWeek.get(k)!, 0) / last8.length : 0;
+    const actualData = last8.map(k => ({ week: weekLabel(new Date(k)), real: byWeek.get(k)! }));
+    const lastDate = last8.length ? new Date(last8[last8.length - 1]) : weekStart(new Date().toISOString());
+    const projectedData = Array.from({ length: 4 }, (_, i) => {
+      const d = new Date(lastDate);
+      d.setDate(d.getDate() + 7 * (i + 1));
+      return { week: weekLabel(d), projetado: Math.round(avg * 10) / 10 };
+    });
+    return {
+      data: [...actualData, ...projectedData],
+      avgPerWeek: Math.round(avg * 10) / 10,
+      hasEnough: last8.length >= MIN_WEEKS_FOR_FORECAST,
+    };
+  }, [sessions]);
+
+  // Tendência de objeções ao longo do tempo — top 4 categorias fixadas pelo
+  // total agregado (não recalculadas por semana, senão a cor "pularia" de
+  // categoria conforme o filtro), resto agrupado em "Outras".
+  const objectionTrend = useMemo(() => {
+    const objSignals = signals.filter(s => s.kind === 'objection');
+    const totalByCategory = new Map<string, number>();
+    objSignals.forEach(s => totalByCategory.set(s.category, (totalByCategory.get(s.category) ?? 0) + 1));
+    const topCategories = Array.from(totalByCategory.entries()).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([c]) => c);
+    const hasOthers = totalByCategory.size > topCategories.length;
+
+    const byWeek = new Map<string, Record<string, number>>();
+    objSignals.forEach(s => {
+      const k = weekKey(weekStart(s.createdAt));
+      const bucket = byWeek.get(k) ?? {};
+      const key = topCategories.includes(s.category) ? s.category : 'outras';
+      bucket[key] = (bucket[key] ?? 0) + 1;
+      byWeek.set(k, bucket);
+    });
+    const weekKeys = Array.from(byWeek.keys()).sort().slice(-8);
+    const data = weekKeys.map(k => {
+      const bucket = byWeek.get(k) ?? {};
+      const row: Record<string, string | number> = { week: weekLabel(new Date(k)) };
+      topCategories.forEach(c => { row[c] = bucket[c] ?? 0; });
+      if (hasOthers) row.outras = bucket.outras ?? 0;
+      return row;
+    });
+    return { data, topCategories, hasOthers };
+  }, [signals]);
 
   const totalTopics = sessions.reduce((a, s) => a + (s.topics?.filter(t => t.included).length ?? 0), 0);
   const totalPieces = sessions.reduce((a, s) => a + (s.content?.length ?? 0), 0);
@@ -582,6 +721,118 @@ export default function Insights() {
                     {word} <span className="text-muted-foreground">· {count}</span>
                   </span>
                 ))}
+              </div>
+            )}
+          </section>
+
+          <section className="border border-border/60 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <Wallet className="h-4 w-4 text-primary" />
+              <h2 className="font-serif text-xl">Previsibilidade</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Nada aqui é estimativa da IA — é cálculo real em cima do que você já marcou (aceito/recusado
+              nas oportunidades de upsell da aba Comercial) e do valor que você cadastrou no catálogo de
+              produtos. Sem amostra suficiente, mostramos isso claramente em vez de inventar número.
+            </p>
+
+            {predictLoading ? (
+              <p className="text-sm text-muted-foreground">Carregando…</p>
+            ) : (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <KpiCard
+                    icon={Wallet}
+                    label="Receita projetada"
+                    value={projectedRevenue.estimatedCount > 0 ? `R$ ${Math.round(projectedRevenue.total).toLocaleString('pt-BR')}` : '—'}
+                    sublabel={`${projectedRevenue.estimatedCount} oportunidade(s) com histórico suficiente${projectedRevenue.unestimatedCount > 0 ? ` · ${projectedRevenue.unestimatedCount} sem estimativa ainda` : ''}`}
+                  />
+                  <KpiCard
+                    icon={Gauge}
+                    label="Ritmo médio semanal"
+                    value={volumeForecast.hasEnough ? `${volumeForecast.avgPerWeek} consultas/sem` : '—'}
+                    sublabel={volumeForecast.hasEnough ? 'projeção pras próximas 4 semanas abaixo' : `precisa de ${MIN_WEEKS_FOR_FORECAST}+ semanas de histórico`}
+                  />
+                  <KpiCard
+                    icon={TrendingUp}
+                    label="Tipos de upsell com taxa real"
+                    value={upsellProbabilityByTipo.list.filter(u => u.hasEnough).length}
+                    sublabel={`de ${upsellProbabilityByTipo.list.length} tipo(s) já com oportunidade marcada`}
+                  />
+                </div>
+
+                {upsellProbabilityByTipo.list.length > 0 && (
+                  <div>
+                    <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                      Probabilidade real de aceitar, por tipo de upsell
+                    </div>
+                    <div className="space-y-1.5">
+                      {upsellProbabilityByTipo.list.map(u => (
+                        <div key={u.tipo} className="flex items-center justify-between text-sm">
+                          <span>{u.label}</span>
+                          <span className="text-muted-foreground text-xs">
+                            {u.hasEnough
+                              ? `${u.taxa}% aceitam · ${u.total} marcada(s)`
+                              : `coletando dados (${u.total}/${MIN_UPSELL_SAMPLE} marcada(s))`}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                    Previsão de volume de consultas
+                  </div>
+                  {!volumeForecast.hasEnough ? (
+                    <p className="text-sm text-muted-foreground">Ainda sem histórico suficiente pra projetar (mínimo {MIN_WEEKS_FOR_FORECAST} semanas com consulta).</p>
+                  ) : (
+                    <ChartContainer
+                      config={{ real: { label: 'Real', color: 'hsl(var(--primary))' }, projetado: { label: 'Projetado (média)', color: 'hsl(var(--primary) / 0.35)' } }}
+                      className="aspect-auto h-56 w-full"
+                    >
+                      <BarChart data={volumeForecast.data} margin={{ left: 8, right: 16 }}>
+                        <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                        <XAxis dataKey="week" tickLine={false} axisLine={false} />
+                        <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={32} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Legend content={<ChartLegendContent />} />
+                        <Bar dataKey="real" fill="var(--color-real)" radius={4} />
+                        <Bar dataKey="projetado" fill="var(--color-projetado)" radius={4} />
+                      </BarChart>
+                    </ChartContainer>
+                  )}
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                    Objeções mais comuns — tendência por semana
+                  </div>
+                  {objectionTrend.data.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Ainda sem objeções suficientes pra mostrar tendência.</p>
+                  ) : (
+                    <ChartContainer
+                      config={Object.fromEntries([
+                        ...objectionTrend.topCategories.map((c, i) => [c, { label: OBJECTION_LABEL[c] ?? c, color: TREND_COLOR_BY_RANK[i] }]),
+                        ...(objectionTrend.hasOthers ? [['outras', { label: 'Outras', color: 'hsl(var(--muted-foreground))' }]] : []),
+                      ])}
+                      className="aspect-auto h-56 w-full"
+                    >
+                      <BarChart data={objectionTrend.data} margin={{ left: 8, right: 16 }}>
+                        <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                        <XAxis dataKey="week" tickLine={false} axisLine={false} />
+                        <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={32} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Legend content={<ChartLegendContent />} />
+                        {objectionTrend.topCategories.map((c, i) => (
+                          <Bar key={c} dataKey={c} stackId="obj" fill={`var(--color-${c})`} radius={0} />
+                        ))}
+                        {objectionTrend.hasOthers && <Bar dataKey="outras" stackId="obj" fill="var(--color-outras)" radius={0} />}
+                      </BarChart>
+                    </ChartContainer>
+                  )}
+                </div>
               </div>
             )}
           </section>

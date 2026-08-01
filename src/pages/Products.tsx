@@ -34,6 +34,7 @@ export default function Products() {
   const [category, setCategory] = useState<ProductCategory>('procedimento');
   const [description, setDescription] = useState('');
   const [priceRange, setPriceRange] = useState('');
+  const [avgPrice, setAvgPrice] = useState('');
 
   const refresh = async () => {
     const uid = getUserId();
@@ -56,8 +57,9 @@ export default function Products() {
     if (!uid || !name.trim()) return;
     setSaving(true);
     try {
-      await addProduct(uid, name.trim(), category, description.trim(), priceRange.trim());
-      setName(''); setDescription(''); setPriceRange(''); setCategory('procedimento');
+      const parsedAvgPrice = avgPrice.trim() ? Number(avgPrice.trim().replace(',', '.')) : null;
+      await addProduct(uid, name.trim(), category, description.trim(), priceRange.trim(), parsedAvgPrice);
+      setName(''); setDescription(''); setPriceRange(''); setAvgPrice(''); setCategory('procedimento');
       setShowForm(false);
       await refresh();
       toast.success('Produto adicionado');
@@ -124,8 +126,20 @@ export default function Products() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Faixa de preço (opcional)</Label>
+              <Label>Faixa de preço (opcional, só pra exibição)</Label>
               <Input value={priceRange} onChange={e => setPriceRange(e.target.value)} placeholder="Ex: R$ 800 – R$ 1.200" />
+            </div>
+            <div className="space-y-2">
+              <Label>Valor médio (opcional — usado pra projetar receita)</Label>
+              <Input
+                value={avgPrice}
+                onChange={e => setAvgPrice(e.target.value)}
+                inputMode="decimal"
+                placeholder="Ex: 1000"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Só um número. É o que entra na estimativa de receita da Previsibilidade (Inteligência de conversão).
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Descrição (opcional)</Label>
@@ -155,6 +169,11 @@ export default function Products() {
                     <span className="text-sm font-semibold">{p.name}</span>
                     <span className="t-micro px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">{CATEGORY_LABEL[p.category]}</span>
                     {p.priceRange && <span className="t-micro text-muted-foreground">{p.priceRange}</span>}
+                    {p.avgPrice !== null && (
+                      <span className="t-micro px-2 py-0.5 rounded-full bg-success/10 text-success font-medium">
+                        ~R$ {p.avgPrice.toLocaleString('pt-BR')}
+                      </span>
+                    )}
                   </div>
                   {p.description && <div className="text-sm text-muted-foreground mt-1">{p.description}</div>}
                 </div>

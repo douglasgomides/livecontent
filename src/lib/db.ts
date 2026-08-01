@@ -650,6 +650,9 @@ function mapCommercialIntelligenceRow(row: any): SessionCommercialIntelligence {
       oportunidade: u.oportunidade, tipo: u.tipo, racional: u.racional,
       produtoCatalogoId: u.produto_catalogo_id ?? null,
       produtoCatalogoNome: u.produto_catalogo_nome ?? null,
+      // Consultas geradas antes desse campo existir não têm status gravado —
+      // trata como pendente (nunca foi marcada, não é o mesmo que "recusada").
+      status: u.status ?? 'pendente',
     })),
     argumentoRecomendadoProximoContato: row.argumento_recomendado_proximo_contato ?? null,
   };
@@ -663,6 +666,52 @@ export async function fetchCommercialIntelligenceForSession(sessionId: string): 
     .maybeSingle();
   if (error) throw error;
   return data ? mapCommercialIntelligenceRow(data) : null;
+}
+
+export interface CommercialIntelligenceWithMeta extends SessionCommercialIntelligence {
+  sessionId: string;
+  createdAt: string;
+}
+
+// Todas as consultas com inteligência comercial do médico — base pra qualquer
+// agregação de previsibilidade (receita projetada, probabilidade, tendência).
+export async function fetchAllCommercialIntelligence(userId: string): Promise<CommercialIntelligenceWithMeta[]> {
+  const { data, error } = await supabase
+    .from('commercial_intelligence')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map(row => ({
+    ...mapCommercialIntelligenceRow(row),
+    sessionId: row.session_id,
+    createdAt: row.created_at,
+  }));
+}
+
+// Marca o resultado real de uma oportunidade de upsell (aceito/recusado) —
+// só o médico faz isso, nunca a IA. É esse dado que vira taxa de conversão
+// de verdade pra alimentar a previsibilidade.
+export async function updateUpsellOpportunityStatus(
+  sessionId: string,
+  opportunityIndex: number,
+  status: 'aceito' | 'recusado',
+): Promise<void> {
+  const { data, error: fetchErr } = await supabase
+    .from('commercial_intelligence')
+    .select('oportunidades_upsell')
+    .eq('session_id', sessionId)
+    .maybeSingle();
+  if (fetchErr) throw fetchErr;
+  if (!data) throw new Error('Inteligência comercial não encontrada');
+  const list: any[] = Array.isArray(data.oportunidades_upsell) ? [...(data.oportunidades_upsell as any[])] : [];
+  if (!list[opportunityIndex]) throw new Error('Oportunidade não encontrada');
+  list[opportunityIndex] = { ...list[opportunityIndex], status };
+  const { error: upErr } = await supabase
+    .from('commercial_intelligence')
+    .update({ oportunidades_upsell: list })
+    .eq('session_id', sessionId);
+  if (upErr) throw upErr;
 }
 
 // ─── Formulário de pré-consulta (link público avulso) ──────────────────────
@@ -733,6 +782,7 @@ function mapProductRow(row: any): Product {
     category: row.category,
     description: row.description ?? null,
     priceRange: row.price_range ?? null,
+    avgPrice: row.avg_price ?? null,
     active: row.active,
     createdAt: row.created_at,
   };
@@ -754,6 +804,7 @@ export async function addProduct(
   category: ProductCategory,
   description: string,
   priceRange: string,
+  avgPrice: number | null,
 ): Promise<void> {
   const { error } = await supabase.from('products').insert({
     user_id: userId,
@@ -761,6 +812,7 @@ export async function addProduct(
     category,
     description: description || null,
     price_range: priceRange || null,
+    avg_price: avgPrice,
   });
   if (error) throw error;
 }
