@@ -323,6 +323,7 @@ function mapEvidenceRow(row: any): EvidenceSource {
     tags: Array.isArray(row.tags) ? row.tags : [],
     source: row.source,
     createdAt: row.created_at,
+    audioSummaryPath: row.audio_summary_path ?? null,
   };
 }
 
@@ -361,6 +362,41 @@ export async function addEvidenceSource(userId: string, s: Omit<EvidenceSource, 
 export async function deleteEvidenceSource(id: string): Promise<void> {
   const { error } = await supabase.from('evidence_sources').delete().eq('id', id);
   if (error) throw error;
+}
+
+export interface EvidenceUsage {
+  pieceId: string;
+  sessionId: string;
+  format: string;
+}
+
+// Cruza cada fonte de evidência com as peças que realmente a citaram
+// (content_pieces.evidence_ids) — pra biblioteca deixar de ser uma lista solta
+// e mostrar "usada em X peças", com link direto pra cada uma.
+export async function fetchEvidenceUsage(userId: string): Promise<Map<string, EvidenceUsage[]>> {
+  const { data, error } = await supabase
+    .from('content_pieces')
+    .select('id, session_id, format, evidence_ids')
+    .eq('user_id', userId)
+    .not('evidence_ids', 'eq', '[]');
+  if (error) throw error;
+  const usage = new Map<string, EvidenceUsage[]>();
+  (data ?? []).forEach((p: any) => {
+    (p.evidence_ids ?? []).forEach((evidenceId: string) => {
+      const list = usage.get(evidenceId) ?? [];
+      list.push({ pieceId: p.id, sessionId: p.session_id, format: p.format });
+      usage.set(evidenceId, list);
+    });
+  });
+  return usage;
+}
+
+export async function getEvidenceAudioSignedUrl(path: string, ttlSec = 3600): Promise<string> {
+  const { data, error } = await supabase.storage
+    .from('evidence-audio')
+    .createSignedUrl(path, ttlSec);
+  if (error) throw error;
+  return data.signedUrl;
 }
 
 // ─── Biblioteca de estilos de referência (estrutura, não conteúdo) ─────────

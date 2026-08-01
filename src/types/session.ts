@@ -111,6 +111,9 @@ export interface EvidenceSource {
   tags: string[];
   source: 'manual' | 'pubmed';
   createdAt: string;
+  // Caminho no storage do resumo em áudio já gerado (cache — evita reprocessar
+  // toda vez). Null até a primeira vez que o médico pede o resumo em áudio.
+  audioSummaryPath?: string | null;
 }
 
 export interface ReferenceStyle {

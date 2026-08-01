@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Microscope, Search, Loader2, Plus, Trash2, ExternalLink, BookMarked, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Microscope, Search, Loader2, Plus, Trash2, ExternalLink, BookMarked, TrendingUp, Sparkles, Volume2, Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,8 +10,8 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import type { EvidenceLevel, EvidenceSource } from '@/types/session';
-import { fetchEvidenceSources, addEvidenceSource, deleteEvidenceSource } from '@/lib/db';
-import { searchPubmed, type PubmedResult } from '@/lib/pipeline';
+import { fetchEvidenceSources, addEvidenceSource, deleteEvidenceSource, fetchEvidenceUsage, type EvidenceUsage } from '@/lib/db';
+import { searchPubmed, searchEvidenceSemantic, embedEvidenceSource, fetchEvidenceAudioSummary, type PubmedResult } from '@/lib/pipeline';
 import { getUserId } from '@/lib/store';
 
 const LEVEL_LABEL: Record<EvidenceLevel, string> = {
@@ -40,6 +40,7 @@ function levelTone(level: EvidenceLevel): string {
 
 export default function EvidenceLibrary() {
   const [sources, setSources] = useState<EvidenceSource[]>([]);
+  const [usage, setUsage] = useState<Map<string, EvidenceUsage[]>>(new Map());
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
@@ -47,12 +48,21 @@ export default function EvidenceLibrary() {
   const [addingId, setAddingId] = useState<string | null>(null);
   const [showManual, setShowManual] = useState(false);
 
+  const [semQuery, setSemQuery] = useState('');
+  const [semSearching, setSemSearching] = useState(false);
+  const [semResults, setSemResults] = useState<EvidenceSource[] | null>(null);
+
+  const [audioLoadingId, setAudioLoadingId] = useState<string | null>(null);
+  const [audioBySource, setAudioBySource] = useState<Map<string, string>>(new Map());
+
   const refresh = async () => {
     const uid = getUserId();
     if (!uid) return;
     setLoading(true);
     try {
-      setSources(await fetchEvidenceSources(uid));
+      const [srcs, use] = await Promise.all([fetchEvidenceSources(uid), fetchEvidenceUsage(uid)]);
+      setSources(srcs);
+      setUsage(use);
     } catch (err: any) {
       toast.error(`Falha ao carregar biblioteca: ${err?.message ?? err}`);
     } finally {
@@ -61,6 +71,34 @@ export default function EvidenceLibrary() {
   };
 
   useEffect(() => { refresh(); }, []);
+
+  const runSemanticSearch = async () => {
+    if (!semQuery.trim()) return;
+    setSemSearching(true);
+    try {
+      const r = await searchEvidenceSemantic(semQuery.trim());
+      setSemResults(r);
+      if (!r.length) toast.info('Nenhuma fonte relevante encontrada na sua biblioteca ainda pra esse tema.');
+    } catch (err: any) {
+      toast.error(`Busca por relevância falhou: ${err?.message ?? err}`);
+    } finally {
+      setSemSearching(false);
+    }
+  };
+
+  const playAudioSummary = async (source: EvidenceSource) => {
+    const cached = audioBySource.get(source.id);
+    if (cached) return; // já carregado, o <audio> já está na tela
+    setAudioLoadingId(source.id);
+    try {
+      const url = await fetchEvidenceAudioSummary(source.id);
+      setAudioBySource(prev => new Map(prev).set(source.id, url));
+    } catch (err: any) {
+      toast.error(`Falha ao gerar áudio: ${err?.message ?? err}`);
+    } finally {
+      setAudioLoadingId(null);
+    }
+  };
 
   const runSearch = async () => {
     if (!query.trim()) return;
@@ -82,7 +120,7 @@ export default function EvidenceLibrary() {
     if (!uid) return;
     setAddingId(r.pubmed_id);
     try {
-      await addEvidenceSource(uid, {
+      const added = await addEvidenceSource(uid, {
         title: r.title,
         authors: r.authors,
         journal: r.journal,
@@ -94,6 +132,7 @@ export default function EvidenceLibrary() {
         source: 'pubmed',
       });
       toast.success('Adicionado à biblioteca');
+      embedEvidenceSource(added.id).catch(() => {});
       refresh();
     } catch (err: any) {
       toast.error(`Falha ao adicionar: ${err?.message ?? err}`);
@@ -192,6 +231,35 @@ export default function EvidenceLibrary() {
         )}
       </div>
 
+      <div className="border border-primary/30 bg-primary/5 rounded-xl p-5 space-y-4">
+        <Label className="flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5 text-primary" /> Busca inteligente na sua biblioteca</Label>
+        <p className="text-[11px] text-muted-foreground -mt-2">
+          Busca por relevância real (não por palavra-chave) — ranqueia o que você já cadastrou pelo
+          que mais se aplica ao tema, não só lista tudo solto.
+        </p>
+        <div className="flex gap-2">
+          <Input
+            value={semQuery}
+            onChange={e => setSemQuery(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && runSemanticSearch()}
+            placeholder="Ex.: recuperação pós-cirúrgica de joelho"
+          />
+          <Button onClick={runSemanticSearch} disabled={semSearching || !semQuery.trim()} className="bg-gold-gradient text-primary-foreground shrink-0">
+            {semSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+          </Button>
+        </div>
+        {semResults !== null && (
+          <div className="space-y-2 pt-2">
+            {semResults.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Nada relevante encontrado ainda.</p>
+            ) : semResults.map(s => (
+              <SourceCard key={s.id} s={s} usage={usage.get(s.id)} onRemove={remove}
+                onPlayAudio={playAudioSummary} audioUrl={audioBySource.get(s.id)} audioLoading={audioLoadingId === s.id} />
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="flex items-center justify-between">
         <h2 className="font-serif text-xl flex items-center gap-2"><BookMarked className="h-4 w-4 text-primary" /> Sua biblioteca ({sources.length})</h2>
         <Button variant="ghost" size="sm" onClick={() => setShowManual(v => !v)}>
@@ -213,34 +281,68 @@ export default function EvidenceLibrary() {
       ) : (
         <div className="space-y-2">
           {sources.map(s => (
-            <div key={s.id} className="border border-border/60 rounded-lg p-3 flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full ${levelTone(s.evidenceLevel)}`}>
-                    {LEVEL_LABEL[s.evidenceLevel]}
-                  </span>
-                  {s.year && <span className="text-[11px] text-muted-foreground">{s.year}</span>}
-                  {s.source === 'pubmed' && <span className="text-[10px] text-muted-foreground">PubMed</span>}
-                </div>
-                <div className="text-sm font-medium leading-snug">{s.title}</div>
-                {(s.authors || s.journal) && (
-                  <div className="text-xs text-muted-foreground mt-0.5">{s.authors} {s.journal ? `· ${s.journal}` : ''}</div>
-                )}
-                {s.summary && <div className="text-xs text-muted-foreground mt-1">{s.summary}</div>}
-                {s.url && (
-                  <a href={s.url} target="_blank" rel="noreferrer" className="text-[11px] text-primary inline-flex items-center gap-1 mt-1 hover:underline">
-                    Abrir fonte <ExternalLink className="h-3 w-3" />
-                  </a>
-                )}
-              </div>
-              <Button size="sm" variant="ghost" onClick={() => remove(s.id)} className="shrink-0 text-destructive hover:text-destructive">
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </div>
+            <SourceCard key={s.id} s={s} usage={usage.get(s.id)} onRemove={remove}
+              onPlayAudio={playAudioSummary} audioUrl={audioBySource.get(s.id)} audioLoading={audioLoadingId === s.id} />
           ))}
         </div>
       )}
       </div>
+    </div>
+  );
+}
+
+function SourceCard({ s, usage, onRemove, onPlayAudio, audioUrl, audioLoading }: {
+  s: EvidenceSource;
+  usage?: EvidenceUsage[];
+  onRemove: (id: string) => void;
+  onPlayAudio: (s: EvidenceSource) => void;
+  audioUrl?: string;
+  audioLoading: boolean;
+}) {
+  return (
+    <div className="border border-border/60 rounded-lg p-3 flex items-start justify-between gap-3">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 flex-wrap mb-1">
+          <span className={`text-[10px] px-2 py-0.5 rounded-full ${levelTone(s.evidenceLevel)}`}>
+            {LEVEL_LABEL[s.evidenceLevel]}
+          </span>
+          {s.year && <span className="text-[11px] text-muted-foreground">{s.year}</span>}
+          {s.source === 'pubmed' && <span className="text-[10px] text-muted-foreground">PubMed</span>}
+          {usage && usage.length > 0 && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary flex items-center gap-1">
+              <LinkIcon className="h-2.5 w-2.5" /> Usada em {usage.length} {usage.length === 1 ? 'peça' : 'peças'}
+            </span>
+          )}
+        </div>
+        <div className="text-sm font-medium leading-snug">{s.title}</div>
+        {(s.authors || s.journal) && (
+          <div className="text-xs text-muted-foreground mt-0.5">{s.authors} {s.journal ? `· ${s.journal}` : ''}</div>
+        )}
+        {s.summary && <div className="text-xs text-muted-foreground mt-1">{s.summary}</div>}
+        <div className="flex items-center gap-3 flex-wrap mt-1.5">
+          {s.url && (
+            <a href={s.url} target="_blank" rel="noreferrer" className="text-[11px] text-primary inline-flex items-center gap-1 hover:underline">
+              Abrir fonte <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
+          {usage && usage.length > 0 && (
+            <Link to={`/app/piece/${usage[0].pieceId}`} className="text-[11px] text-primary inline-flex items-center gap-1 hover:underline">
+              Ver peça <ExternalLink className="h-3 w-3" />
+            </Link>
+          )}
+        </div>
+        {audioUrl ? (
+          <audio controls src={audioUrl} className="w-full h-8 mt-2" />
+        ) : (
+          <Button size="sm" variant="outline" className="mt-2 h-7 text-[11px]" disabled={audioLoading} onClick={() => onPlayAudio(s)}>
+            {audioLoading ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Volume2 className="h-3 w-3 mr-1" />}
+            {audioLoading ? 'Gerando resumo em áudio...' : 'Ouvir resumo em áudio'}
+          </Button>
+        )}
+      </div>
+      <Button size="sm" variant="ghost" onClick={() => onRemove(s.id)} className="shrink-0 text-destructive hover:text-destructive">
+        <Trash2 className="h-3.5 w-3.5" />
+      </Button>
     </div>
   );
 }
@@ -261,7 +363,7 @@ function ManualAddForm({ onAdded }: { onAdded: () => void }) {
     if (!uid) return;
     setSaving(true);
     try {
-      await addEvidenceSource(uid, {
+      const added = await addEvidenceSource(uid, {
         title: title.trim(),
         authors: authors.trim() || undefined,
         journal: journal.trim() || undefined,
@@ -273,6 +375,7 @@ function ManualAddForm({ onAdded }: { onAdded: () => void }) {
         source: 'manual',
       });
       toast.success('Fonte adicionada');
+      embedEvidenceSource(added.id).catch(() => {});
       onAdded();
     } catch (err: any) {
       toast.error(`Falha ao adicionar: ${err?.message ?? err}`);

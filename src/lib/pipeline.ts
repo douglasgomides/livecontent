@@ -3,7 +3,7 @@
  * Chama a Edge Function `run-pipeline` para pipelines reais (áudio real).
  * Mantém helpers do mock para fluxos síncronos legados (voice_note, science).
  */
-import type { Session, ContentPiece, Topic, ContentFormat, CFMResult, TrendingContentIdea } from '@/types/session';
+import type { Session, ContentPiece, Topic, ContentFormat, CFMResult, TrendingContentIdea, EvidenceSource } from '@/types/session';
 import type { Brain } from '@/types/brain';
 import { supabase } from '@/integrations/supabase/client';
 import { uploadAudio } from './db';
@@ -88,6 +88,48 @@ export async function searchPubmed(query: string, maxResults = 10): Promise<Pubm
   const { data, error } = await supabase.functions.invoke('search-pubmed', { body: { query, maxResults } });
   if (error) throw new Error(await describeFunctionError(error, 'Falha na busca do PubMed'));
   return (data?.results ?? []) as PubmedResult[];
+}
+
+// ─── Evidência científica: relevância semântica + resumo em áudio ──────────
+// Embedding calculado uma vez por fonte (assíncrono, best-effort — nunca
+// bloqueia o cadastro se falhar). Busca semântica ranqueia pelo que já foi
+// embedado; fontes sem embedding ainda simplesmente não aparecem no resultado.
+
+function mapEvidenceRowLocal(row: any): EvidenceSource {
+  return {
+    id: row.id,
+    title: row.title,
+    authors: row.authors ?? undefined,
+    journal: row.journal ?? undefined,
+    year: row.year ?? undefined,
+    url: row.url ?? undefined,
+    pubmedId: row.pubmed_id ?? undefined,
+    evidenceLevel: row.evidence_level,
+    summary: row.summary ?? undefined,
+    tags: Array.isArray(row.tags) ? row.tags : [],
+    source: row.source,
+    createdAt: row.created_at,
+    audioSummaryPath: row.audio_summary_path ?? null,
+  };
+}
+
+export async function embedEvidenceSource(sourceId: string): Promise<void> {
+  const { error } = await supabase.functions.invoke('embed-evidence-source', { body: { source_id: sourceId } });
+  if (error) console.warn('[embed-evidence-source]', error);
+}
+
+export async function searchEvidenceSemantic(query: string): Promise<EvidenceSource[]> {
+  const { data, error } = await supabase.functions.invoke('search-evidence-semantic', { body: { query } });
+  if (error) throw new Error(await describeFunctionError(error, 'Falha na busca por relevância'));
+  return ((data?.results ?? []) as any[]).map(mapEvidenceRowLocal);
+}
+
+export async function fetchEvidenceAudioSummary(sourceId: string): Promise<string> {
+  const { data, error } = await supabase.functions.invoke('evidence-audio-summary', { body: { source_id: sourceId } });
+  if (error || !data?.audio_url) {
+    throw new Error(await describeFunctionError(error, 'Falha ao gerar resumo em áudio'));
+  }
+  return data.audio_url as string;
 }
 
 // ─── Temas em alta (PubMed recente + notícias de saúde BR/internacional) ────
