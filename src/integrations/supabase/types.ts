@@ -33,6 +33,7 @@ export type Database = {
           created_at: string
           doctor: Json
           id: string
+          instagram_account_id: string | null
           objections_opt_in: boolean
           onboarded: boolean
           patient: Json
@@ -44,6 +45,7 @@ export type Database = {
           created_at?: string
           doctor?: Json
           id?: string
+          instagram_account_id?: string | null
           objections_opt_in?: boolean
           onboarded?: boolean
           patient?: Json
@@ -55,6 +57,7 @@ export type Database = {
           created_at?: string
           doctor?: Json
           id?: string
+          instagram_account_id?: string | null
           objections_opt_in?: boolean
           onboarded?: boolean
           patient?: Json
@@ -909,6 +912,60 @@ export type Database = {
           },
         ]
       }
+      social_post_performance: {
+        Row: {
+          caption: string | null
+          comments: number
+          engagement: number | null
+          external_media_id: string
+          id: string
+          likes: number
+          media_type: string | null
+          permalink: string | null
+          platform: string
+          posted_at: string | null
+          reach: number | null
+          saved: number | null
+          shares: number | null
+          synced_at: string
+          user_id: string
+        }
+        Insert: {
+          caption?: string | null
+          comments?: number
+          engagement?: number | null
+          external_media_id: string
+          id?: string
+          likes?: number
+          media_type?: string | null
+          permalink?: string | null
+          platform?: string
+          posted_at?: string | null
+          reach?: number | null
+          saved?: number | null
+          shares?: number | null
+          synced_at?: string
+          user_id: string
+        }
+        Update: {
+          caption?: string | null
+          comments?: number
+          engagement?: number | null
+          external_media_id?: string
+          id?: string
+          likes?: number
+          media_type?: string | null
+          permalink?: string | null
+          platform?: string
+          posted_at?: string | null
+          reach?: number | null
+          saved?: number | null
+          shares?: number | null
+          synced_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           created_at: string
@@ -1056,6 +1113,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      trending_content_ideas: {
+        Row: {
+          fetched_at: string
+          id: string
+          source_title: string | null
+          source_url: string | null
+          specialty: string
+          suggested_format: string | null
+          topic: string
+          why_it_works: string
+        }
+        Insert: {
+          fetched_at?: string
+          id?: string
+          source_title?: string | null
+          source_url?: string | null
+          specialty: string
+          suggested_format?: string | null
+          topic: string
+          why_it_works: string
+        }
+        Update: {
+          fetched_at?: string
+          id?: string
+          source_title?: string | null
+          source_url?: string | null
+          specialty?: string
+          suggested_format?: string | null
+          topic?: string
+          why_it_works?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

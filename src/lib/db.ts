@@ -568,7 +568,7 @@ function mapSocialPostRow(row: any): SocialPostPerformance {
 }
 
 export async function fetchTopOwnPosts(userId: string, limit = 10): Promise<SocialPostPerformance[]> {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('social_post_performance')
     .select('*')
     .eq('user_id', userId)
