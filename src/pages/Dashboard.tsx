@@ -147,9 +147,9 @@ export default function Dashboard() {
       </section>
 
       <section className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <StatCard icon={Clock} label="Consultas este mês" value={thisMonth} />
-        <StatCard icon={FileCheck2} label="Peças aprovadas" value={approved} />
-        <StatCard icon={Shield} label="Conformidade média (CFM)" value={avgCfm || '—'} />
+        <StatCard icon={Clock} label="Consultas este mês" value={thisMonth} tone="primary" />
+        <StatCard icon={FileCheck2} label="Peças aprovadas" value={approved} tone="success" />
+        <StatCard icon={Shield} label="Conformidade média (CFM)" value={avgCfm || '—'} tone="primary" />
       </section>
 
       {(pendingApproval > 0 || queueOpen > 0 || scheduledThisWeek > 0 || blockedCfm > 0) && (
@@ -214,26 +214,42 @@ export default function Dashboard() {
   );
 }
 
-function StatCard({ icon: Icon, label, value }: { icon: any; label: string; value: number | string }) {
+const STAT_TONE = {
+  primary: { iconBg: 'bg-primary/10', icon: 'text-primary', dot: 'bg-primary' },
+  success: { iconBg: 'bg-success/10', icon: 'text-success', dot: 'bg-success' },
+  warning: { iconBg: 'bg-warning/10', icon: 'text-warning', dot: 'bg-warning' },
+  danger: { iconBg: 'bg-destructive/10', icon: 'text-destructive', dot: 'bg-destructive' },
+} as const;
+
+function StatCard({ icon: Icon, label, value, tone = 'primary' }: { icon: any; label: string; value: number | string; tone?: keyof typeof STAT_TONE }) {
+  const t = STAT_TONE[tone];
   return (
-    <div className="border border-border/60 rounded-lg p-5">
-      <div className="flex items-center gap-2 t-eyebrow text-muted-foreground mb-3" style={{ color: 'hsl(var(--muted-foreground))' }}>
-        <Icon className="h-3.5 w-3.5" /> {label}
+    <div className="rounded-2xl border border-border/50 bg-card shadow-sm p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className={`h-10 w-10 rounded-full ${t.iconBg} flex items-center justify-center`}>
+          <Icon className={`h-4 w-4 ${t.icon}`} />
+        </div>
+        <span className={`h-1.5 w-1.5 rounded-full ${t.dot}`} />
       </div>
-      <div className="t-numeric">{value}</div>
+      <div className="t-numeric text-[1.75rem]">{value}</div>
+      <div className="t-micro text-muted-foreground mt-1">{label}</div>
     </div>
   );
 }
 
 function FlowCard({ to, icon: Icon, label, value, tone }: { to: string; icon: any; label: string; value: number; tone: 'primary' | 'warning' | 'danger' }) {
-  const toneCls = tone === 'warning' ? 'text-warning' : tone === 'danger' ? 'text-destructive' : 'text-primary';
-  const borderCls = value > 0 ? (tone === 'warning' ? 'border-warning/40' : tone === 'danger' ? 'border-destructive/40' : 'border-primary/40') : 'border-border/60';
+  const t = STAT_TONE[tone === 'danger' ? 'danger' : tone];
+  const active = value > 0;
   return (
-    <Link to={to} className={`border ${borderCls} rounded-lg p-4 hover:bg-primary/5 transition block`}>
-      <div className="flex items-center gap-2 t-eyebrow text-muted-foreground mb-2">
-        <Icon className={`h-3.5 w-3.5 ${value > 0 ? toneCls : ''}`} /> {label}
+    <Link to={to} className="rounded-2xl border border-border/50 bg-card shadow-sm p-4 hover:shadow-md transition block">
+      <div className="flex items-center justify-between mb-3">
+        <div className={`h-8 w-8 rounded-full ${active ? t.iconBg : 'bg-muted'} flex items-center justify-center`}>
+          <Icon className={`h-3.5 w-3.5 ${active ? t.icon : 'text-muted-foreground'}`} />
+        </div>
+        {active && <span className={`h-1.5 w-1.5 rounded-full ${t.dot}`} />}
       </div>
-      <div className={`t-numeric ${value > 0 ? toneCls : 'text-muted-foreground'}`}>{value}</div>
+      <div className={`t-numeric text-xl ${active ? t.icon : 'text-muted-foreground'}`}>{value}</div>
+      <div className="t-micro text-muted-foreground mt-1">{label}</div>
     </Link>
   );
 }

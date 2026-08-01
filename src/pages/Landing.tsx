@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import {
   Mic, Upload, MessageCircle, Radio, FlaskConical, Youtube, Instagram, Link2,
   ArrowRight, FileText, Linkedin, MapPin, Stethoscope, Globe, Music, Camera,
+  ShieldCheck, Sparkles, ListChecks, LineChart, Plus,
 } from 'lucide-react';
 import { loadProfile } from '@/lib/storage';
 
@@ -59,24 +60,28 @@ export default function Landing() {
       </header>
 
       {/* Hero */}
-      <main className="relative z-10 max-w-4xl mx-auto px-6 pt-16 pb-20 text-center">
-        <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 rounded-full px-3.5 py-1 mb-10 t-micro text-primary uppercase tracking-[0.24em] font-semibold">
-          <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-          Sempre ligada. Sempre sua.
+      <main className="relative z-10 max-w-4xl mx-auto px-6 pt-16 pb-8 text-center">
+        <div className="flex flex-wrap items-center justify-center gap-2.5 mb-8">
+          <span className="inline-flex items-center gap-1.5 border border-primary/25 bg-primary/5 rounded-full px-3 py-1 t-micro text-primary font-semibold">
+            <ShieldCheck className="h-3 w-3" /> Anonimização de dados do paciente
+          </span>
+          <span className="inline-flex items-center gap-1.5 border border-primary/25 bg-primary/5 rounded-full px-3 py-1 t-micro text-primary font-semibold">
+            <ListChecks className="h-3 w-3" /> Compliance CFM by design
+          </span>
         </div>
         <h1 className="t-display">
-          Sua máquina de<br />
-          <span className="text-primary">conteúdo médico.</span>
+          Inteligência artificial na produção<br />
+          de <span className="text-primary">conteúdo médico assertivo.</span>
         </h1>
         <p className="mt-8 t-lead max-w-2xl mx-auto">
-          Grave consultas, palestras e áudios — ou cole um link do YouTube. A ferramenta transforma
-          em Reels, carrosséis, blog, vídeos, podcast e posts prontos para publicar.
+          Grave a consulta, uma palestra ou cole um link. A IA anonimiza, extrai os temas e gera
+          Reels, carrosséis, blog, vídeos, podcast e posts — prontos pra publicar.
         </p>
 
         <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
           <Link to={cta}>
             <Button size="lg" className="h-12 px-8 bg-gold-gradient text-primary-foreground hover:opacity-90 shadow-gold rounded-md font-semibold text-sm">
-              Começar agora <ArrowRight className="ml-2 h-4 w-4" />
+              Começar grátis <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>
           <Link to="/app/new/link">
@@ -85,7 +90,52 @@ export default function Landing() {
             </Button>
           </Link>
         </div>
+
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 t-micro text-muted-foreground">
+          <span className="flex items-center gap-1.5"><Sparkles className="h-3 w-3 text-primary" /> Fácil de começar</span>
+          <span className="flex items-center gap-1.5"><ListChecks className="h-3 w-3 text-primary" /> Plano grátis, sem cartão</span>
+          <span className="flex items-center gap-1.5"><ShieldCheck className="h-3 w-3 text-primary" /> Seus dados, sua conta</span>
+        </div>
       </main>
+
+      {/* Preview do produto — mock ilustrativo da tela real (não é screenshot ao vivo) */}
+      <div className="relative z-10 max-w-4xl mx-auto px-6 pb-20">
+        <div className="rounded-2xl border border-border/60 bg-card shadow-[0_24px_64px_-24px_hsl(var(--primary)/0.25)] overflow-hidden">
+          <div className="flex items-center gap-1.5 border-b border-border/60 px-4 py-3 bg-secondary/40">
+            <span className="h-2.5 w-2.5 rounded-full bg-destructive/40" />
+            <span className="h-2.5 w-2.5 rounded-full bg-warning/40" />
+            <span className="h-2.5 w-2.5 rounded-full bg-success/40" />
+            <span className="ml-3 t-micro text-muted-foreground font-medium">Consulta Creator</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] text-left">
+            <div className="border-b sm:border-b-0 sm:border-r border-border/60 p-4 space-y-3">
+              <div className="flex items-center gap-1.5 bg-gold-gradient text-primary-foreground rounded-lg px-3 py-2 t-micro font-semibold">
+                <Plus className="h-3 w-3" /> Nova consulta
+              </div>
+              <div className="space-y-2 pt-2">
+                {['Dor lombar crônica', 'Retorno pós-cirúrgico', 'Ansiedade e sono'].map(t => (
+                  <div key={t} className="t-micro text-muted-foreground truncate">{t}</div>
+                ))}
+              </div>
+            </div>
+            <div className="p-5 space-y-3">
+              <div className="flex items-center gap-2 t-eyebrow">
+                <LineChart className="h-3.5 w-3.5" /> Temas extraídos
+              </div>
+              {[
+                { title: 'Por que a dor volta depois de melhorar', stage: 'C1' },
+                { title: 'O que esperar da recuperação', stage: 'C2' },
+                { title: 'Quando vale considerar o procedimento', stage: 'C3' },
+              ].map(t => (
+                <div key={t.title} className="flex items-center justify-between gap-3 border border-border/60 rounded-lg px-3.5 py-2.5">
+                  <span className="text-sm font-medium truncate">{t.title}</span>
+                  <span className="t-micro font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary shrink-0">{t.stage}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="gold-hairline max-w-4xl mx-auto" />
 
