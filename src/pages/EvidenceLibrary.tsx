@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Microscope, Search, Loader2, Plus, Trash2, ExternalLink, BookMarked, TrendingUp, Sparkles, Volume2, Link as LinkIcon } from 'lucide-react';
+import { ArrowLeft, Microscope, Search, Loader2, Plus, Trash2, ExternalLink, BookMarked, TrendingUp, Sparkles, Volume2, Link as LinkIcon, Radar, Mic2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,9 +9,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import type { EvidenceLevel, EvidenceSource } from '@/types/session';
-import { fetchEvidenceSources, addEvidenceSource, deleteEvidenceSource, fetchEvidenceUsage, type EvidenceUsage } from '@/lib/db';
-import { searchPubmed, searchEvidenceSemantic, embedEvidenceSource, fetchEvidenceAudioSummary, type PubmedResult } from '@/lib/pipeline';
+import type { EvidenceLevel, EvidenceSource, EvidenceTopicWatch, EvidenceTopicUpdate, DebateSegment } from '@/types/session';
+import { fetchEvidenceSources, addEvidenceSource, deleteEvidenceSource, fetchEvidenceUsage, type EvidenceUsage, fetchTopicWatches, addTopicWatch, deleteTopicWatch, fetchTopicUpdates } from '@/lib/db';
+import { searchPubmed, searchEvidenceSemantic, embedEvidenceSource, fetchEvidenceAudioSummary, fetchEvidenceAudioDebate, type PubmedResult } from '@/lib/pipeline';
 import { getUserId } from '@/lib/store';
 
 const LEVEL_LABEL: Record<EvidenceLevel, string> = {
@@ -54,6 +54,14 @@ export default function EvidenceLibrary() {
 
   const [audioLoadingId, setAudioLoadingId] = useState<string | null>(null);
   const [audioBySource, setAudioBySource] = useState<Map<string, string>>(new Map());
+  const [debateLoadingId, setDebateLoadingId] = useState<string | null>(null);
+  const [debateBySource, setDebateBySource] = useState<Map<string, DebateSegment[]>>(new Map());
+
+  const [watches, setWatches] = useState<EvidenceTopicWatch[]>([]);
+  const [watchUpdates, setWatchUpdates] = useState<Map<string, EvidenceTopicUpdate[]>>(new Map());
+  const [newTopic, setNewTopic] = useState('');
+  const [addingWatch, setAddingWatch] = useState(false);
+  const [watchesLoading, setWatchesLoading] = useState(true);
 
   const refresh = async () => {
     const uid = getUserId();
@@ -70,7 +78,60 @@ export default function EvidenceLibrary() {
     }
   };
 
-  useEffect(() => { refresh(); }, []);
+  const refreshWatches = async () => {
+    const uid = getUserId();
+    if (!uid) return;
+    setWatchesLoading(true);
+    try {
+      const w = await fetchTopicWatches(uid);
+      setWatches(w);
+      setWatchUpdates(await fetchTopicUpdates(w.map(x => x.id)));
+    } catch (err: any) {
+      toast.error(`Falha ao carregar temas monitorados: ${err?.message ?? err}`);
+    } finally {
+      setWatchesLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); refreshWatches(); }, []);
+
+  const submitTopicWatch = async () => {
+    const uid = getUserId();
+    if (!uid || !newTopic.trim()) return;
+    setAddingWatch(true);
+    try {
+      await addTopicWatch(uid, newTopic.trim());
+      setNewTopic('');
+      toast.success('Tema em monitoramento. Novidades aparecem aqui automaticamente em alguns dias.');
+      await refreshWatches();
+    } catch (err: any) {
+      toast.error(`Falha ao adicionar tema: ${err?.message ?? err}`);
+    } finally {
+      setAddingWatch(false);
+    }
+  };
+
+  const removeTopicWatch = async (id: string) => {
+    try {
+      await deleteTopicWatch(id);
+      setWatches(prev => prev.filter(w => w.id !== id));
+    } catch (err: any) {
+      toast.error(`Falha ao remover: ${err?.message ?? err}`);
+    }
+  };
+
+  const playDebate = async (source: EvidenceSource) => {
+    if (debateBySource.has(source.id)) return;
+    setDebateLoadingId(source.id);
+    try {
+      const segments = await fetchEvidenceAudioDebate(source.id);
+      setDebateBySource(prev => new Map(prev).set(source.id, segments));
+    } catch (err: any) {
+      toast.error(`Falha ao gerar debate: ${err?.message ?? err}`);
+    } finally {
+      setDebateLoadingId(null);
+    }
+  };
 
   const runSemanticSearch = async () => {
     if (!semQuery.trim()) return;
@@ -254,8 +315,69 @@ export default function EvidenceLibrary() {
               <p className="text-xs text-muted-foreground">Nada relevante encontrado ainda.</p>
             ) : semResults.map(s => (
               <SourceCard key={s.id} s={s} usage={usage.get(s.id)} onRemove={remove}
-                onPlayAudio={playAudioSummary} audioUrl={audioBySource.get(s.id)} audioLoading={audioLoadingId === s.id} />
+                onPlayAudio={playAudioSummary} audioUrl={audioBySource.get(s.id)} audioLoading={audioLoadingId === s.id}
+                onPlayDebate={playDebate} debateSegments={debateBySource.get(s.id)} debateLoading={debateLoadingId === s.id} />
             ))}
+          </div>
+        )}
+      </div>
+
+      <div className="border border-border/60 rounded-xl p-5 space-y-4">
+        <Label className="flex items-center gap-1.5"><Radar className="h-3.5 w-3.5 text-primary" /> Monitorar um tema</Label>
+        <p className="text-[11px] text-muted-foreground -mt-2">
+          Assine um assunto e a IA pesquisa sozinha, de tempos em tempos, se há novidade real
+          (estudo novo, diretriz atualizada) — sem você precisar procurar.
+        </p>
+        <div className="flex gap-2">
+          <Input
+            value={newTopic}
+            onChange={e => setNewTopic(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && submitTopicWatch()}
+            placeholder="Ex.: tratamento de enxaqueca crônica"
+          />
+          <Button onClick={submitTopicWatch} disabled={addingWatch || !newTopic.trim()} className="bg-gold-gradient text-primary-foreground shrink-0">
+            {addingWatch ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          </Button>
+        </div>
+        {watchesLoading ? (
+          <p className="text-xs text-muted-foreground">Carregando…</p>
+        ) : watches.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Nenhum tema em monitoramento ainda.</p>
+        ) : (
+          <div className="space-y-3 pt-2">
+            {watches.map(w => {
+              const updates = watchUpdates.get(w.id) ?? [];
+              return (
+                <div key={w.id} className="border border-border/60 rounded-lg p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="text-sm font-medium">{w.topic}</div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {w.lastCheckedAt ? `Última checagem: ${new Date(w.lastCheckedAt).toLocaleDateString('pt-BR')}` : 'Ainda não checado — a primeira busca roda em breve'}
+                      </div>
+                    </div>
+                    <Button size="sm" variant="ghost" onClick={() => removeTopicWatch(w.id)} className="shrink-0 text-destructive hover:text-destructive">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  {updates.length > 0 && (
+                    <div className="space-y-2 mt-2">
+                      {updates.map(u => (
+                        <div key={u.id} className="border border-border/60 rounded-lg p-2.5 bg-background">
+                          <div className="text-xs font-medium">{u.title}</div>
+                          <div className="text-[11px] text-muted-foreground mt-0.5">{u.summary}</div>
+                          {u.sourceUrl && (
+                            <a href={u.sourceUrl} target="_blank" rel="noreferrer" className="text-[11px] text-primary inline-flex items-center gap-1 mt-1 hover:underline">
+                              {u.sourceTitle || 'Ver fonte'} <ExternalLink className="h-2.5 w-2.5" />
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -282,7 +404,8 @@ export default function EvidenceLibrary() {
         <div className="space-y-2">
           {sources.map(s => (
             <SourceCard key={s.id} s={s} usage={usage.get(s.id)} onRemove={remove}
-              onPlayAudio={playAudioSummary} audioUrl={audioBySource.get(s.id)} audioLoading={audioLoadingId === s.id} />
+              onPlayAudio={playAudioSummary} audioUrl={audioBySource.get(s.id)} audioLoading={audioLoadingId === s.id}
+              onPlayDebate={playDebate} debateSegments={debateBySource.get(s.id)} debateLoading={debateLoadingId === s.id} />
           ))}
         </div>
       )}
@@ -291,13 +414,16 @@ export default function EvidenceLibrary() {
   );
 }
 
-function SourceCard({ s, usage, onRemove, onPlayAudio, audioUrl, audioLoading }: {
+function SourceCard({ s, usage, onRemove, onPlayAudio, audioUrl, audioLoading, onPlayDebate, debateSegments, debateLoading }: {
   s: EvidenceSource;
   usage?: EvidenceUsage[];
   onRemove: (id: string) => void;
   onPlayAudio: (s: EvidenceSource) => void;
   audioUrl?: string;
   audioLoading: boolean;
+  onPlayDebate: (s: EvidenceSource) => void;
+  debateSegments?: DebateSegment[];
+  debateLoading: boolean;
 }) {
   return (
     <div className="border border-border/60 rounded-lg p-3 flex items-start justify-between gap-3">
@@ -331,14 +457,22 @@ function SourceCard({ s, usage, onRemove, onPlayAudio, audioUrl, audioLoading }:
             </Link>
           )}
         </div>
-        {audioUrl ? (
-          <audio controls src={audioUrl} className="w-full h-8 mt-2" />
-        ) : (
-          <Button size="sm" variant="outline" className="mt-2 h-7 text-[11px]" disabled={audioLoading} onClick={() => onPlayAudio(s)}>
-            {audioLoading ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Volume2 className="h-3 w-3 mr-1" />}
-            {audioLoading ? 'Gerando resumo em áudio...' : 'Ouvir resumo em áudio'}
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2 mt-2">
+          {!audioUrl && (
+            <Button size="sm" variant="outline" className="h-7 text-[11px]" disabled={audioLoading} onClick={() => onPlayAudio(s)}>
+              {audioLoading ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Volume2 className="h-3 w-3 mr-1" />}
+              {audioLoading ? 'Gerando resumo...' : 'Ouvir resumo em áudio'}
+            </Button>
+          )}
+          {!debateSegments && (
+            <Button size="sm" variant="outline" className="h-7 text-[11px]" disabled={debateLoading} onClick={() => onPlayDebate(s)}>
+              {debateLoading ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Mic2 className="h-3 w-3 mr-1" />}
+              {debateLoading ? 'Gerando debate...' : 'Ouvir debate em áudio'}
+            </Button>
+          )}
+        </div>
+        {audioUrl && <audio controls src={audioUrl} className="w-full h-8 mt-2" />}
+        {debateSegments && <DebatePlayer segments={debateSegments} />}
       </div>
       <Button size="sm" variant="ghost" onClick={() => onRemove(s.id)} className="shrink-0 text-destructive hover:text-destructive">
         <Trash2 className="h-3.5 w-3.5" />
@@ -426,6 +560,33 @@ function ManualAddForm({ onAdded }: { onAdded: () => void }) {
           {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null} Salvar fonte
         </Button>
       </div>
+    </div>
+  );
+}
+
+// Toca os segmentos do debate em sequência (locutor A / especialista B) — sem
+// precisar costurar os áudios num arquivo só, só avança pro próximo ao terminar.
+function DebatePlayer({ segments }: { segments: DebateSegment[] }) {
+  const [index, setIndex] = useState(0);
+  const current = segments[index];
+  if (!current) return null;
+  return (
+    <div className="mt-2 border border-border/60 rounded-lg p-2.5">
+      <div className="flex items-center justify-between mb-1.5">
+        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${current.speaker === 'A' ? 'bg-primary/15 text-primary' : 'bg-secondary text-foreground'}`}>
+          {current.speaker === 'A' ? 'Locutor(a)' : 'Especialista'}
+        </span>
+        <span className="text-[10px] text-muted-foreground">{index + 1}/{segments.length}</span>
+      </div>
+      <p className="text-xs text-muted-foreground mb-2">{current.text}</p>
+      <audio
+        key={index}
+        controls
+        autoPlay
+        src={current.audioUrl}
+        className="w-full h-8"
+        onEnded={() => setIndex(i => Math.min(i + 1, segments.length - 1))}
+      />
     </div>
   );
 }

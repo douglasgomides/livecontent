@@ -401,8 +401,11 @@ export type Database = {
       }
       evidence_sources: {
         Row: {
+          audio_debate_segments: Json | null
+          audio_summary_path: string | null
           authors: string | null
           created_at: string
+          embedding: string | null
           evidence_level: Database["public"]["Enums"]["evidence_level"]
           id: string
           journal: string | null
@@ -417,8 +420,11 @@ export type Database = {
           year: number | null
         }
         Insert: {
+          audio_debate_segments?: Json | null
+          audio_summary_path?: string | null
           authors?: string | null
           created_at?: string
+          embedding?: string | null
           evidence_level?: Database["public"]["Enums"]["evidence_level"]
           id?: string
           journal?: string | null
@@ -433,8 +439,11 @@ export type Database = {
           year?: number | null
         }
         Update: {
+          audio_debate_segments?: Json | null
+          audio_summary_path?: string | null
           authors?: string | null
           created_at?: string
+          embedding?: string | null
           evidence_level?: Database["public"]["Enums"]["evidence_level"]
           id?: string
           journal?: string | null
@@ -447,6 +456,74 @@ export type Database = {
           url?: string | null
           user_id?: string
           year?: number | null
+        }
+        Relationships: []
+      }
+      evidence_topic_updates: {
+        Row: {
+          found_at: string
+          id: string
+          source_title: string | null
+          source_url: string | null
+          summary: string
+          title: string
+          user_id: string
+          watch_id: string
+        }
+        Insert: {
+          found_at?: string
+          id?: string
+          source_title?: string | null
+          source_url?: string | null
+          summary: string
+          title: string
+          user_id: string
+          watch_id: string
+        }
+        Update: {
+          found_at?: string
+          id?: string
+          source_title?: string | null
+          source_url?: string | null
+          summary?: string
+          title?: string
+          user_id?: string
+          watch_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_topic_updates_watch_id_fkey"
+            columns: ["watch_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_topic_watches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evidence_topic_watches: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          last_checked_at: string | null
+          topic: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          last_checked_at?: string | null
+          topic: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          last_checked_at?: string | null
+          topic?: string
+          user_id?: string
         }
         Relationships: []
       }

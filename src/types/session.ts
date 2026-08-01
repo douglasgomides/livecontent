@@ -223,6 +223,34 @@ export interface PreConsultationResponse {
   linkedSessionId: string | null;
 }
 
+// Assinatura de tema pra monitoramento automático de novidades (evidência
+// científica) — pesquisado periodicamente, nunca inventado.
+export interface EvidenceTopicWatch {
+  id: string;
+  topic: string;
+  active: boolean;
+  createdAt: string;
+  lastCheckedAt: string | null;
+}
+
+export interface EvidenceTopicUpdate {
+  id: string;
+  watchId: string;
+  title: string;
+  summary: string;
+  sourceTitle: string | null;
+  sourceUrl: string | null;
+  foundAt: string;
+}
+
+// Um turno do resumo em áudio "debatido" (duas vozes) sobre uma fonte de
+// evidência — já com a signed URL do segmento pronto pra tocar.
+export interface DebateSegment {
+  speaker: 'A' | 'B';
+  text: string;
+  audioUrl: string;
+}
+
 // Catálogo de produtos/procedimentos do médico — cadastrado uma vez, usado pra
 // a inteligência comercial sugerir upsell casando com algo real que existe.
 export type ProductCategory = 'procedimento' | 'pacote' | 'plano_recorrente' | 'produto' | 'servico' | 'outro';

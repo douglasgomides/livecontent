@@ -3,7 +3,7 @@
  * Chama a Edge Function `run-pipeline` para pipelines reais (áudio real).
  * Mantém helpers do mock para fluxos síncronos legados (voice_note, science).
  */
-import type { Session, ContentPiece, Topic, ContentFormat, CFMResult, TrendingContentIdea, EvidenceSource } from '@/types/session';
+import type { Session, ContentPiece, Topic, ContentFormat, CFMResult, TrendingContentIdea, EvidenceSource, DebateSegment } from '@/types/session';
 import type { Brain } from '@/types/brain';
 import { supabase } from '@/integrations/supabase/client';
 import { uploadAudio } from './db';
@@ -130,6 +130,14 @@ export async function fetchEvidenceAudioSummary(sourceId: string): Promise<strin
     throw new Error(await describeFunctionError(error, 'Falha ao gerar resumo em áudio'));
   }
   return data.audio_url as string;
+}
+
+export async function fetchEvidenceAudioDebate(sourceId: string): Promise<DebateSegment[]> {
+  const { data, error } = await supabase.functions.invoke('evidence-audio-debate', { body: { source_id: sourceId } });
+  if (error || !Array.isArray(data?.segments)) {
+    throw new Error(await describeFunctionError(error, 'Falha ao gerar debate em áudio'));
+  }
+  return (data.segments as any[]).map(s => ({ speaker: s.speaker, text: s.text, audioUrl: s.audio_url }));
 }
 
 // ─── Temas em alta (PubMed recente + notícias de saúde BR/internacional) ────

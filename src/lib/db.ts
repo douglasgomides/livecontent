@@ -19,6 +19,8 @@ import type {
   PreConsultationResponse,
   Product,
   ProductCategory,
+  EvidenceTopicWatch,
+  EvidenceTopicUpdate,
 } from '@/types/session';
 import type { Brain } from '@/types/brain';
 import { EMPTY_BRAIN } from '@/types/brain';
@@ -771,4 +773,71 @@ export async function updateProductActive(productId: string, active: boolean): P
 export async function deleteProduct(productId: string): Promise<void> {
   const { error } = await supabase.from('products').delete().eq('id', productId);
   if (error) throw error;
+}
+
+// ─── Monitoramento de tema (evidência científica) ──────────────────────────
+
+function mapTopicWatchRow(row: any): EvidenceTopicWatch {
+  return {
+    id: row.id,
+    topic: row.topic,
+    active: row.active,
+    createdAt: row.created_at,
+    lastCheckedAt: row.last_checked_at ?? null,
+  };
+}
+
+function mapTopicUpdateRow(row: any): EvidenceTopicUpdate {
+  return {
+    id: row.id,
+    watchId: row.watch_id,
+    title: row.title,
+    summary: row.summary,
+    sourceTitle: row.source_title ?? null,
+    sourceUrl: row.source_url ?? null,
+    foundAt: row.found_at,
+  };
+}
+
+export async function fetchTopicWatches(userId: string): Promise<EvidenceTopicWatch[]> {
+  const { data, error } = await supabase
+    .from('evidence_topic_watches')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(mapTopicWatchRow);
+}
+
+export async function addTopicWatch(userId: string, topic: string): Promise<EvidenceTopicWatch> {
+  const { data, error } = await supabase
+    .from('evidence_topic_watches')
+    .insert({ user_id: userId, topic })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return mapTopicWatchRow(data);
+}
+
+export async function deleteTopicWatch(id: string): Promise<void> {
+  const { error } = await supabase.from('evidence_topic_watches').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function fetchTopicUpdates(watchIds: string[]): Promise<Map<string, EvidenceTopicUpdate[]>> {
+  const map = new Map<string, EvidenceTopicUpdate[]>();
+  if (!watchIds.length) return map;
+  const { data, error } = await supabase
+    .from('evidence_topic_updates')
+    .select('*')
+    .in('watch_id', watchIds)
+    .order('found_at', { ascending: false });
+  if (error) throw error;
+  (data ?? []).forEach((row: any) => {
+    const u = mapTopicUpdateRow(row);
+    const list = map.get(u.watchId) ?? [];
+    list.push(u);
+    map.set(u.watchId, list);
+  });
+  return map;
 }
