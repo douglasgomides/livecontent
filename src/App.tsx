@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
+import PreConsultationForm from "./pages/PreConsultationForm";
+import PreConsultation from "./pages/PreConsultation";
 import Onboarding from "./pages/Onboarding";
 import AppShell from "./components/app/AppShell";
 import Dashboard from "./pages/Dashboard";
@@ -72,6 +74,7 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/pre-consulta/:doctorId" element={<PreConsultationForm />} />
             <Route path="/termos" element={<Terms />} />
             <Route path="/privacidade" element={<Privacy />} />
             <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
@@ -102,6 +105,7 @@ const App = () => (
               <Route path="trends" element={<Trends />} />
               <Route path="reference-styles" element={<ReferenceStyles />} />
               <Route path="brand-photos" element={<BrandPhotos />} />
+              <Route path="pre-consulta" element={<PreConsultation />} />
               <Route path="brain" element={<BrainPage />} />
               <Route path="settings" element={<Settings />} />
               <Route path="admin" element={<Admin />} />

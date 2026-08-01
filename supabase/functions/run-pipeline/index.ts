@@ -266,8 +266,19 @@ Deno.serve(async (req) => {
     // só faz sentido em consulta real com paciente (recording/upload) — palestra, nota de
     // voz solta, link importado e science-to-content não têm oferta comercial pra analisar.
     const isRealConsultation = session.source === 'recording' || session.source === 'upload';
+    let preConsultContext: string | null = null;
+    if (isRealConsultation) {
+      const { data: preConsultRow } = await supabase
+        .from('preconsultation_responses').select('answers')
+        .eq('linked_session_id', session_id).maybeSingle();
+      if (preConsultRow?.answers && Object.keys(preConsultRow.answers).length) {
+        preConsultContext = Object.entries(preConsultRow.answers as Record<string, string>)
+          .map(([q, a]) => `- ${PRE_CONSULT_LABEL[q] ?? q}: ${a}`)
+          .join('\n');
+      }
+    }
     const commercialIntelPromise = isRealConsultation
-      ? extractCommercialIntelligence(anthropicKey, anonymized).catch(() => null)
+      ? extractCommercialIntelligence(anthropicKey, anonymized, preConsultContext).catch(() => null)
       : Promise.resolve(null);
 
     const CONCURRENCY = 3;
@@ -426,6 +437,16 @@ const OBJECTION_LABEL: Record<string, string> = {
   need_think_it_over: 'Precisa pensar', family_spouse_approval: 'Aprovação de família/cônjuge',
   insurance_coverage: 'Cobertura de plano', previous_bad_experience: 'Experiência ruim anterior',
   scheduling_time: 'Tempo/agenda', other: 'Outro',
+};
+
+// Rótulos legíveis pras perguntas fixas de src/lib/preConsultQuestions.ts — usados só
+// pra formatar o contexto passado pra extractCommercialIntelligence.
+const PRE_CONSULT_LABEL: Record<string, string> = {
+  motivo_consulta: 'O que trouxe o paciente à consulta',
+  procedimento_interesse: 'Procedimento/tratamento de interesse já sinalizado',
+  pesquisou_outros: 'Já pesquisou com outro profissional',
+  orcamento: 'Sinalização sobre investimento/orçamento',
+  duvidas_receios: 'Dúvidas ou receios já compartilhados antes da consulta',
 };
 
 function buildGenUser(topic: any, _format: string, transcript: string, brain: any, evidence: any[] = [], referenceStructure: string | null = null, referenceOwnership: 'own' | 'other' = 'other', objectionsBlock: string = '', referenceExtractedCopy: string | null = null) {

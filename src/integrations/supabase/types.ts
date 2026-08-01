@@ -694,6 +694,44 @@ export type Database = {
           },
         ]
       }
+      preconsultation_responses: {
+        Row: {
+          answers: Json
+          id: string
+          linked_session_id: string | null
+          patient_contact: string | null
+          patient_name: string
+          submitted_at: string
+          user_id: string
+        }
+        Insert: {
+          answers?: Json
+          id?: string
+          linked_session_id?: string | null
+          patient_contact?: string | null
+          patient_name: string
+          submitted_at?: string
+          user_id: string
+        }
+        Update: {
+          answers?: Json
+          id?: string
+          linked_session_id?: string | null
+          patient_contact?: string | null
+          patient_name?: string
+          submitted_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "preconsultation_responses_linked_session_id_fkey"
+            columns: ["linked_session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

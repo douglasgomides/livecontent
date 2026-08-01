@@ -204,6 +204,18 @@ export interface SocialPostPerformance {
   syncedAt: string;
 }
 
+// Resposta de um paciente ao formulário de pré-consulta (link público avulso,
+// sem conta) — fica solta até o médico vincular manualmente a uma consulta
+// gravada depois, pra cruzar com a inteligência comercial dessa consulta.
+export interface PreConsultationResponse {
+  id: string;
+  patientName: string;
+  patientContact: string | null;
+  answers: Record<string, string>;
+  submittedAt: string;
+  linkedSessionId: string | null;
+}
+
 export type BrandPhotoCategory = 'working' | 'lifestyle' | 'family' | 'clinic' | 'team' | 'other';
 
 // Foto que o médico sobe (dele, da clínica, da equipe) pra IA usar como fundo

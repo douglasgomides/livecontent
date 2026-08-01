@@ -22,6 +22,13 @@ periódica, indicação familiar) baseadas SÓ no que foi dito na consulta — n
 que a clínica não mencionou; (2) um argumento recomendado pro PRÓXIMO contato com esse paciente
 específico, considerando as objeções que ainda não foram resolvidas e as dores identificadas.
 
+Se vier junto um bloco de "Respostas do paciente no formulário de pré-consulta" antes da
+transcrição, cruze essas respostas com o que foi dito na consulta: elas já sinalizam motivo real,
+procedimento de interesse e sensibilidade a preço ANTES do médico entrar na sala — use isso pra
+deixar as oportunidades de upsell e o argumento pro próximo contato mais específicos e menos
+genéricos, mas nunca cite o formulário como fonte no texto (fale como se fosse conhecimento natural
+da consulta).
+
 Retorne SÓ um JSON no formato exato abaixo — sem markdown, sem texto fora do JSON:
 {
   "houve_oferta_comercial": boolean,
@@ -115,14 +122,21 @@ const VALID_OBJ_CATEGORIA = new Set(['preco', 'tempo', 'medo_dor', 'duvida_efica
 const VALID_DOR_CATEGORIA = new Set(['estetica', 'funcional', 'emocional', 'social', 'financeira', 'outro']);
 const VALID_UPSELL_TIPO = new Set(['plano_recorrente', 'combo_procedimentos', 'upgrade_pacote', 'manutencao_periodica', 'indicacao_familiar', 'outro']);
 
-export async function extractCommercialIntelligence(anthropicKey: string, anonymizedTranscript: string): Promise<CommercialIntelligenceRow> {
+export async function extractCommercialIntelligence(
+  anthropicKey: string,
+  anonymizedTranscript: string,
+  preConsultContext: string | null = null,
+): Promise<CommercialIntelligenceRow> {
   try {
+    const userContent = preConsultContext
+      ? `## Respostas do paciente no formulário de pré-consulta (preenchido antes desta consulta)\n${preConsultContext}\n\n## Transcrição da consulta\n${anonymizedTranscript}`
+      : anonymizedTranscript;
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify({
         model: MODEL, max_tokens: 3000, system: COMMERCIAL_SYSTEM,
-        messages: [{ role: 'user', content: anonymizedTranscript }],
+        messages: [{ role: 'user', content: userContent }],
       }),
     });
     if (!r.ok) { console.warn('[commercial-intel] anthropic', r.status); return FALLBACK; }

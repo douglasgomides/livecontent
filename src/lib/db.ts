@@ -16,6 +16,7 @@ import type {
   BrandPhotoCategory,
   SocialPostPerformance,
   SessionCommercialIntelligence,
+  PreConsultationResponse,
 } from '@/types/session';
 import type { Brain } from '@/types/brain';
 import { EMPTY_BRAIN } from '@/types/brain';
@@ -620,4 +621,63 @@ export async function fetchCommercialIntelligenceForSession(sessionId: string): 
     .maybeSingle();
   if (error) throw error;
   return data ? mapCommercialIntelligenceRow(data) : null;
+}
+
+// ─── Formulário de pré-consulta (link público avulso) ──────────────────────
+
+function mapPreConsultationRow(row: any): PreConsultationResponse {
+  return {
+    id: row.id,
+    patientName: row.patient_name,
+    patientContact: row.patient_contact ?? null,
+    answers: row.answers ?? {},
+    submittedAt: row.submitted_at,
+    linkedSessionId: row.linked_session_id ?? null,
+  };
+}
+
+// Chamado da tela pública /pre-consulta/:doctorId — sem sessão autenticada,
+// funciona porque a policy de insert é aberta pro papel anon.
+export async function submitPreConsultationForm(
+  doctorUserId: string,
+  patientName: string,
+  patientContact: string,
+  answers: Record<string, string>,
+): Promise<void> {
+  const { error } = await supabase.from('preconsultation_responses').insert({
+    user_id: doctorUserId,
+    patient_name: patientName,
+    patient_contact: patientContact || null,
+    answers,
+  });
+  if (error) throw error;
+}
+
+export async function fetchPreConsultationResponses(userId: string): Promise<PreConsultationResponse[]> {
+  const { data, error } = await supabase
+    .from('preconsultation_responses')
+    .select('*')
+    .eq('user_id', userId)
+    .order('submitted_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(mapPreConsultationRow);
+}
+
+export async function linkPreConsultationResponse(responseId: string, sessionId: string): Promise<void> {
+  const { error } = await supabase
+    .from('preconsultation_responses')
+    .update({ linked_session_id: sessionId })
+    .eq('id', responseId);
+  if (error) throw error;
+}
+
+export async function fetchRecentSessionsForLinking(userId: string, limit = 20): Promise<{ id: string; title: string; createdAt: string }[]> {
+  const { data, error } = await supabase
+    .from('sessions')
+    .select('id, title, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []).map((r: any) => ({ id: r.id, title: r.title, createdAt: r.created_at }));
 }
