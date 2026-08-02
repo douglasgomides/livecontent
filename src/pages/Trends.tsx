@@ -155,7 +155,7 @@ export default function Trends() {
             <h2 className="font-serif text-xl">Sugestão da semana</h2>
           </div>
           <p className="text-sm text-muted-foreground">
-            Ative "Objeções aprendidas" em <Link to="/app/insights" className="text-primary hover:underline">Insights</Link> pra
+            Ative "Objeções aprendidas" em <Link to="/app/comercial" className="text-primary hover:underline">Inteligência comercial</Link> pra
             receber, toda semana, uma sugestão de tema baseada na objeção real mais frequente dos seus pacientes.
           </p>
         </section>

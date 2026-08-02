@@ -93,10 +93,10 @@ export default function Dashboard() {
       )}
 
       {sessions.length > 0 && (
-        <Link to="/app/insights" className="flex items-center gap-3 border border-primary/40 bg-primary/5 rounded-lg p-4 hover:bg-primary/10 transition">
+        <Link to="/app/comercial" className="flex items-center gap-3 border border-primary/40 bg-primary/5 rounded-lg p-4 hover:bg-primary/10 transition">
           <LineChart className="h-5 w-5 text-primary shrink-0" />
           <div className="flex-1 min-w-0">
-            <div className="font-medium text-sm">Inteligência de conversão: objeções, sentimento e argumento sugerido</div>
+            <div className="font-medium text-sm">Inteligência comercial: objeções, sentimento e argumento sugerido</div>
             <div className="text-xs text-muted-foreground">Extraído automaticamente da fala dos pacientes — veja o que eles realmente objetam, sentem e perguntam.</div>
           </div>
           <ArrowRight className="h-4 w-4 text-primary shrink-0" />

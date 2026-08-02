@@ -34,6 +34,7 @@ import EvidenceLibrary from "./pages/EvidenceLibrary";
 import ReferenceStyles from "./pages/ReferenceStyles";
 import BrandPhotos from "./pages/BrandPhotos";
 import Insights from "./pages/Insights";
+import Commercial from "./pages/Commercial";
 import Products from "./pages/Products";
 import Trends from "./pages/Trends";
 import Admin from "./pages/Admin";
@@ -106,6 +107,7 @@ const App = () => (
               <Route path="calendar" element={<CalendarPage />} />
               <Route path="evidence" element={<EvidenceLibrary />} />
               <Route path="insights" element={<Insights />} />
+              <Route path="comercial" element={<Commercial />} />
               <Route path="trends" element={<Trends />} />
               <Route path="reference-styles" element={<ReferenceStyles />} />
               <Route path="brand-photos" element={<BrandPhotos />} />

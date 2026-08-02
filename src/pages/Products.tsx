@@ -139,7 +139,7 @@ export default function Products() {
                 placeholder="Ex: 1000"
               />
               <p className="text-[11px] text-muted-foreground">
-                Só um número. É o que entra na estimativa de receita da Previsibilidade (Inteligência de conversão).
+                Só um número. É o que entra na estimativa de receita da Previsibilidade (Inteligência comercial).
               </p>
             </div>
             <div className="space-y-2">

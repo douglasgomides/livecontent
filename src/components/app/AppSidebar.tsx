@@ -27,6 +27,7 @@ import {
   LogOut,
   User,
   UserPlus,
+  Target,
 } from 'lucide-react';
 
 import {
@@ -77,7 +78,8 @@ const workItems = [
   { title: 'Calendário', url: '/app/calendar', icon: CalendarDays },
   { title: 'Fila de publicação', url: '/app/publish-queue', icon: Send },
   { title: 'Biblioteca', url: '/app/library', icon: Library },
-  { title: 'Inteligência de conversão', url: '/app/insights', icon: LineChart },
+  { title: 'Inteligência de conteúdo', url: '/app/insights', icon: LineChart },
+  { title: 'Inteligência comercial', url: '/app/comercial', icon: Target },
   { title: 'Pré-consulta', url: '/app/pre-consulta', icon: ClipboardList },
   { title: 'Captação de leads', url: '/app/leads', icon: UserPlus },
 ];
