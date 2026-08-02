@@ -143,11 +143,25 @@ export default function SessionDetail() {
           <Tabs value={tab} onValueChange={v => setTab(v as TabId)} className="space-y-6">
             <TabsList className="w-full justify-start overflow-x-auto">
               <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
-              <TabsTrigger value="transcript" disabled={!session.rawTranscript}>Transcrição</TabsTrigger>
-              {showAnon && <TabsTrigger value="anon" disabled={!session.anonymizedTranscript && session.status !== 'anonymization_review'}>Anonimização</TabsTrigger>}
-              {showTopics && <TabsTrigger value="topics" disabled={!session.topics}>Temas</TabsTrigger>}
+              <span title={session.rawTranscript ? undefined : 'A transcrição ainda não ficou pronta'} className="inline-block">
+                <TabsTrigger value="transcript" disabled={!session.rawTranscript}>Transcrição</TabsTrigger>
+              </span>
+              {showAnon && (
+                <span title={(session.anonymizedTranscript || session.status === 'anonymization_review') ? undefined : 'A anonimização ainda não rodou pra esta consulta'} className="inline-block">
+                  <TabsTrigger value="anon" disabled={!session.anonymizedTranscript && session.status !== 'anonymization_review'}>Anonimização</TabsTrigger>
+                </span>
+              )}
+              {showTopics && (
+                <span title={session.topics ? undefined : 'Os temas ainda não foram extraídos — aguarde o pipeline terminar'} className="inline-block">
+                  <TabsTrigger value="topics" disabled={!session.topics}>Temas</TabsTrigger>
+                </span>
+              )}
               <TabsTrigger value="content">Conteúdo</TabsTrigger>
-              {showCommercial && <TabsTrigger value="commercial" disabled={session.status !== 'ready'}>Comercial</TabsTrigger>}
+              {showCommercial && (
+                <span title={session.status === 'ready' ? undefined : 'A inteligência comercial só fica disponível quando a consulta termina de processar'} className="inline-block">
+                  <TabsTrigger value="commercial" disabled={session.status !== 'ready'}>Comercial</TabsTrigger>
+                </span>
+              )}
             </TabsList>
 
             <TabsContent value="pipeline" className="space-y-4">

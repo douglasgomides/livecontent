@@ -86,6 +86,11 @@ export default function Onboarding() {
                 <p className="text-muted-foreground">Quem você quer atrair? Descreva com suas palavras.</p>
               </div>
               <Textarea rows={5} value={idealPatient} onChange={e => setIdealPatient(e.target.value)} placeholder="Ex: mulher 35-55 anos, com dor crônica..." />
+              {idealPatient.trim().length <= 20 && (
+                <p className="text-xs text-muted-foreground">
+                  Descreva com um pouco mais de detalhe pra continuar — faltam {20 - idealPatient.trim().length} caracteres.
+                </p>
+              )}
             </div>
           )}
           {step === 3 && (

@@ -107,8 +107,15 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, unver
       <Tabs defaultValue="text">
         <TabsList className="w-full justify-start rounded-none border-b border-border/60 h-9 bg-transparent px-2">
           <TabsTrigger value="text" className="text-xs">Texto</TabsTrigger>
-          <TabsTrigger value="art" className="text-xs" disabled={!canHaveArtwork}>Arte</TabsTrigger>
-          <TabsTrigger value="prompts" className="text-xs" disabled={!hasPrompts}>Prompts externos</TabsTrigger>
+          {/* Trigger desabilitado vira pointer-events:none (padrão do componente) — o
+              title precisa ficar no span de fora, senão o hover nunca chega no elemento
+              e a explicação nunca aparece, o próprio bug que este tooltip existe pra resolver. */}
+          <span title={canHaveArtwork ? undefined : 'Disponível só para carrossel e stories — este formato não usa arte visual'} className="inline-block">
+            <TabsTrigger value="art" className="text-xs" disabled={!canHaveArtwork}>Arte</TabsTrigger>
+          </span>
+          <span title={hasPrompts ? undefined : 'Nenhum prompt externo foi gerado pra esta peça ainda'} className="inline-block">
+            <TabsTrigger value="prompts" className="text-xs" disabled={!hasPrompts}>Prompts externos</TabsTrigger>
+          </span>
           <TabsTrigger value="publish" className="text-xs">Publicar</TabsTrigger>
         </TabsList>
 

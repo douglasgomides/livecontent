@@ -10,6 +10,7 @@ import type { Session, PublishJob } from '@/types/session';
 import type { Brain } from '@/types/brain';
 import { EMPTY_BRAIN } from '@/types/brain';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import {
   fetchAllSessions,
   upsertSessionDb,
@@ -58,6 +59,16 @@ function notify() {
   });
 }
 
+// Toda mutação aqui é otimista: a tela já mudou antes de saber se o servidor
+// aceitou. Sem isso, uma falha de rede/DB era só um console.error — a tela
+// seguia mostrando o estado novo como se tivesse salvo, e o dado sumia no
+// próximo reload sem o médico nunca saber que não persistiu. Um único `id`
+// faz falhas em rajada (ex.: autoFillWeek chamando isso dezenas de vezes)
+// colapsarem num só toast em vez de inundar a tela.
+function notifySyncFailure(action: string) {
+  toast.error(`Não foi possível salvar "${action}" no servidor. Sua tela já mudou, mas a alteração pode se perder se você recarregar — verifique sua conexão e tente de novo.`, { id: 'sync-error' });
+}
+
 // ─── Getters (sync) ─────────────────────────────────────────────────────────
 
 export const getUserId = () => _userId;
@@ -89,6 +100,7 @@ export async function hydrateStore(userId: string): Promise<void> {
     console.error('[store] hydrate failed', err);
     _hydrated = true; // still allow UI
     notify();
+    toast.error('Não foi possível carregar seus dados agora. Recarregue a página ou tente novamente em instantes.', { id: 'hydrate-error' });
   }
 }
 
@@ -143,6 +155,7 @@ export async function upsertSession(s: Session): Promise<void> {
     await upsertSessionDb(_userId, clean);
   } catch (err) {
     console.error('[store] upsertSession failed', err);
+    notifySyncFailure('consulta');
   }
 }
 
@@ -153,6 +166,7 @@ export async function deleteSession(id: string): Promise<void> {
     await deleteSessionDb(id);
   } catch (err) {
     console.error('[store] deleteSession failed', err);
+    notifySyncFailure('exclusão da consulta');
   }
 }
 
@@ -164,6 +178,7 @@ export async function saveBrain(b: Brain): Promise<void> {
     await saveBrainDb(_userId, b);
   } catch (err) {
     console.error('[store] saveBrain failed', err);
+    notifySyncFailure('perfil (Brain)');
   }
 }
 
@@ -175,6 +190,7 @@ export async function upsertJob(j: PublishJob): Promise<void> {
     await upsertJobDb(_userId, j);
   } catch (err) {
     console.error('[store] upsertJob failed', err);
+    notifySyncFailure('agendamento/publicação');
   }
 }
 
@@ -185,6 +201,7 @@ export async function deleteJob(id: string): Promise<void> {
     await deleteJobDb(id);
   } catch (err) {
     console.error('[store] deleteJob failed', err);
+    notifySyncFailure('remoção do agendamento');
   }
 }
 
@@ -206,6 +223,7 @@ export async function saveSettings(s: DoctorSettings): Promise<void> {
     await saveSettingsDb(_userId, s);
   } catch (err) {
     console.error('[store] saveSettings failed', err);
+    notifySyncFailure('ajustes');
   }
 }
 

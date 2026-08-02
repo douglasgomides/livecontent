@@ -140,9 +140,11 @@ export default function TopicsReview({ session, onConfirm }: { session: Session;
       )}
 
       <div className="flex justify-end">
+        <span title={!includedCount ? 'Selecione ao menos 1 tema pra gerar conteúdo' : !formats.length ? 'Escolha ao menos 1 formato pra gerar conteúdo' : undefined} className="inline-block">
         <Button onClick={save} disabled={!includedCount || !formats.length} className="bg-gold-gradient text-primary-foreground gold-shadow">
           Gerar conteúdo ({includedCount} {includedCount === 1 ? 'tema' : 'temas'} · {formats.length} {formats.length === 1 ? 'formato' : 'formatos'})
         </Button>
+        </span>
       </div>
     </div>
   );
