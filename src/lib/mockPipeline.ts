@@ -331,6 +331,13 @@ function scoreCFM(body: string): CFMResult {
   return { score: Math.max(0, Math.min(100, score)), flags, evaluated: true };
 }
 
+// Mesma tradução usada em Brain.tsx/Onboarding.tsx/Settings.tsx pro seletor de
+// tom — sem isso, o chip de traço usado (BrainPreview) mostrava o valor cru do
+// enum ("tom didactic") em vez do rótulo traduzido ("tom didático").
+const TONE_LABEL: Record<NonNullable<Brain['doctor']['tone']>, string> = {
+  didactic: 'didático', empathetic: 'empático', direct: 'direto', technical: 'técnico acessível',
+};
+
 function applyBrand(body: string, brain?: Brain | null): { body: string; usedTraits: string[] } {
   const traits: string[] = [];
   if (!brain) return { body, usedTraits: traits };
@@ -346,7 +353,7 @@ function applyBrand(body: string, brain?: Brain | null): { body: string; usedTra
     traits.push('CTA da marca');
   }
   // Signal tone
-  if (brain.doctor.tone) traits.push(`tom ${brain.doctor.tone}`);
+  if (brain.doctor.tone) traits.push(`tom ${TONE_LABEL[brain.doctor.tone] ?? brain.doctor.tone}`);
   return { body: out, usedTraits: traits };
 }
 

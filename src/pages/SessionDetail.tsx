@@ -14,7 +14,7 @@ import ContentPieceCard from '@/components/session/ContentPieceCard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ArrowLeft, Check, Circle, Loader2, Sparkles, FlaskConical, FileText, AlertTriangle, RefreshCw, Target, Lightbulb, TrendingUp, X } from 'lucide-react';
-import { CHANNEL_LABEL, CHANNEL_ICON, FUNNEL_STAGE_LABEL } from '@/lib/contentFormats';
+import { CHANNEL_LABEL, CHANNEL_ICON, FUNNEL_STAGE_LABEL, SOURCE_LABEL, STATUS_LABEL } from '@/lib/contentFormats';
 import type { ContentChannel } from '@/types/session';
 
 const ALL_STAGES: { id: SessionStatus; label: string }[] = [
@@ -123,7 +123,7 @@ export default function SessionDetail() {
             <p className="text-muted-foreground text-sm mt-1">
               {new Date(session.createdAt).toLocaleString('pt-BR')}
               {session.durationSec > 0 && <> · {Math.floor(session.durationSec/60)}min {(session.durationSec%60).toString().padStart(2,'0')}s</>}
-              {' · '}<span className="uppercase tracking-wider text-[10px]">{session.source.replace('_', ' ')}</span>
+              {' · '}<span className="uppercase tracking-wider text-[10px]">{SOURCE_LABEL[session.source]}</span>
             </p>
           </div>
           <div className="flex items-center gap-2 text-xs">
@@ -545,8 +545,8 @@ export default function SessionDetail() {
 
           <div className="border border-border/60 rounded-lg p-4 space-y-2 text-sm">
             <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Resumo</div>
-            <Row label="Fonte" value={session.source.replace('_', ' ')} />
-            <Row label="Status" value={session.status.replace(/_/g, ' ')} />
+            <Row label="Fonte" value={SOURCE_LABEL[session.source]} />
+            <Row label="Status" value={STATUS_LABEL[session.status]} />
             {session.topics && <Row label="Temas" value={`${session.topics.filter(t => t.included).length} incluídos`} />}
             {contentPieces.length > 0 && <Row label="Peças" value={`${approvedCount}/${contentPieces.length} aprovadas`} />}
           </div>

@@ -5,7 +5,7 @@ import { loadSessions, loadProfile } from '@/lib/storage';
 import { loadBrain, getCompleteness } from '@/lib/brainStorage';
 import { loadSchedule, upcoming } from '@/lib/scheduleStorage';
 import { loadJobs } from '@/lib/publishQueue';
-import { CHANNEL_LABEL } from '@/lib/contentFormats';
+import { CHANNEL_LABEL, SOURCE_LABEL } from '@/lib/contentFormats';
 import type { SessionStatus } from '@/types/session';
 
 
@@ -199,7 +199,7 @@ export default function Dashboard() {
                     <div className="flex items-center gap-3 t-micro text-muted-foreground mt-1.5">
                       {s.durationSec > 0 && <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {fmtDur(s.durationSec)}</span>}
                       <span>{fmtDate(s.createdAt)}</span>
-                      <span className="uppercase tracking-wider font-semibold">{s.source.replace('_', ' ')}</span>
+                      <span className="uppercase tracking-wider font-semibold">{SOURCE_LABEL[s.source]}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">

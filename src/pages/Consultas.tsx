@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, ArrowRight, Clock } from 'lucide-react';
 import { loadSessions } from '@/lib/storage';
-import type { SessionSource, SessionStatus } from '@/types/session';
+import type { SessionSource } from '@/types/session';
+import { SOURCE_LABEL, STATUS_LABEL } from '@/lib/contentFormats';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -11,28 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-
-const STATUS_LABEL: Record<SessionStatus, string> = {
-  recording: 'Gravando',
-  transcribing: 'Transcrevendo',
-  anonymizing: 'Anonimizando',
-  anonymization_review: 'Revisar PII',
-  extracting_topics: 'Extraindo temas',
-  topics_review: 'Revisar temas',
-  generating_content: 'Gerando',
-  ready: 'Pronto',
-  failed: 'Falhou',
-};
-
-const SOURCE_LABEL: Record<SessionSource, string> = {
-  recording: 'Gravação',
-  upload: 'Upload',
-  voice_note: 'Voice Note',
-  science: 'Science',
-  audio_livre: 'Áudio livre',
-  link: 'Link',
-  tema_sugerido: 'Tema sugerido',
-};
 
 
 const fmtDate = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -80,7 +59,7 @@ export default function Consultas() {
       <div className="grid grid-cols-1 md:grid-cols-[1fr_180px_180px_180px] gap-2">
         <div className="relative">
           <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar consulta..." className="pl-9 text-ellipsis" />
+          <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar consulta ou tema" className="pl-9 text-ellipsis" />
         </div>
         <Select value={source} onValueChange={v => setSource(v as any)}>
           <SelectTrigger><SelectValue placeholder="Fonte" /></SelectTrigger>

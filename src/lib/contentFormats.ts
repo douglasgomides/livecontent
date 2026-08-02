@@ -1,4 +1,4 @@
-import type { ContentFormat, ContentChannel, Topic } from '@/types/session';
+import type { ContentFormat, ContentChannel, Topic, SessionSource, SessionStatus } from '@/types/session';
 import { Instagram, Linkedin, MessageSquare, Youtube, FileText, Globe, MapPin, Stethoscope, Mic, Music, Camera } from 'lucide-react';
 
 // Rótulos em linguagem simples pro estágio de funil (C0-C3 é jargão de marketing
@@ -116,6 +116,36 @@ export const OBJECTION_LABEL: Record<string, string> = {
 // conteúdo) — amostra pequena demais vira ruído, não sinal.
 export const MIN_TOTAL_OBJECTIONS = 8;
 export const MIN_LEADING_CATEGORY = 3;
+
+// Fonte única pra origem da consulta — antes cada tela tinha sua própria cópia
+// (algumas com "Voice Note"/"Science" corretos, outras vazando o valor cru do
+// enum via .replace('_',' ') e mostrando "voice note"/"recording" em inglês
+// sem tradução nenhuma). "Voice Note"/"Science" ficam como estão de propósito:
+// são o nome da própria feature (igual "Insights"/"Trends" no menu), não um
+// vazamento — o problema real era a INCONSISTÊNCIA entre telas pro mesmo valor.
+export const SOURCE_LABEL: Record<SessionSource, string> = {
+  recording: 'Gravação',
+  upload: 'Upload',
+  voice_note: 'Voice Note',
+  science: 'Science',
+  audio_livre: 'Áudio livre',
+  link: 'Link',
+  tema_sugerido: 'Tema sugerido',
+};
+
+// Idem pro status do pipeline — status.replace(/_/g,' ') vazava código interno
+// cru ("generating_content" -> "generating content") sem tradução nenhuma.
+export const STATUS_LABEL: Record<SessionStatus, string> = {
+  recording: 'Gravando',
+  transcribing: 'Transcrevendo',
+  anonymizing: 'Anonimizando',
+  anonymization_review: 'Revisar PII',
+  extracting_topics: 'Extraindo temas',
+  topics_review: 'Revisar temas',
+  generating_content: 'Gerando',
+  ready: 'Pronto',
+  failed: 'Falhou',
+};
 
 /** Formats that produce ready-to-copy text vs prepared publication */
 export const EXPORT_MODE: Record<ContentFormat, 'copy' | 'publish' | 'download'> = {
