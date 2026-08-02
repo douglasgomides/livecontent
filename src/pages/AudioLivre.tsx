@@ -85,7 +85,7 @@ function RecordMode({ nav }: { nav: ReturnType<typeof useNavigate> }) {
       </div>
       {rec.error && <div className="text-destructive text-sm mb-4">{rec.error}</div>}
       {rec.status === 'idle' && (
-        <Button size="lg" onClick={rec.start} className="bg-gold-gradient text-primary-foreground gold-shadow">
+        <Button size="lg" onClick={() => rec.start()} className="bg-gold-gradient text-primary-foreground gold-shadow">
           <Mic className="h-4 w-4 mr-2" /> Começar gravação
         </Button>
       )}

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mic, Pause, Play, Square, AlertTriangle, CheckCircle2, X, Loader2 } from 'lucide-react';
+import { Mic, Pause, Play, Square, AlertTriangle, CheckCircle2, X, Loader2, Monitor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { upsertSession } from '@/lib/storage';
 import { createBlankSession, uploadAudioForSession, runPipeline } from '@/lib/pipeline';
 import { useAudioRecorder, extFromMimeType } from '@/hooks/useAudioRecorder';
@@ -15,6 +17,7 @@ export default function Recording() {
   const nav = useNavigate();
   const [consented, setConsented] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [isTeleconsulta, setIsTeleconsulta] = useState(false);
 
   const finish = async (result: { blob: Blob; durationSec: number }) => {
     setUploading(true);
@@ -112,9 +115,22 @@ export default function Recording() {
 
       {error && <div className="text-destructive text-sm mb-4">{error}</div>}
 
+      {status === 'ready' && (
+        <div className="flex items-start gap-2.5 border border-border rounded-lg p-3 mb-6 text-left max-w-sm mx-auto">
+          <Checkbox checked={isTeleconsulta} onCheckedChange={v => setIsTeleconsulta(!!v)} className="mt-0.5" />
+          <Label className="font-normal cursor-pointer text-sm flex items-start gap-1.5" onClick={() => setIsTeleconsulta(v => !v)}>
+            <Monitor className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground" />
+            <span>
+              É teleconsulta (paciente fala pelo computador). Vou pedir pra compartilhar a
+              tela/aba da chamada — marque "Compartilhar áudio" na janela do navegador.
+            </span>
+          </Label>
+        </div>
+      )}
+
       <div className="flex items-center justify-center gap-4">
         {status === 'ready' && (
-          <Button size="lg" onClick={rec.start} className="bg-gold-gradient text-primary-foreground gold-shadow h-14 px-8">
+          <Button size="lg" onClick={() => rec.start({ captureSystemAudio: isTeleconsulta })} className="bg-gold-gradient text-primary-foreground gold-shadow h-14 px-8">
             <Mic className="h-5 w-5 mr-2" /> Começar
           </Button>
         )}
