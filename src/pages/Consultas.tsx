@@ -79,7 +79,7 @@ export default function Consultas() {
       <div className="grid grid-cols-1 md:grid-cols-[1fr_180px_180px_180px] gap-2">
         <div className="relative">
           <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar por título ou tema..." className="pl-9" />
+          <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar consulta..." className="pl-9 text-ellipsis" />
         </div>
         <Select value={source} onValueChange={v => setSource(v as any)}>
           <SelectTrigger><SelectValue placeholder="Fonte" /></SelectTrigger>

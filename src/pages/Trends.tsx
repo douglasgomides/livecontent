@@ -9,9 +9,22 @@ import { getUserId } from '@/lib/store';
 import { FORMAT_LABEL } from '@/lib/contentFormats';
 import type { ContentFormat, TrendingContentIdea, SocialPostPerformance } from '@/types/session';
 
+// Busca de tendências é uma pesquisa real na web via IA — pode travar sem
+// resposta nenhuma. Sem isso, a tela ficava presa em "Buscando…" pra sempre,
+// sem erro e sem jeito de tentar de novo além de recarregar a página inteira.
+const SEARCH_TIMEOUT_MS = 30000;
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer)) as Promise<T>;
+}
+
 export default function Trends() {
   const [ideas, setIdeas] = useState<TrendingContentIdea[]>([]);
   const [ideasLoading, setIdeasLoading] = useState(true);
+  const [ideasError, setIdeasError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const [ownPosts, setOwnPosts] = useState<SocialPostPerformance[]>([]);
@@ -19,9 +32,14 @@ export default function Trends() {
 
   const loadIdeas = (refresh = false) => {
     (refresh ? setRefreshing : setIdeasLoading)(true);
-    fetchTrendingContentIdeas(refresh)
+    setIdeasError(null);
+    withTimeout(fetchTrendingContentIdeas(refresh), SEARCH_TIMEOUT_MS, 'A busca demorou demais e foi cancelada. Tente novamente.')
       .then(setIdeas)
-      .catch(err => toast.error(err?.message ?? 'Falha ao buscar tendências'))
+      .catch(err => {
+        const msg = err?.message ?? 'Falha ao buscar tendências';
+        setIdeasError(msg);
+        toast.error(msg);
+      })
       .finally(() => (refresh ? setRefreshing : setIdeasLoading)(false));
   };
 
@@ -63,7 +81,14 @@ export default function Trends() {
           Pesquisado agora na web, com fonte real citada — nunca inventado. Cacheado por alguns dias.
         </p>
         {ideasLoading ? (
-          <p className="text-sm text-muted-foreground">Buscando…</p>
+          <p className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Buscando…</p>
+        ) : ideasError ? (
+          <div className="text-sm space-y-2">
+            <p className="text-destructive">{ideasError}</p>
+            <Button size="sm" variant="outline" onClick={() => loadIdeas(false)}>
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Tentar de novo
+            </Button>
+          </div>
         ) : ideas.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhuma tendência encontrada ainda. Cadastre sua especialidade em Meu Consultório e tente atualizar.</p>
         ) : (

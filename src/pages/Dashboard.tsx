@@ -225,6 +225,13 @@ const STAT_TONE = {
   danger: { iconBg: 'bg-destructive/10', icon: 'text-destructive', dot: 'bg-destructive' },
 } as const;
 
+const TONE_DESCRIPTION: Record<keyof typeof STAT_TONE, string> = {
+  primary: 'indicador informativo',
+  success: 'indicador positivo',
+  warning: 'indicador de atenção',
+  danger: 'indicador crítico',
+};
+
 function StatCard({ icon: Icon, label, value, tone = 'primary' }: { icon: any; label: string; value: number | string; tone?: keyof typeof STAT_TONE }) {
   const t = STAT_TONE[tone];
   return (
@@ -233,7 +240,7 @@ function StatCard({ icon: Icon, label, value, tone = 'primary' }: { icon: any; l
         <div className={`h-10 w-10 rounded-full ${t.iconBg} flex items-center justify-center`}>
           <Icon className={`h-4 w-4 ${t.icon}`} />
         </div>
-        <span className={`h-1.5 w-1.5 rounded-full ${t.dot}`} />
+        <span className={`h-1.5 w-1.5 rounded-full ${t.dot}`} title={`${label} — ${TONE_DESCRIPTION[tone]}`} />
       </div>
       <div className="t-numeric text-[1.75rem]">{value}</div>
       <div className="t-micro text-muted-foreground mt-1">{label}</div>
@@ -250,7 +257,7 @@ function FlowCard({ to, icon: Icon, label, value, tone }: { to: string; icon: an
         <div className={`h-8 w-8 rounded-full ${active ? t.iconBg : 'bg-muted'} flex items-center justify-center`}>
           <Icon className={`h-3.5 w-3.5 ${active ? t.icon : 'text-muted-foreground'}`} />
         </div>
-        {active && <span className={`h-1.5 w-1.5 rounded-full ${t.dot}`} />}
+        {active && <span className={`h-1.5 w-1.5 rounded-full ${t.dot}`} title={`${value} pendente${value === 1 ? '' : 's'} em ${label}`} />}
       </div>
       <div className={`t-numeric text-xl ${active ? t.icon : 'text-muted-foreground'}`}>{value}</div>
       <div className="t-micro text-muted-foreground mt-1">{label}</div>

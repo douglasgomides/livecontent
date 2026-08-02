@@ -24,6 +24,8 @@ import {
   ClipboardList,
   Package,
   ChevronDown,
+  LogOut,
+  User,
 } from 'lucide-react';
 
 import {
@@ -40,11 +42,19 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { loadProfile } from '@/lib/storage';
 import { loadBrain, getCompleteness } from '@/lib/brainStorage';
 import { isRecordingActive, LEAVE_RECORDING_WARNING } from '@/lib/recordingGuard';
 import { isAppAdmin } from '@/lib/db';
 import { getUserId } from '@/lib/store';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Gravar consulta é a ação principal (renderizada em destaque, separada do
 // resto) — as outras formas de criar são variações menos comuns e não devem
@@ -112,6 +122,7 @@ export function AppSidebar() {
   const collapsed = state === 'collapsed';
   const { pathname } = useLocation();
   const profile = loadProfile();
+  const { signOut } = useAuth();
 
   const [groupState, setGroupState] = useState<Record<GroupId, boolean>>(loadGroupState);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -261,10 +272,25 @@ export function AppSidebar() {
 
       {!collapsed && profile && (
         <SidebarFooter className="border-t border-sidebar-border">
-          <div className="px-2 py-2 text-xs">
-            <div className="font-medium text-foreground truncate">{profile.name}</div>
-            <div className="text-muted-foreground truncate">{profile.specialty}</div>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="w-full px-2 py-2 text-xs text-left rounded-md hover:bg-sidebar-accent transition">
+                <div className="font-medium text-foreground truncate">{profile.name}</div>
+                <div className="text-muted-foreground truncate">{profile.specialty}</div>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="start" className="w-56">
+              <DropdownMenuItem asChild>
+                <Link to="/app/settings" className="flex items-center gap-2 cursor-pointer">
+                  <User className="h-4 w-4" /> Ajustes da conta
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={signOut} className="text-destructive focus:text-destructive cursor-pointer">
+                <LogOut className="h-4 w-4 mr-2" /> Sair
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </SidebarFooter>
       )}
     </Sidebar>
