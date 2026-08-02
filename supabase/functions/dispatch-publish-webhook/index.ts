@@ -1,6 +1,7 @@
 // dispatch-publish-webhook — dispara um POST para a URL configurada pelo médico
 // para o canal da peça, e grava o resultado no publish_jobs.
 import { corsHeaders } from '../_shared/cors.ts';
+import { isSafeWebhookUrl } from '../_shared/urlGuard.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 Deno.serve(async (req) => {
@@ -41,6 +42,13 @@ Deno.serve(async (req) => {
         message: `Nenhuma webhook configurada para ${job.channel}. Configure em Ajustes.`,
       }).eq('id', job_id);
       return json({ ok: false, needs_connection: true });
+    }
+    if (!isSafeWebhookUrl(url)) {
+      await supabase.from('publish_jobs').update({
+        status: 'failed',
+        message: 'URL de webhook inválida ou aponta pra um endereço não permitido.',
+      }).eq('id', job_id);
+      return json({ ok: false, error: 'URL de webhook inválida ou aponta pra um endereço não permitido.' }, 400);
     }
 
     await supabase.from('publish_jobs').update({ status: 'publishing' }).eq('id', job_id);

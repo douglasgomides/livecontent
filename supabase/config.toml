@@ -5,3 +5,15 @@ verify_jwt = false
 
 [functions.receive-whatsapp-reply]
 verify_jwt = false
+
+# Chamadas só por pg_cron (net.http_post), autenticadas por x-cron-secret —
+# nunca têm um JWT de usuário pra verificar. Sem esta entrada, um redeploy via
+# CLI lendo este arquivo reativaria verify_jwt e quebraria o cron silenciosamente.
+[functions.sync-instagram-posts]
+verify_jwt = false
+
+[functions.sync-ads-performance]
+verify_jwt = false
+
+[functions.check-evidence-topic-watches]
+verify_jwt = false

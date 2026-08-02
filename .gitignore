@@ -24,3 +24,9 @@ dist-ssr
 *.sw?
 # Internal build-tool planning notes (not part of the product)
 .lovable/
+
+# .env já commitado hoje só tem valores públicos (VITE_SUPABASE_URL/PUBLISHABLE_KEY,
+# que vão pro bundle do cliente de qualquer forma) — mas evita que um secret de
+# verdade entre aqui por hábito daqui pra frente.
+.env
+.env.local

@@ -6,6 +6,7 @@
 // Nunca envia sem aprovação explícita do médico — esta função só roda quando
 // ele já clicou em "Aprovar e enviar" no follow-up revisado.
 import { corsHeaders } from '../_shared/cors.ts';
+import { isSafeWebhookUrl } from '../_shared/urlGuard.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 Deno.serve(async (req) => {
@@ -51,6 +52,10 @@ Deno.serve(async (req) => {
 
     if (!url) {
       return json({ ok: false, needs_connection: true, error: 'Configure o webhook do WhatsApp em Ajustes' });
+    }
+    if (!isSafeWebhookUrl(url)) {
+      await supabase.from('whatsapp_followups').update({ status: 'failed' }).eq('id', followup_id);
+      return json({ ok: false, error: 'URL de webhook inválida ou aponta pra um endereço não permitido.' }, 400);
     }
 
     try {
