@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import type { Product, ProductCategory } from '@/types/session';
 import { fetchProducts, addProduct, updateProductActive, deleteProduct } from '@/lib/db';
 import { getUserId } from '@/lib/store';
+import { toFriendlyMessage } from '@/lib/friendlyError';
 
 const CATEGORY_LABEL: Record<ProductCategory, string> = {
   procedimento: 'Procedimento',
@@ -42,8 +43,8 @@ export default function Products() {
     setLoading(true);
     try {
       setProducts(await fetchProducts(uid));
-    } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao carregar produtos');
+    } catch (err) {
+      toast.error(toFriendlyMessage(err, 'Não foi possível carregar seus produtos agora. Tente novamente em instantes.'));
     } finally {
       setLoading(false);
     }
@@ -63,8 +64,8 @@ export default function Products() {
       setShowForm(false);
       await refresh();
       toast.success('Produto adicionado');
-    } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao adicionar produto');
+    } catch (err) {
+      toast.error(toFriendlyMessage(err, 'Não foi possível salvar o produto agora. Tente novamente.'));
     } finally {
       setSaving(false);
     }
@@ -74,8 +75,8 @@ export default function Products() {
     try {
       await updateProductActive(p.id, !p.active);
       setProducts(prev => prev.map(x => x.id === p.id ? { ...x, active: !x.active } : x));
-    } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao atualizar');
+    } catch (err) {
+      toast.error(toFriendlyMessage(err, 'Não foi possível atualizar o produto agora.'));
     }
   };
 
@@ -84,8 +85,8 @@ export default function Products() {
     try {
       await deleteProduct(p.id);
       setProducts(prev => prev.filter(x => x.id !== p.id));
-    } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao remover');
+    } catch (err) {
+      toast.error(toFriendlyMessage(err, 'Não foi possível remover o produto agora.'));
     }
   };
 

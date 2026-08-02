@@ -106,7 +106,8 @@ export default function SessionDetail() {
   const showTopics = session.source !== 'voice_note';
   const showCommercial = session.source === 'recording' || session.source === 'upload';
   const contentPieces = session.content || [];
-  const avgCfm = contentPieces.length ? Math.round(contentPieces.reduce((a, p) => a + p.cfm.score, 0) / contentPieces.length) : null;
+  const evaluatedPieces = contentPieces.filter(p => p.cfm.evaluated);
+  const avgCfm = evaluatedPieces.length ? Math.round(evaluatedPieces.reduce((a, p) => a + p.cfm.score, 0) / evaluatedPieces.length) : null;
   const approvedCount = contentPieces.filter(p => p.approved).length;
 
   return (

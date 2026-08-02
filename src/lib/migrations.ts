@@ -38,6 +38,18 @@ export function normalizePiece(raw: any): ContentPiece {
   const format: ContentFormat = VALID_FORMAT.includes(p.format) ? p.format : 'caption';
   const channel: ContentChannel = p.channel || FORMAT_CHANNEL[format] || 'instagram';
   const cfmRaw = p.cfm && typeof p.cfm === 'object' ? p.cfm : {};
+  const cfmFlags = asArray<{ label: string; severity: 'info' | 'warning' | 'block' }>(cfmRaw.flags)
+    .filter(f => f && typeof f === 'object')
+    .map(f => ({
+      label: asString((f as any).label, '—'),
+      severity: (['info', 'warning', 'block'].includes((f as any).severity) ? (f as any).severity : 'info'),
+    }));
+  // Dado antigo (anterior ao campo 'evaluated') não distingue "não avaliado" de nota
+  // real — detecta pela assinatura exata do FALLBACK de _shared/cfm.ts (score 50 +
+  // único flag com esse texto), a única forma de reconstruir o estado sem re-rodar a IA.
+  const cfmEvaluated = typeof cfmRaw.evaluated === 'boolean'
+    ? cfmRaw.evaluated
+    : !(cfmFlags.length === 1 && cfmFlags[0].label.startsWith('Não foi possível avaliar automaticamente'));
   return {
     id: asString(p.id, crypto.randomUUID()),
     topicId: asString(p.topicId, ''),
@@ -46,12 +58,8 @@ export function normalizePiece(raw: any): ContentPiece {
     body: asString(p.body, ''),
     cfm: {
       score: asNumber(cfmRaw.score, 0),
-      flags: asArray<{ label: string; severity: 'info' | 'warning' | 'block' }>(cfmRaw.flags)
-        .filter(f => f && typeof f === 'object')
-        .map(f => ({
-          label: asString((f as any).label, '—'),
-          severity: (['info', 'warning', 'block'].includes((f as any).severity) ? (f as any).severity : 'info'),
-        })),
+      flags: cfmFlags,
+      evaluated: cfmEvaluated,
     },
     approved: asBool(p.approved),
     rejected: asBool(p.rejected),

@@ -246,12 +246,14 @@ export default function Insights() {
   }, [sessions]);
 
   const formatStats = useMemo(() => {
-    const stats = new Map<ContentFormat, { total: number; approved: number; cfmSum: number }>();
+    const stats = new Map<ContentFormat, { total: number; approved: number; cfmSum: number; cfmEvaluated: number }>();
     sessions.forEach(s => (s.content || []).forEach(p => {
-      const cur = stats.get(p.format) ?? { total: 0, approved: 0, cfmSum: 0 };
+      const cur = stats.get(p.format) ?? { total: 0, approved: 0, cfmSum: 0, cfmEvaluated: 0 };
       cur.total += 1;
       if (p.approved) cur.approved += 1;
-      cur.cfmSum += p.cfm.score;
+      // Nunca mistura peça "não avaliada" na média — score dela é só um
+      // placeholder neutro, não uma nota real de conformidade.
+      if (p.cfm.evaluated) { cur.cfmSum += p.cfm.score; cur.cfmEvaluated += 1; }
       stats.set(p.format, cur);
     }));
     return Array.from(stats.entries())
@@ -259,7 +261,7 @@ export default function Insights() {
         format,
         label: FORMAT_LABEL[format],
         aprovacao: Math.round((s.approved / s.total) * 100),
-        cfmMedio: Math.round(s.cfmSum / s.total),
+        cfmMedio: s.cfmEvaluated ? Math.round(s.cfmSum / s.cfmEvaluated) : null,
         total: s.total,
       }))
       .sort((a, b) => b.total - a.total);
@@ -697,7 +699,7 @@ export default function Insights() {
                     <div className="h-full bg-gold-gradient" style={{ width: `${f.aprovacao}%` }} />
                   </div>
                   <div className="w-16 shrink-0 text-xs text-muted-foreground text-right">{f.aprovacao}% aprov.</div>
-                  <div className="w-24 shrink-0 text-xs text-muted-foreground text-right">CFM {f.cfmMedio} · {f.total}</div>
+                  <div className="w-24 shrink-0 text-xs text-muted-foreground text-right">{f.cfmMedio !== null ? `CFM ${f.cfmMedio}` : 'CFM —'} · {f.total}</div>
                 </div>
               ))}
             </div>

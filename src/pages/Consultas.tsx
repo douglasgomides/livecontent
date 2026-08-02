@@ -59,7 +59,7 @@ export default function Consultas() {
       if (sort === 'pieces') return (b.content?.length || 0) - (a.content?.length || 0);
       if (sort === 'cfm') {
         const avg = (s: typeof a) => {
-          const c = s.content || [];
+          const c = (s.content || []).filter(p => p.cfm.evaluated);
           return c.length ? c.reduce((x, p) => x + p.cfm.score, 0) / c.length : 0;
         };
         return avg(b) - avg(a);

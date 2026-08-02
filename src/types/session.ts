@@ -40,6 +40,10 @@ export interface Topic {
 export interface CFMResult {
   score: number; // 0-100
   flags: { label: string; severity: 'info' | 'warning' | 'block' }[];
+  // false quando a IA não conseguiu avaliar (falha na chamada) — nesse caso
+  // score é só um placeholder neutro (50), NUNCA uma nota real. Distingue
+  // "metade conforme" de "não avaliado", que são estados completamente diferentes.
+  evaluated: boolean;
 }
 
 // Nota de potencial de viralização/qualidade, estilo Opus Clip — gancho, retenção

@@ -44,11 +44,15 @@ Sem markdown, sem texto fora do JSON.`;
 export interface CFMResult {
   score: number;
   flags: Array<{ label: string; severity: 'info' | 'warning' | 'block' }>;
+  // false quando a IA não conseguiu avaliar (falha na chamada) — nesse caso
+  // score é só um placeholder neutro (50), NUNCA uma nota real.
+  evaluated: boolean;
 }
 
 const FALLBACK: CFMResult = {
   score: 50,
   flags: [{ label: 'Não foi possível avaliar automaticamente — revise manualmente antes de aprovar', severity: 'warning' }],
+  evaluated: false,
 };
 
 export async function scoreCFMSemantic(anthropicKey: string, body: string): Promise<CFMResult> {
@@ -71,7 +75,7 @@ export async function scoreCFMSemantic(anthropicKey: string, body: string): Prom
     const flags = Array.isArray(parsed.flags) && parsed.flags.length
       ? parsed.flags
       : [{ label: 'Nenhum problema ético real identificado', severity: 'info' as const }];
-    return { score, flags };
+    return { score, flags, evaluated: true };
   } catch (e) {
     console.warn('[cfm] failed', e);
     return FALLBACK;

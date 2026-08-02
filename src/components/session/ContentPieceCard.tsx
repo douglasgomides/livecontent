@@ -79,7 +79,7 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, compa
         <div className="flex items-center gap-2 min-w-0">
           <Icon className="h-4 w-4 text-primary shrink-0" />
           <span className="text-xs uppercase tracking-widest text-primary truncate">{FORMAT_LABEL[piece.format]}</span>
-          <ScoreBadge score={cfm.score} blocked={blocked} warned={warned} />
+          <ScoreBadge score={cfm.score} blocked={blocked} warned={warned} evaluated={cfm.evaluated} />
           <ViralityBadge virality={piece.virality} />
         </div>
         <Button variant="ghost" size="sm" onClick={rescore} disabled={rescoring}>
@@ -199,7 +199,12 @@ function MetaBlock({ meta }: { meta: NonNullable<ContentPiece['meta']> }) {
   );
 }
 
-function ScoreBadge({ score, blocked, warned }: { score: number; blocked: boolean; warned: boolean }) {
+function ScoreBadge({ score, blocked, warned, evaluated }: { score: number; blocked: boolean; warned: boolean; evaluated: boolean }) {
+  // "Não avaliado" nunca é um score real — nunca mostrar número junto, pra não
+  // confundir com uma nota de conformidade de fato calculada pela IA.
+  if (!evaluated) {
+    return <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">Não avaliado — revisar manualmente</span>;
+  }
   const cls = blocked ? 'bg-destructive/15 text-destructive' : warned ? 'bg-warning/15 text-warning' : 'bg-success/15 text-success';
   const label = blocked ? `CFM ${score} · bloqueado` : warned ? `CFM ${score} · revisar` : `CFM ${score} · conforme`;
   return <span className={`text-xs px-2 py-0.5 rounded-full ${cls}`}>{label}</span>;

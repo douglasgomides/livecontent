@@ -7,6 +7,8 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
@@ -1375,6 +1377,39 @@ export type Database = {
         Returns: boolean
       }
       is_app_admin: { Args: { uid: string }; Returns: boolean }
+      match_evidence_sources: {
+        Args: {
+          match_count?: number
+          match_user_id: string
+          query_embedding: string
+        }
+        Returns: {
+          audio_debate_segments: Json | null
+          audio_summary_path: string | null
+          authors: string | null
+          created_at: string
+          embedding: string | null
+          evidence_level: Database["public"]["Enums"]["evidence_level"]
+          id: string
+          journal: string | null
+          pubmed_id: string | null
+          source: string
+          summary: string | null
+          tags: Json
+          title: string
+          updated_at: string
+          url: string | null
+          user_id: string
+          virality: Json | null
+          year: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "evidence_sources"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       owns_tenant: { Args: { _tenant_id: string }; Returns: boolean }
     }
     Enums: {

@@ -241,7 +241,7 @@ export default function Approvals() {
               <div className="flex items-center gap-2 text-xs">
                 <span className="t-eyebrow text-primary">{FORMAT_LABEL[previewRow.piece.format]}</span>
                 <span className="text-muted-foreground">·</span>
-                <span className="text-muted-foreground">CFM {previewRow.piece.cfm.score}</span>
+                <span className="text-muted-foreground">{previewRow.piece.cfm.evaluated ? `CFM ${previewRow.piece.cfm.score}` : 'Não avaliado — revisar manualmente'}</span>
               </div>
               <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">{previewRow.piece.body}</pre>
               {previewRow.piece.cfm.flags.length > 0 && (
@@ -287,8 +287,8 @@ function PendingCard({
           <Icon className="h-4 w-4 text-primary shrink-0" />
           <span className="t-eyebrow text-primary truncate">{FORMAT_LABEL[row.piece.format]}</span>
         </div>
-        <span className={`text-[11px] px-2 py-0.5 rounded-full ${warned ? 'bg-warning/15 text-warning' : 'bg-secondary text-muted-foreground'}`}>
-          CFM {row.piece.cfm.score}
+        <span className={`text-[11px] px-2 py-0.5 rounded-full ${!row.piece.cfm.evaluated ? 'bg-secondary text-muted-foreground' : warned ? 'bg-warning/15 text-warning' : 'bg-secondary text-muted-foreground'}`}>
+          {row.piece.cfm.evaluated ? `CFM ${row.piece.cfm.score}` : 'Não avaliado'}
         </span>
       </div>
       <div>

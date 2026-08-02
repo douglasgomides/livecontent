@@ -328,7 +328,7 @@ function scoreCFM(body: string): CFMResult {
   if (/garant[ie]/.test(lower)) { flags.push({ label: 'Palavra "garantia" pode configurar promessa de resultado', severity: 'warning' }); score -= 8; }
   if (/antes.*depois|resultado real/.test(lower)) { flags.push({ label: 'Formato antes/depois exige cuidado ético', severity: 'warning' }); score -= 8; }
   if (!flags.length) flags.push({ label: 'Nenhuma promessa de resultado detectada', severity: 'info' });
-  return { score: Math.max(0, Math.min(100, score)), flags };
+  return { score: Math.max(0, Math.min(100, score)), flags, evaluated: true };
 }
 
 function applyBrand(body: string, brain?: Brain | null): { body: string; usedTraits: string[] } {

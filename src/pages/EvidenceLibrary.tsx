@@ -14,6 +14,7 @@ import { fetchEvidenceSources, addEvidenceSource, deleteEvidenceSource, fetchEvi
 import { searchPubmed, searchEvidenceSemantic, embedEvidenceSource, fetchEvidenceAudioSummary, fetchEvidenceAudioDebate, scoreViralityRemote, type PubmedResult } from '@/lib/pipeline';
 import { getUserId } from '@/lib/store';
 import ViralityBadge from '@/components/ViralityBadge';
+import { toFriendlyMessage } from '@/lib/friendlyError';
 
 const LEVEL_LABEL: Record<EvidenceLevel, string> = {
   meta_analysis: 'Meta-análise',
@@ -72,8 +73,8 @@ export default function EvidenceLibrary() {
       const [srcs, use] = await Promise.all([fetchEvidenceSources(uid), fetchEvidenceUsage(uid)]);
       setSources(srcs);
       setUsage(use);
-    } catch (err: any) {
-      toast.error(`Falha ao carregar biblioteca: ${err?.message ?? err}`);
+    } catch (err) {
+      toast.error(toFriendlyMessage(err, 'Não foi possível carregar sua biblioteca de evidências agora. Tente novamente.'));
     } finally {
       setLoading(false);
     }
@@ -87,8 +88,8 @@ export default function EvidenceLibrary() {
       const w = await fetchTopicWatches(uid);
       setWatches(w);
       setWatchUpdates(await fetchTopicUpdates(w.map(x => x.id)));
-    } catch (err: any) {
-      toast.error(`Falha ao carregar temas monitorados: ${err?.message ?? err}`);
+    } catch (err) {
+      toast.error(toFriendlyMessage(err, 'Não foi possível carregar seus temas monitorados agora.'));
     } finally {
       setWatchesLoading(false);
     }
@@ -105,8 +106,8 @@ export default function EvidenceLibrary() {
       setNewTopic('');
       toast.success('Tema em monitoramento. Novidades aparecem aqui automaticamente em alguns dias.');
       await refreshWatches();
-    } catch (err: any) {
-      toast.error(`Falha ao adicionar tema: ${err?.message ?? err}`);
+    } catch (err) {
+      toast.error(toFriendlyMessage(err, 'Não foi possível adicionar o tema agora. Tente novamente.'));
     } finally {
       setAddingWatch(false);
     }
@@ -116,8 +117,8 @@ export default function EvidenceLibrary() {
     try {
       await deleteTopicWatch(id);
       setWatches(prev => prev.filter(w => w.id !== id));
-    } catch (err: any) {
-      toast.error(`Falha ao remover: ${err?.message ?? err}`);
+    } catch (err) {
+      toast.error(toFriendlyMessage(err, 'Não foi possível remover agora.'));
     }
   };
 
@@ -128,8 +129,8 @@ export default function EvidenceLibrary() {
       const virality = await scoreViralityRemote({ title: source.title, text: source.summary || source.title, contentType: 'artigo' });
       await updateEvidenceSourceVirality(source.id, virality);
       setSources(prev => prev.map(s => s.id === source.id ? { ...s, virality } : s));
-    } catch (err: any) {
-      toast.error(`Falha ao reavaliar potencial: ${err?.message ?? err}`);
+    } catch (err) {
+      toast.error(toFriendlyMessage(err, 'Não foi possível reavaliar o potencial agora.'));
     } finally {
       setViralityRescoringId(null);
     }
@@ -141,8 +142,8 @@ export default function EvidenceLibrary() {
     try {
       const segments = await fetchEvidenceAudioDebate(source.id);
       setDebateBySource(prev => new Map(prev).set(source.id, segments));
-    } catch (err: any) {
-      toast.error(`Falha ao gerar debate: ${err?.message ?? err}`);
+    } catch (err) {
+      toast.error(toFriendlyMessage(err, 'Não foi possível gerar o debate em áudio agora.'));
     } finally {
       setDebateLoadingId(null);
     }
@@ -155,8 +156,8 @@ export default function EvidenceLibrary() {
       const r = await searchEvidenceSemantic(semQuery.trim());
       setSemResults(r);
       if (!r.length) toast.info('Nenhuma fonte relevante encontrada na sua biblioteca ainda pra esse tema.');
-    } catch (err: any) {
-      toast.error(`Busca por relevância falhou: ${err?.message ?? err}`);
+    } catch (err) {
+      toast.error(toFriendlyMessage(err, 'A busca por relevância falhou. Tente novamente.'));
     } finally {
       setSemSearching(false);
     }
@@ -169,8 +170,8 @@ export default function EvidenceLibrary() {
     try {
       const url = await fetchEvidenceAudioSummary(source.id);
       setAudioBySource(prev => new Map(prev).set(source.id, url));
-    } catch (err: any) {
-      toast.error(`Falha ao gerar áudio: ${err?.message ?? err}`);
+    } catch (err) {
+      toast.error(toFriendlyMessage(err, 'Não foi possível gerar o áudio agora.'));
     } finally {
       setAudioLoadingId(null);
     }
@@ -184,8 +185,8 @@ export default function EvidenceLibrary() {
       const r = await searchPubmed(query.trim(), 10);
       setResults(r);
       if (!r.length) toast.info('Nenhum artigo encontrado no PubMed pra essa busca.');
-    } catch (err: any) {
-      toast.error(`Busca falhou: ${err?.message ?? err}`);
+    } catch (err) {
+      toast.error(toFriendlyMessage(err, 'A busca no PubMed falhou. Tente novamente.'));
     } finally {
       setSearching(false);
     }
@@ -210,8 +211,8 @@ export default function EvidenceLibrary() {
       toast.success('Adicionado à biblioteca');
       embedEvidenceSource(added.id).catch(() => {});
       refresh();
-    } catch (err: any) {
-      toast.error(`Falha ao adicionar: ${err?.message ?? err}`);
+    } catch (err) {
+      toast.error(toFriendlyMessage(err, 'Não foi possível adicionar essa fonte agora.'));
     } finally {
       setAddingId(null);
     }
@@ -222,8 +223,8 @@ export default function EvidenceLibrary() {
       await deleteEvidenceSource(id);
       setSources(s => s.filter(x => x.id !== id));
       toast.success('Removido');
-    } catch (err: any) {
-      toast.error(`Falha ao remover: ${err?.message ?? err}`);
+    } catch (err) {
+      toast.error(toFriendlyMessage(err, 'Não foi possível remover agora.'));
     }
   };
 
@@ -537,8 +538,8 @@ function ManualAddForm({ onAdded }: { onAdded: () => void }) {
       toast.success('Fonte adicionada');
       embedEvidenceSource(added.id).catch(() => {});
       onAdded();
-    } catch (err: any) {
-      toast.error(`Falha ao adicionar: ${err?.message ?? err}`);
+    } catch (err) {
+      toast.error(toFriendlyMessage(err, 'Não foi possível adicionar essa fonte agora.'));
     } finally {
       setSaving(false);
     }

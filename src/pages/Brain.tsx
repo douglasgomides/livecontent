@@ -260,7 +260,9 @@ function BrainPreview({ brain }: { brain: Brain }) {
         {piece.body}
       </pre>
       <div className="text-xs text-muted-foreground">
-        CFM Score: <span className="font-medium text-foreground">{piece.cfm.score}</span>
+        {piece.cfm.evaluated
+          ? <>CFM Score: <span className="font-medium text-foreground">{piece.cfm.score}</span></>
+          : <span className="font-medium text-foreground">Não avaliado — revisar manualmente</span>}
       </div>
     </div>
   );

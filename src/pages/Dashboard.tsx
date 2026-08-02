@@ -54,8 +54,12 @@ export default function Dashboard() {
   const approved = allPieces.filter(p => p.approved).length;
   const pendingApproval = allPieces.filter(p => !p.approved && !p.rejected && !p.cfm.flags.some(f => f.severity === 'block')).length;
   const blockedCfm = allPieces.filter(p => !p.rejected && p.cfm.flags.some(f => f.severity === 'block')).length;
-  const avgCfm = allPieces.length
-    ? Math.round(allPieces.reduce((a, p) => a + p.cfm.score, 0) / allPieces.length)
+  // Nunca mistura peça "não avaliada" (score é só um placeholder neutro) na
+  // média — senão a Conformidade média fica artificialmente puxada por falhas
+  // de avaliação, não por conteúdo real.
+  const evaluatedPieces = allPieces.filter(p => p.cfm.evaluated);
+  const avgCfm = evaluatedPieces.length
+    ? Math.round(evaluatedPieces.reduce((a, p) => a + p.cfm.score, 0) / evaluatedPieces.length)
     : 0;
 
   const jobs = loadJobs();

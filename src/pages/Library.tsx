@@ -227,10 +227,12 @@ export default function Library() {
   );
 }
 
-function statusPill(piece: { approved: boolean; cfm: { flags: { severity: string }[]; score: number } }) {
+function statusPill(piece: { approved: boolean; cfm: { flags: { severity: string }[]; score: number; evaluated: boolean } }) {
   const blocked = piece.cfm.flags.some(f => f.severity === 'block');
   if (blocked) return { cls: 'bg-destructive/15 text-destructive', label: 'Bloqueado' };
   if (piece.approved) return { cls: 'bg-success/15 text-success', label: 'Aprovado' };
+  // "Não avaliado" nunca aparece com número — não é uma nota real de conformidade.
+  if (!piece.cfm.evaluated) return { cls: 'bg-secondary text-muted-foreground', label: 'Não avaliado' };
   return { cls: 'bg-secondary text-muted-foreground', label: `CFM ${piece.cfm.score}` };
 }
 
