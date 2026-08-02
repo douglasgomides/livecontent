@@ -27,6 +27,7 @@ import type {
   LeadStatus,
   LeadMessage,
   WhatsappFollowup,
+  AvatarVideo,
 } from '@/types/session';
 import type { Brain } from '@/types/brain';
 import { EMPTY_BRAIN } from '@/types/brain';
@@ -306,6 +307,11 @@ export interface DoctorSettings {
   // esse endpoint quando um lead responde por WhatsApp) — gerado automático
   // pelo banco, só leitura aqui.
   whatsappInboundToken: string | null;
+  // Credenciais da conta HeyGen do PRÓPRIO médico (avatar clonado dele) —
+  // nunca um secret compartilhado da plataforma, cada médico usa a sua.
+  heygenApiKey: string | null;
+  heygenAvatarId: string | null;
+  heygenVoiceId: string | null;
 }
 
 export async function fetchSettings(userId: string): Promise<DoctorSettings> {
@@ -321,6 +327,9 @@ export async function fetchSettings(userId: string): Promise<DoctorSettings> {
     schedulingLink: data?.scheduling_link ?? null,
     whatsappWebhookUrl: data?.whatsapp_webhook_url ?? null,
     whatsappInboundToken: data?.whatsapp_inbound_token ?? null,
+    heygenApiKey: data?.heygen_api_key ?? null,
+    heygenAvatarId: data?.heygen_avatar_id ?? null,
+    heygenVoiceId: data?.heygen_voice_id ?? null,
   };
 }
 
@@ -331,6 +340,9 @@ export async function saveSettingsDb(userId: string, s: DoctorSettings): Promise
     preferred_formats: s.preferredFormats as any,
     scheduling_link: s.schedulingLink,
     whatsapp_webhook_url: s.whatsappWebhookUrl,
+    heygen_api_key: s.heygenApiKey,
+    heygen_avatar_id: s.heygenAvatarId,
+    heygen_voice_id: s.heygenVoiceId,
   }, { onConflict: 'user_id' });
   if (error) throw error;
 }
@@ -979,6 +991,51 @@ export async function approveAndSendWhatsappFollowup(followupId: string): Promis
   const { data, error } = await supabase.functions.invoke('dispatch-whatsapp-followup', { body: { followup_id: followupId } });
   if (error) return { ok: false, error: error.message ?? 'Falha ao enviar' };
   return data as { ok: boolean; error?: string };
+}
+
+// ─── Vídeo com avatar clonado (HeyGen) — sempre sob demanda, por peça ──────
+
+function mapAvatarVideoRow(row: any): AvatarVideo {
+  return {
+    id: row.id,
+    contentPieceId: row.content_piece_id,
+    status: row.status,
+    videoUrl: row.video_url ?? null,
+    error: row.error ?? null,
+    createdAt: row.created_at,
+  };
+}
+
+// Pega a geração mais recente dessa peça — o médico pode gerar de novo (ex.:
+// depois de editar o roteiro), então nunca assume linha única.
+export async function fetchAvatarVideoForPiece(pieceId: string): Promise<AvatarVideo | null> {
+  const { data, error } = await supabase
+    .from('avatar_videos')
+    .select('*')
+    .eq('content_piece_id', pieceId)
+    .order('created_at', { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  return data && data[0] ? mapAvatarVideoRow(data[0]) : null;
+}
+
+// Chama a edge function que fala com a API do HeyGen usando a CONTA/AVATAR DO
+// PRÓPRIO MÉDICO (nunca uma credencial compartilhada da plataforma) — a
+// geração em si é assíncrona do lado do HeyGen, esta chamada só inicia o job.
+export async function createAvatarVideoJob(pieceId: string): Promise<AvatarVideo> {
+  const { data, error } = await supabase.functions.invoke('generate-avatar-video', { body: { piece_id: pieceId } });
+  if (error) throw new Error(error.message ?? 'Falha ao iniciar geração do vídeo');
+  if (data?.error) throw new Error(data.error);
+  return mapAvatarVideoRow(data);
+}
+
+// Polling leve enquanto o job está 'processing' — sem cron, o próprio
+// componente chama isso a cada alguns segundos enquanto a tela estiver aberta.
+export async function checkAvatarVideoStatus(avatarVideoId: string): Promise<AvatarVideo> {
+  const { data, error } = await supabase.functions.invoke('check-avatar-video-status', { body: { avatar_video_id: avatarVideoId } });
+  if (error) throw new Error(error.message ?? 'Falha ao checar status do vídeo');
+  if (data?.error) throw new Error(data.error);
+  return mapAvatarVideoRow(data);
 }
 
 export async function fetchRecentSessionsForLinking(userId: string, limit = 20): Promise<{ id: string; title: string; createdAt: string }[]> {

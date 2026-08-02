@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Brain as BrainIcon, ArrowRight, Database, RefreshCw, Download, Trash2, Webhook, LogOut, Upload as UploadIcon, Crown, Loader2, ExternalLink, Radio, MessageCircle, Copy, Check } from 'lucide-react';
+import { Brain as BrainIcon, ArrowRight, Database, RefreshCw, Download, Trash2, Webhook, LogOut, Upload as UploadIcon, Crown, Loader2, ExternalLink, Radio, MessageCircle, Copy, Check, UserCircle2 } from 'lucide-react';
 import { useSessions, loadSessions } from '@/lib/storage';
 import { loadBrain, saveBrain, useBrain } from '@/lib/brainStorage';
 import { getSettings, saveSettings, upsertSession } from '@/lib/store';
@@ -57,6 +57,9 @@ export default function Settings() {
   const [whatsappWebhookUrl, setWhatsappWebhookUrl] = useState(initialSettings.whatsappWebhookUrl ?? '');
   const [whatsappInboundToken, setWhatsappInboundToken] = useState(initialSettings.whatsappInboundToken ?? '');
   const [copiedInbound, setCopiedInbound] = useState(false);
+  const [heygenApiKey, setHeygenApiKey] = useState(initialSettings.heygenApiKey ?? '');
+  const [heygenAvatarId, setHeygenAvatarId] = useState(initialSettings.heygenAvatarId ?? '');
+  const [heygenVoiceId, setHeygenVoiceId] = useState(initialSettings.heygenVoiceId ?? '');
 
   useEffect(() => {
     const s = getSettings();
@@ -65,6 +68,9 @@ export default function Settings() {
     setSchedulingLink(s.schedulingLink ?? '');
     setWhatsappWebhookUrl(s.whatsappWebhookUrl ?? '');
     setWhatsappInboundToken(s.whatsappInboundToken ?? '');
+    setHeygenApiKey(s.heygenApiKey ?? '');
+    setHeygenAvatarId(s.heygenAvatarId ?? '');
+    setHeygenVoiceId(s.heygenVoiceId ?? '');
   }, [user?.id]);
 
   const inboundUrl = whatsappInboundToken ? `${FUNCTIONS_BASE}/receive-whatsapp-reply?token=${whatsappInboundToken}` : '';
@@ -140,6 +146,16 @@ export default function Settings() {
   const saveWhatsappWebhook = async () => {
     await saveSettings({ ...getSettings(), whatsappWebhookUrl: whatsappWebhookUrl.trim() || null });
     toast.success('Webhook do WhatsApp salvo');
+  };
+
+  const saveHeygenSettings = async () => {
+    await saveSettings({
+      ...getSettings(),
+      heygenApiKey: heygenApiKey.trim() || null,
+      heygenAvatarId: heygenAvatarId.trim() || null,
+      heygenVoiceId: heygenVoiceId.trim() || null,
+    });
+    toast.success('Configuração do HeyGen salva');
   };
 
   const saveFormats = async () => {
@@ -363,6 +379,34 @@ export default function Settings() {
         ) : (
           <p className="text-xs text-muted-foreground">Salve qualquer ajuste acima uma vez pra gerar seu link de recebimento.</p>
         )}
+      </div>
+
+      <div className="border-t border-border pt-8 space-y-4">
+        <div className="flex items-center gap-2">
+          <UserCircle2 className="h-4 w-4 text-primary" />
+          <h2 className="font-serif text-2xl">Vídeo com seu avatar (HeyGen)</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Pra gerar vídeo do seu avatar clonado lendo o roteiro de uma peça (aba "Vídeo avatar" em
+          Conteúdo). Use a conta HeyGen que já tem SEU avatar treinado — nunca um avatar de estoque.
+          Pegue a chave em HeyGen → Settings → API, e o avatar_id/voice_id na listagem de avatares/vozes
+          da sua conta.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Chave da API</Label>
+            <Input type="password" value={heygenApiKey} onChange={e => setHeygenApiKey(e.target.value)} placeholder="Chave HeyGen" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">ID do avatar</Label>
+            <Input value={heygenAvatarId} onChange={e => setHeygenAvatarId(e.target.value)} placeholder="avatar_id" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">ID da voz</Label>
+            <Input value={heygenVoiceId} onChange={e => setHeygenVoiceId(e.target.value)} placeholder="voice_id" />
+          </div>
+        </div>
+        <Button onClick={saveHeygenSettings} variant="outline" size="sm">Salvar configuração do HeyGen</Button>
       </div>
 
       <div className="border-t border-border pt-8 space-y-4">

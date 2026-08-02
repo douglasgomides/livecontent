@@ -465,3 +465,17 @@ export interface PublishJob {
   scheduledAt?: string;
   message?: string;
 }
+
+// Vídeo do médico com o próprio avatar clonado no HeyGen, lendo o roteiro de
+// uma peça — sempre sob demanda (nunca automático no pipeline), sempre com o
+// avatar/voz que o médico já configurou em Ajustes (nunca estoque genérico).
+export type AvatarVideoStatus = 'processing' | 'completed' | 'failed';
+
+export interface AvatarVideo {
+  id: string;
+  contentPieceId: string;
+  status: AvatarVideoStatus;
+  videoUrl: string | null;
+  error: string | null;
+  createdAt: string;
+}

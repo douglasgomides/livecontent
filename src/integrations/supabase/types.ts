@@ -29,6 +29,50 @@ export type Database = {
         }
         Relationships: []
       }
+      avatar_videos: {
+        Row: {
+          content_piece_id: string
+          created_at: string
+          error: string | null
+          heygen_video_id: string | null
+          id: string
+          status: string
+          updated_at: string
+          user_id: string
+          video_url: string | null
+        }
+        Insert: {
+          content_piece_id: string
+          created_at?: string
+          error?: string | null
+          heygen_video_id?: string | null
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          video_url?: string | null
+        }
+        Update: {
+          content_piece_id?: string
+          created_at?: string
+          error?: string | null
+          heygen_video_id?: string | null
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avatar_videos_content_piece_id_fkey"
+            columns: ["content_piece_id"]
+            isOneToOne: false
+            referencedRelation: "content_pieces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brains: {
         Row: {
           brain_seeded: boolean
@@ -348,6 +392,9 @@ export type Database = {
       doctor_settings: {
         Row: {
           created_at: string
+          heygen_api_key: string | null
+          heygen_avatar_id: string | null
+          heygen_voice_id: string | null
           preferred_formats: Json
           scheduling_link: string | null
           updated_at: string
@@ -358,6 +405,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          heygen_api_key?: string | null
+          heygen_avatar_id?: string | null
+          heygen_voice_id?: string | null
           preferred_formats?: Json
           scheduling_link?: string | null
           updated_at?: string
@@ -368,6 +418,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          heygen_api_key?: string | null
+          heygen_avatar_id?: string | null
+          heygen_voice_id?: string | null
           preferred_formats?: Json
           scheduling_link?: string | null
           updated_at?: string

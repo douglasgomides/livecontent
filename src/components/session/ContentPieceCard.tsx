@@ -10,6 +10,7 @@ import { FORMAT_LABEL, FORMAT_ICON, EXPORT_MODE } from '@/lib/contentFormats';
 import { Copy, CheckCircle2, AlertTriangle, ShieldAlert, RefreshCw, Download, Loader2, Share2, Pencil, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import PieceArtwork from './PieceArtwork';
+import PieceAvatarVideo from './PieceAvatarVideo';
 import PiecePrompts from './PiecePrompts';
 import PiecePublish from './PiecePublish';
 import ViralityBadge from '@/components/ViralityBadge';
@@ -78,6 +79,9 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, unver
   const topicTitle = topic?.title || piece.meta?.title || 'Sem título';
   const canHaveArtwork = piece.format === 'carousel' || piece.format === 'stories';
   const hasPrompts = piece.externalPrompts && Object.keys(piece.externalPrompts).length > 0;
+  // Vídeo com avatar só faz sentido pra formato falado/narrado — carrossel e
+  // caption são só texto/imagem estática, sem roteiro contínuo pra ler.
+  const canHaveAvatarVideo = piece.format === 'reel' || piece.format === 'stories' || piece.format === 'youtube' || piece.format === 'tiktok';
 
   return (
     <div className="border border-border/60 rounded-lg overflow-hidden bg-card">
@@ -116,6 +120,9 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, unver
           <span title={hasPrompts ? undefined : 'Nenhum prompt externo foi gerado pra esta peça ainda'} className="inline-block">
             <TabsTrigger value="prompts" className="text-xs" disabled={!hasPrompts}>Prompts externos</TabsTrigger>
           </span>
+          <span title={canHaveAvatarVideo ? undefined : 'Disponível só pra formatos narrados (Reel, Stories, YouTube, TikTok)'} className="inline-block">
+            <TabsTrigger value="avatar" className="text-xs" disabled={!canHaveAvatarVideo}>Vídeo avatar</TabsTrigger>
+          </span>
           <TabsTrigger value="publish" className="text-xs">Publicar</TabsTrigger>
         </TabsList>
 
@@ -153,6 +160,10 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, unver
 
         <TabsContent value="prompts" className="m-0">
           <PiecePrompts piece={piece} />
+        </TabsContent>
+
+        <TabsContent value="avatar" className="m-0">
+          <PieceAvatarVideo piece={piece} />
         </TabsContent>
 
         <TabsContent value="publish" className="m-0">
