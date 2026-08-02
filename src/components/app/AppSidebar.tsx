@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -22,6 +23,7 @@ import {
   TrendingUp,
   ClipboardList,
   Package,
+  ChevronDown,
 } from 'lucide-react';
 
 import {
@@ -37,9 +39,12 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { loadProfile } from '@/lib/storage';
 import { loadBrain, getCompleteness } from '@/lib/brainStorage';
 import { isRecordingActive, LEAVE_RECORDING_WARNING } from '@/lib/recordingGuard';
+import { isAppAdmin } from '@/lib/db';
+import { getUserId } from '@/lib/store';
 
 // Gravar consulta é a ação principal (renderizada em destaque, separada do
 // resto) — as outras formas de criar são variações menos comuns e não devem
@@ -63,6 +68,12 @@ const workItems = [
   { title: 'Biblioteca', url: '/app/library', icon: Library },
   { title: 'Inteligência de conversão', url: '/app/insights', icon: LineChart },
   { title: 'Pré-consulta', url: '/app/pre-consulta', icon: ClipboardList },
+];
+
+// Separado de "Trabalho" — eram os itens que ficavam enterrados no fim de uma
+// lista de 13 sem nenhum indício de que havia mais abaixo. Como grupo próprio,
+// aparecem com nome e ficam sempre alcançáveis, não só depois de rolar tudo.
+const resourceItems = [
   { title: 'Produtos', url: '/app/products', icon: Package },
   { title: 'Tendências', url: '/app/trends', icon: TrendingUp },
   { title: 'Evidências', url: '/app/evidence', icon: Microscope },
@@ -73,14 +84,70 @@ const workItems = [
 const accountItems = [
   { title: 'Brain', url: '/app/brain', icon: BrainIcon },
   { title: 'Ajustes', url: '/app/settings', icon: Settings },
-  { title: 'Admin', url: '/app/admin', icon: ShieldCheck },
 ];
+const adminItem = { title: 'Admin', url: '/app/admin', icon: ShieldCheck };
+
+const GROUP_STATE_KEY = 'cc_sidebar_groups_v1';
+type GroupId = 'create' | 'secondary' | 'work' | 'resources' | 'account';
+const DEFAULT_GROUP_STATE: Record<GroupId, boolean> = {
+  create: true,
+  secondary: false,
+  work: true,
+  resources: true,
+  account: true,
+};
+
+function loadGroupState(): Record<GroupId, boolean> {
+  try {
+    const raw = localStorage.getItem(GROUP_STATE_KEY);
+    if (!raw) return DEFAULT_GROUP_STATE;
+    return { ...DEFAULT_GROUP_STATE, ...JSON.parse(raw) };
+  } catch {
+    return DEFAULT_GROUP_STATE;
+  }
+}
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const { pathname } = useLocation();
   const profile = loadProfile();
+
+  const [groupState, setGroupState] = useState<Record<GroupId, boolean>>(loadGroupState);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [canScrollUp, setCanScrollUp] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(false);
+  const contentRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const uid = getUserId();
+    if (!uid) return;
+    isAppAdmin(uid).then(setIsAdmin).catch(() => setIsAdmin(false));
+  }, []);
+
+  const toggleGroup = (id: GroupId) => {
+    setGroupState(prev => {
+      const next = { ...prev, [id]: !prev[id] };
+      localStorage.setItem(GROUP_STATE_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const updateScrollShadows = () => {
+    const el = contentRef.current;
+    if (!el) return;
+    setCanScrollUp(el.scrollTop > 4);
+    setCanScrollDown(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
+  };
+
+  useEffect(() => {
+    updateScrollShadows();
+    const el = contentRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(updateScrollShadows);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [groupState, isAdmin]);
 
   const isActive = (path: string, end?: boolean) =>
     end ? pathname === path : pathname === path || pathname.startsWith(path + '/');
@@ -115,6 +182,40 @@ export function AppSidebar() {
     );
   };
 
+  // Cada grupo colapsável some quando a sidebar tá em modo ícone (não faz
+  // sentido colapsar rótulo que já não aparece), e mostra um chevron que gira
+  // conforme o estado — persistido, então a escolha do médico não reseta.
+  const renderGroup = (id: GroupId, label: string, items: { title: string; url: string; icon: any; end?: boolean }[]) => {
+    if (!items.length) return null;
+    if (collapsed) {
+      return (
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>{items.map(item => renderItem(item))}</SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      );
+    }
+    const open = groupState[id];
+    return (
+      <Collapsible open={open} onOpenChange={() => toggleGroup(id)}>
+        <SidebarGroup>
+          <CollapsibleTrigger asChild>
+            <SidebarGroupLabel className="cursor-pointer flex items-center justify-between pr-2 hover:text-foreground">
+              {label}
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? '' : '-rotate-90'}`} />
+            </SidebarGroupLabel>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <SidebarGroupContent>
+              <SidebarMenu>{items.map(item => renderItem(item))}</SidebarMenu>
+            </SidebarGroupContent>
+          </CollapsibleContent>
+        </SidebarGroup>
+      </Collapsible>
+    );
+  };
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
@@ -134,35 +235,29 @@ export function AppSidebar() {
         </Link>
       </SidebarHeader>
 
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Criar</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>{renderItem(primaryCreateItem, true)}</SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+      <div className="relative min-h-0 flex-1 flex flex-col">
+        {/* Sombra de degradê no topo/fim da lista — só aparece quando há mais
+            conteúdo pra rolar naquela direção, o affordance que faltava. */}
+        {canScrollUp && (
+          <div className="pointer-events-none absolute top-0 inset-x-0 h-4 z-10 bg-gradient-to-b from-sidebar to-transparent" />
+        )}
+        <SidebarContent ref={contentRef} onScroll={updateScrollShadows}>
+          <SidebarGroup>
+            <SidebarGroupLabel>Criar</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>{renderItem(primaryCreateItem, true)}</SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Outras formas</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>{secondaryCreateItems.map(item => renderItem(item))}</SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Trabalho</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>{workItems.map(item => renderItem(item))}</SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Conta</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>{accountItems.map(item => renderItem(item))}</SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
+          {renderGroup('secondary', 'Outras formas', secondaryCreateItems)}
+          {renderGroup('work', 'Trabalho', workItems)}
+          {renderGroup('resources', 'Recursos', resourceItems)}
+          {renderGroup('account', 'Conta', isAdmin ? [...accountItems, adminItem] : accountItems)}
+        </SidebarContent>
+        {canScrollDown && (
+          <div className="pointer-events-none absolute bottom-0 inset-x-0 h-4 z-10 bg-gradient-to-t from-sidebar to-transparent" />
+        )}
+      </div>
 
       {!collapsed && profile && (
         <SidebarFooter className="border-t border-sidebar-border">

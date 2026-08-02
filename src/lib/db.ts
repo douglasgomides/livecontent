@@ -32,6 +32,16 @@ import {
 
 // ─── Brain ──────────────────────────────────────────────────────────────────
 
+// Checa se o usuário tem permissão de admin — usado só pra decidir se o item
+// "Admin" aparece na sidebar (a página em si já tem seu próprio gate real no
+// servidor via admin-overview; isso é puramente pra não mostrar um link morto
+// pra quem nunca vai conseguir entrar).
+export async function isAppAdmin(userId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('is_app_admin', { uid: userId });
+  if (error) { console.warn('[isAppAdmin] failed', error); return false; }
+  return !!data;
+}
+
 export async function fetchBrain(userId: string): Promise<Brain> {
   const { data, error } = await supabase
     .from('brains')
