@@ -1,5 +1,18 @@
-import type { ContentFormat, ContentChannel } from '@/types/session';
+import type { ContentFormat, ContentChannel, Topic } from '@/types/session';
 import { Instagram, Linkedin, MessageSquare, Youtube, FileText, Globe, MapPin, Stethoscope, Mic, Music, Camera } from 'lucide-react';
+
+// Rótulos em linguagem simples pro estágio de funil (C0-C3 é jargão de marketing
+// que um médico leigo em ferramenta de conteúdo não teria por que conhecer) —
+// fonte única, nunca renderizar o código cru "C1" na tela em lugar nenhum.
+// Vários temas de UMA MESMA consulta podem legitimamente cair no mesmo estágio
+// (não é um identificador sequencial único) — mostrar o código cru lado a lado
+// é o que faz isso parecer um bug de "rótulo duplicado" quando não é.
+export const FUNNEL_STAGE_LABEL: Record<Topic['funnelStage'], string> = {
+  C0: 'Não sabe do problema',
+  C1: 'Sabe do problema',
+  C2: 'Compara soluções',
+  C3: 'Pronto para agendar',
+};
 
 export const FORMAT_LABEL: Record<ContentFormat, string> = {
   reel: 'Reel',

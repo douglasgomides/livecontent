@@ -164,7 +164,7 @@ export default function Dashboard() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <FlowCard to="/app/approvals" icon={Inbox} label="Pendentes" value={pendingApproval} tone="warning" />
-            <FlowCard to="/app/approvals" icon={Shield} label="Bloqueadas CFM" value={blockedCfm} tone="danger" />
+            <FlowCard to="/app/approvals" icon={Shield} label="Sinalizadas CFM" value={blockedCfm} tone="danger" />
             <FlowCard to="/app/calendar" icon={CalendarDays} label="Agendadas 7d" value={scheduledThisWeek} tone="primary" />
             <FlowCard to="/app/queue" icon={Send} label="Na fila" value={queueOpen} tone="primary" />
           </div>

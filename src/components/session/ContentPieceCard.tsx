@@ -27,6 +27,7 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, unver
   const [body, setBody] = useState(piece.body);
   const [rescoring, setRescoring] = useState(false);
   const [draftConfirmed, setDraftConfirmed] = useState(false);
+  const [cfmOverrideConfirmed, setCfmOverrideConfirmed] = useState(false);
   const cfm = piece.cfm;
   const blocked = cfm.flags.some(f => f.severity === 'block');
   const warned = cfm.flags.some(f => f.severity === 'warning');
@@ -155,6 +156,16 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, unver
         </div>
       )}
 
+      {blocked && !piece.approved && (
+        <label className="px-4 py-2.5 border-t border-destructive/40 bg-destructive/5 flex items-start gap-2 cursor-pointer">
+          <Checkbox checked={cfmOverrideConfirmed} onCheckedChange={v => setCfmOverrideConfirmed(!!v)} className="mt-0.5" />
+          <span className="text-xs text-foreground">
+            A IA sinalizou possível problema de conformidade CFM nesta peça (veja os itens acima). O CFM é
+            só um sinalizador — revisei o texto e decido aprovar mesmo assim.
+          </span>
+        </label>
+      )}
+
       {unverifiedDraft && !piece.approved && (
         <label className="px-4 py-2.5 border-t border-warning/40 bg-warning/10 flex items-start gap-2 cursor-pointer">
           <Checkbox checked={draftConfirmed} onCheckedChange={v => setDraftConfirmed(!!v)} className="mt-0.5" />
@@ -177,12 +188,12 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, unver
         </div>
         <Button
           size="sm"
-          disabled={blocked || (!!unverifiedDraft && !piece.approved && !draftConfirmed)}
+          disabled={(blocked && !piece.approved && !cfmOverrideConfirmed) || (!!unverifiedDraft && !piece.approved && !draftConfirmed)}
           onClick={onApprove}
           className={piece.approved ? '' : 'bg-gold-gradient text-primary-foreground'}
           variant={piece.approved ? 'outline' : 'default'}
         >
-          {piece.approved ? <><CheckCircle2 className="h-4 w-4 mr-2" /> Aprovado</> : blocked ? 'Bloqueado pelo CFM' : 'Aprovar peça'}
+          {piece.approved ? <><CheckCircle2 className="h-4 w-4 mr-2" /> Aprovado</> : 'Aprovar peça'}
         </Button>
       </div>
     </div>
@@ -219,6 +230,6 @@ function ScoreBadge({ score, blocked, warned, evaluated }: { score: number; bloc
     return <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">Não avaliado — revisar manualmente</span>;
   }
   const cls = blocked ? 'bg-destructive/15 text-destructive' : warned ? 'bg-warning/15 text-warning' : 'bg-success/15 text-success';
-  const label = blocked ? `CFM ${score} · bloqueado` : warned ? `CFM ${score} · revisar` : `CFM ${score} · conforme`;
+  const label = blocked ? `CFM ${score} · sinalizado` : warned ? `CFM ${score} · revisar` : `CFM ${score} · conforme`;
   return <span className={`text-xs px-2 py-0.5 rounded-full ${cls}`}>{label}</span>;
 }

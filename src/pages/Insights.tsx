@@ -11,7 +11,7 @@ import { getUserId } from '@/lib/store';
 import { loadBrain, saveBrain } from '@/lib/brainStorage';
 import { fetchPatientSignals, fetchAllCommercialIntelligence, fetchProducts, type CommercialIntelligenceWithMeta } from '@/lib/db';
 import { fetchCommercialBenchmark, type CommercialBenchmark } from '@/lib/pipeline';
-import { FORMAT_LABEL } from '@/lib/contentFormats';
+import { FORMAT_LABEL, FUNNEL_STAGE_LABEL } from '@/lib/contentFormats';
 import type { ContentFormat, PatientSignal, Product } from '@/types/session';
 
 // Pisos mínimos antes de liberar o opt-in — mesma cautela de qualquer padrão
@@ -68,14 +68,9 @@ const SENTIMENT_LABEL: Record<string, string> = {
   frustrated: 'Frustrado', reassured: 'Tranquilizado', indifferent: 'Indiferente', other: 'Outro',
 };
 
-// Estágio de funil em linguagem simples — mesmo mapeamento usado em TopicsReview,
-// duplicado aqui de propósito (é só rótulo de exibição, não vale acoplar as duas telas).
-const STAGE_LABEL: Record<'C0' | 'C1' | 'C2' | 'C3', string> = {
-  C0: 'Não sabe do problema',
-  C1: 'Sabe do problema',
-  C2: 'Compara soluções',
-  C3: 'Pronto para agendar',
-};
+// Estágio de funil em linguagem simples — fonte única em contentFormats.ts, pra
+// nunca divergir do rótulo mostrado em TopicsReview/SessionDetail.
+const STAGE_LABEL = FUNNEL_STAGE_LABEL;
 
 // Palavras curtas e conectivos que não carregam sentido de tema — filtradas do
 // ranking de palavras mais frequentes pra sobrar só o que é assunto de verdade.

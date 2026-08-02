@@ -121,7 +121,7 @@ export default function Library() {
               <SelectItem value="all">Todos os status</SelectItem>
               <SelectItem value="approved">Aprovadas</SelectItem>
               <SelectItem value="pending">Pendentes</SelectItem>
-              <SelectItem value="blocked">Bloqueadas</SelectItem>
+              <SelectItem value="blocked">Sinalizadas CFM</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -229,7 +229,7 @@ export default function Library() {
 
 function statusPill(piece: { approved: boolean; cfm: { flags: { severity: string }[]; score: number; evaluated: boolean } }) {
   const blocked = piece.cfm.flags.some(f => f.severity === 'block');
-  if (blocked) return { cls: 'bg-destructive/15 text-destructive', label: 'Bloqueado' };
+  if (blocked) return { cls: 'bg-destructive/15 text-destructive', label: 'Sinalizado CFM' };
   if (piece.approved) return { cls: 'bg-success/15 text-success', label: 'Aprovado' };
   // "Não avaliado" nunca aparece com número — não é uma nota real de conformidade.
   if (!piece.cfm.evaluated) return { cls: 'bg-secondary text-muted-foreground', label: 'Não avaliado' };

@@ -298,7 +298,7 @@ export default function Settings() {
           </div>
           <div className="border border-border rounded-lg p-3">
             <div className="text-2xl font-medium text-destructive">{stats.blocked}</div>
-            <div className="text-xs text-muted-foreground">bloqueadas CFM</div>
+            <div className="text-xs text-muted-foreground">sinalizadas CFM</div>
           </div>
         </div>
 

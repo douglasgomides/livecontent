@@ -14,7 +14,7 @@ import ContentPieceCard from '@/components/session/ContentPieceCard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ArrowLeft, Check, Circle, Loader2, Sparkles, FlaskConical, FileText, AlertTriangle, RefreshCw, Target, Lightbulb, TrendingUp, X } from 'lucide-react';
-import { CHANNEL_LABEL, CHANNEL_ICON } from '@/lib/contentFormats';
+import { CHANNEL_LABEL, CHANNEL_ICON, FUNNEL_STAGE_LABEL } from '@/lib/contentFormats';
 import type { ContentChannel } from '@/types/session';
 
 const ALL_STAGES: { id: SessionStatus; label: string }[] = [
@@ -257,7 +257,7 @@ export default function SessionDetail() {
                   <div className="space-y-3">
                     {session.topics.map(t => (
                       <div key={t.id} className={`border rounded-lg p-4 ${t.included ? 'border-primary/40 bg-primary/5' : 'border-border/60 opacity-60'}`}>
-                        <div className="text-xs uppercase tracking-widest text-primary mb-1">{t.funnelStage}</div>
+                        <div className="text-xs uppercase tracking-widest text-primary mb-1">{FUNNEL_STAGE_LABEL[t.funnelStage]}</div>
                         <div className="font-serif text-lg">{t.title}</div>
                         <p className="text-sm text-muted-foreground mt-1">{t.summary}</p>
                       </div>
@@ -309,7 +309,7 @@ export default function SessionDetail() {
                     return (
                       <div key={topic.id} className="space-y-5">
                         <div className="border-l-2 border-primary pl-4">
-                          <div className="text-xs uppercase tracking-widest text-primary mb-1">Tema · {topic.funnelStage}</div>
+                          <div className="text-xs uppercase tracking-widest text-primary mb-1">Tema · {FUNNEL_STAGE_LABEL[topic.funnelStage]}</div>
                           <h3 className="font-serif text-2xl">{topic.title}</h3>
                           <p className="text-sm text-muted-foreground mt-1">{topic.summary}</p>
                         </div>

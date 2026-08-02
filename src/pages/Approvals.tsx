@@ -38,12 +38,16 @@ export default function Approvals() {
   const [previewRow, setPreviewRow] = useState<Row | null>(null);
   const [rejectRow, setRejectRow] = useState<Row | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
-  const [draftConfirm, setDraftConfirm] = useState<{ row: Row; action: () => void } | null>(null);
+  const [confirmApprove, setConfirmApprove] = useState<{ row: Row; reasons: ('cfm' | 'draft')[]; action: () => void } | null>(null);
 
-  // Peça de sessão sem transcrição real (fluxo Link → Conteúdo) nunca aprova
-  // direto — exige confirmação explícita de que o médico sabe que é rascunho.
+  // CFM sinalizado ou rascunho não verificado (Link → Conteúdo sem transcrição real)
+  // nunca aprovam direto — exige confirmação explícita do médico, mas nunca bloqueia
+  // de fato (o CFM é rígido demais pra ser impeditivo; ele só aponta o que revisar).
   const requestApprove = (row: Row, action: () => void) => {
-    if (row.session.unverifiedDraft) { setDraftConfirm({ row, action }); return; }
+    const reasons: ('cfm' | 'draft')[] = [];
+    if (row.piece.cfm.flags.some(f => f.severity === 'block')) reasons.push('cfm');
+    if (row.session.unverifiedDraft) reasons.push('draft');
+    if (reasons.length) { setConfirmApprove({ row, reasons, action }); return; }
     action();
   };
 
@@ -57,7 +61,9 @@ export default function Approvals() {
 
   const pending = rows.filter(r => !r.piece.approved && !r.piece.rejected && !r.piece.cfm.flags.some(f => f.severity === 'block'));
   const approved = rows.filter(r => r.piece.approved);
-  const blocked = rows.filter(r => !r.piece.rejected && r.piece.cfm.flags.some(f => f.severity === 'block'));
+  // CFM sinalizado nunca é impeditivo — é só um apontamento pra revisar. Some
+  // daqui assim que a peça é aprovada (mesmo aprovada "com ressalva").
+  const blocked = rows.filter(r => !r.piece.rejected && !r.piece.approved && r.piece.cfm.flags.some(f => f.severity === 'block'));
 
   const filtered = pending.filter(r =>
     (channel === 'all' || r.piece.channel === channel) &&
@@ -214,9 +220,12 @@ export default function Approvals() {
         <div className="border border-destructive/40 rounded-xl p-4 bg-destructive/5">
           <div className="flex items-center gap-2 text-destructive mb-2">
             <ShieldAlert className="h-4 w-4" />
-            <span className="text-sm font-semibold">Bloqueadas pelo CFM ({blocked.length})</span>
+            <span className="text-sm font-semibold">Sinalizadas pelo CFM ({blocked.length})</span>
           </div>
-          <p className="text-xs text-muted-foreground mb-3">Edite o texto aqui pra remover o termo bloqueado — o score é recalculado no ato.</p>
+          <p className="text-xs text-muted-foreground mb-3">
+            O CFM é um sinalizador, não um veto — edite pra resolver o apontamento, ou aprove mesmo assim
+            depois de confirmar que revisou.
+          </p>
           <div className="grid md:grid-cols-2 gap-3">
             {blocked.map(b => (
               <div key={b.piece.id} className="border border-destructive/30 rounded-lg p-3 bg-background">
@@ -228,7 +237,10 @@ export default function Approvals() {
                 <div className="text-xs text-muted-foreground mb-2">
                   {b.piece.cfm.flags.filter(f => f.severity === 'block').map(f => f.label).join(' · ')}
                 </div>
-                <div className="flex gap-1.5">
+                <div className="flex gap-1.5 flex-wrap">
+                  <Button size="sm" className="bg-gold-gradient text-primary-foreground" onClick={() => requestApprove(b, () => approve(b))}>
+                    <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Aprovar mesmo assim
+                  </Button>
                   <Button size="sm" variant="outline" onClick={() => setEditRow(b)}>
                     <Pencil className="h-3.5 w-3.5 mr-1" /> Editar
                   </Button>
@@ -276,24 +288,34 @@ export default function Approvals() {
       {/* Reject dialog */}
       <RejectDialog row={rejectRow} onClose={() => setRejectRow(null)} onConfirm={confirmReject} />
 
-      {/* Confirmação de rascunho não verificado (Link → Conteúdo sem transcrição real) */}
-      <Dialog open={!!draftConfirm} onOpenChange={() => setDraftConfirm(null)}>
+      {/* Confirmação antes de aprovar — CFM sinalizado e/ou rascunho não verificado.
+          Nenhum dos dois impede a aprovação; só exigem que o médico confirme que revisou. */}
+      <Dialog open={!!confirmApprove} onOpenChange={() => setConfirmApprove(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-warning">
-              <AlertTriangle className="h-4 w-4" /> Rascunho não verificado
+              <AlertTriangle className="h-4 w-4" /> Confirme antes de aprovar
             </DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Esta peça veio de uma consulta sem transcrição real do vídeo/artigo (fluxo Link → Conteúdo) —
-            o texto é um rascunho baseado só na URL e no contexto informado, nunca no conteúdo real.
-            Confirme que já revisou antes de aprovar.
-          </p>
+          <div className="text-sm text-muted-foreground space-y-2">
+            {confirmApprove?.reasons.includes('cfm') && (
+              <p>
+                A IA sinalizou possível problema de conformidade CFM nesta peça. O CFM é só um sinalizador,
+                não um veto — revise o texto e confirme que decide aprovar mesmo assim.
+              </p>
+            )}
+            {confirmApprove?.reasons.includes('draft') && (
+              <p>
+                Esta peça veio de uma consulta sem transcrição real do vídeo/artigo (fluxo Link → Conteúdo)
+                — o texto é um rascunho baseado só na URL e no contexto informado, nunca no conteúdo real.
+              </p>
+            )}
+          </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setDraftConfirm(null)}>Cancelar</Button>
+            <Button variant="ghost" onClick={() => setConfirmApprove(null)}>Cancelar</Button>
             <Button
               className="bg-gold-gradient text-primary-foreground"
-              onClick={() => { draftConfirm?.action(); setDraftConfirm(null); }}
+              onClick={() => { confirmApprove?.action(); setConfirmApprove(null); }}
             >
               Já revisei, aprovar mesmo assim
             </Button>

@@ -16,16 +16,9 @@ import { Lightbulb, LayoutTemplate, Radio, RefreshCw, Loader2 } from 'lucide-rea
 import { toast } from 'sonner';
 import FormatPicker from './FormatPicker';
 import ViralityBadge from '@/components/ViralityBadge';
+import { FUNNEL_STAGE_LABEL } from '@/lib/contentFormats';
 
 const STAGES: Topic['funnelStage'][] = ['C0', 'C1', 'C2', 'C3'];
-// Rótulos em linguagem simples em vez dos códigos C0-C3 (jargão de marketing
-// que um médico leigo em ferramenta de conteúdo não teria por que conhecer).
-const STAGE_LABEL: Record<Topic['funnelStage'], string> = {
-  C0: 'Não sabe do problema',
-  C1: 'Sabe do problema',
-  C2: 'Compara soluções',
-  C3: 'Pronto para agendar',
-};
 
 export default function TopicsReview({ session, onConfirm }: { session: Session; onConfirm: () => void }) {
   const [topics, setTopics] = useState<Topic[]>(session.topics || []);
@@ -111,7 +104,7 @@ export default function TopicsReview({ session, onConfirm }: { session: Session;
                       onClick={() => update(t.id, { funnelStage: s })}
                       className={`text-xs px-2 py-1 rounded ${t.funnelStage === s ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground hover:text-foreground'}`}
                     >
-                      {STAGE_LABEL[s]}
+                      {FUNNEL_STAGE_LABEL[s]}
                     </button>
                   ))}
                 </div>
