@@ -78,6 +78,23 @@ export default function BrainPage() {
                 </button>
               ))}
             </div>
+            {brain.doctor.toneSuggested && (
+              <div className="flex items-center gap-2 flex-wrap text-xs bg-primary/5 border border-primary/20 rounded-lg p-2.5">
+                <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />
+                <span className="text-muted-foreground">
+                  Baseado na sua 1ª consulta gravada, o tom que você realmente usa parece mais{' '}
+                  <span className="font-medium text-foreground">{TONES.find(t => t.id === brain.doctor.toneSuggested)?.label}</span>.
+                </span>
+                <div className="flex gap-1.5 ml-auto shrink-0">
+                  <Button size="sm" variant="outline" className="h-6 text-xs px-2" onClick={() => updateDoctor({ tone: brain.doctor.toneSuggested, toneSuggested: undefined })}>
+                    Usar essa
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={() => updateDoctor({ toneSuggested: undefined })}>
+                    Dispensar
+                  </Button>
+                </div>
+              </div>
+            )}
           </Field>
           <Field label="Bordões / frases que você costuma usar" hint="Uma por linha">
             <Textarea rows={3} value={showList(brain.doctor.catchphrases)} onChange={e => updateDoctor({ catchphrases: parseList(e.target.value) })} placeholder="Cirurgia é ferramenta, não solução automática." />

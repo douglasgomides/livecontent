@@ -59,6 +59,14 @@ export async function fetchBrain(userId: string): Promise<Brain> {
   };
 }
 
+// Flag interna (não faz parte do tipo Brain) que marca se o pré-preenchimento
+// automático a partir da 1a consulta real já rodou — usada só pra decidir quando
+// mostrar o toast de "pré-preenchemos sua Brain" uma única vez (ver store.ts).
+export async function fetchBrainSeeded(userId: string): Promise<boolean> {
+  const { data } = await supabase.from('brains').select('brain_seeded').eq('user_id', userId).maybeSingle();
+  return !!(data as any)?.brain_seeded;
+}
+
 export async function saveBrainDb(userId: string, brain: Brain): Promise<void> {
   const { error } = await supabase
     .from('brains')

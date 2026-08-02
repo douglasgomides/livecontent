@@ -4,6 +4,9 @@ export interface DoctorLayer {
   credentials: string;
   yearsPractice: string;
   tone: 'didactic' | 'empathetic' | 'direct' | 'technical';
+  // Sugestão automática (baseada na 1a consulta real) de um tom diferente do escolhido
+  // no onboarding — nunca aplicada sozinha, só some quando o médico aceita ou dispensa.
+  toneSuggested?: 'didactic' | 'empathetic' | 'direct' | 'technical';
   catchphrases: string[];
   lovedTopics: string[];
   avoidedTopics: string[];

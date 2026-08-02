@@ -6,6 +6,7 @@ import { scoreCFMSemantic } from '../_shared/cfm.ts';
 import { scoreViralitySemantic } from '../_shared/virality.ts';
 import { extractPatientSignals } from '../_shared/patientSignals.ts';
 import { extractCommercialIntelligence } from '../_shared/commercialIntelligence.ts';
+import { inferBrainSeed } from '../_shared/brainSeed.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const CLAUDE = 'claude-sonnet-4-5';
@@ -374,6 +375,40 @@ Deno.serve(async (req) => {
         argumento_recomendado_proximo_contato: commercialIntel.argumento_recomendado_proximo_contato,
       });
       if (ciErr) console.warn('[commercial-intel] insert failed', ciErr.message);
+    }
+
+    // Pré-preenche a Brain (só campos ainda vazios, nunca sobrescreve curadoria manual)
+    // com base na 1a consulta real — reduz fricção de ativação: sem isso o médico só
+    // teria conteúdo bem calibrado depois de digitar ~10 campos à mão em Brain.tsx.
+    // Roda 1x só (brain_seeded) e nunca é bloqueante: falha aqui não derruba a sessão.
+    if (isRealConsultation && brainRow && !brainRow.brain_seeded) {
+      try {
+        const seed = await inferBrainSeed(anthropicKey, anonymized);
+        const currentPatient = brainRow.patient ?? {};
+        const currentDoctor = brainRow.doctor ?? {};
+        const isEmpty = (v: any) => Array.isArray(v) ? v.length === 0 : !v || !String(v).trim();
+        const patientPatch: Record<string, any> = {};
+        const doctorPatch: Record<string, any> = {};
+        if (seed) {
+          if (seed.patientMainPains && isEmpty(currentPatient.mainPains)) patientPatch.mainPains = seed.patientMainPains;
+          if (seed.patientCommonObjections && isEmpty(currentPatient.commonObjections)) patientPatch.commonObjections = seed.patientCommonObjections;
+          if (seed.patientLanguage && isEmpty(currentPatient.language)) patientPatch.language = seed.patientLanguage;
+          if (seed.patientFears && isEmpty(currentPatient.fears)) patientPatch.fears = seed.patientFears;
+          if (seed.patientDecisionTriggers && isEmpty(currentPatient.decisionTriggers)) patientPatch.decisionTriggers = seed.patientDecisionTriggers;
+          if (seed.doctorCatchphrases && isEmpty(currentDoctor.catchphrases)) doctorPatch.catchphrases = seed.doctorCatchphrases;
+          if (seed.doctorOpeningStyle && isEmpty(currentDoctor.openingStyle)) doctorPatch.openingStyle = seed.doctorOpeningStyle;
+          // Tom: nunca sobrescreve a escolha explícita do onboarding — só deixa uma
+          // sugestão visível (toneSuggested) que o médico aceita com 1 clique em Brain.tsx.
+          if (seed.doctorTone && seed.doctorTone !== currentDoctor.tone) doctorPatch.toneSuggested = seed.doctorTone;
+        }
+        await supabase.from('brains').update({
+          ...(Object.keys(patientPatch).length ? { patient: { ...currentPatient, ...patientPatch } } : {}),
+          ...(Object.keys(doctorPatch).length ? { doctor: { ...currentDoctor, ...doctorPatch } } : {}),
+          brain_seeded: true,
+        }).eq('user_id', userId);
+      } catch (e) {
+        console.warn('[brain-seed] skipped', e);
+      }
     }
 
     await setStatus('ready');

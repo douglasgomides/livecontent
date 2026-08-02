@@ -16,6 +16,7 @@ import {
   upsertSessionDb,
   deleteSessionDb,
   fetchBrain,
+  fetchBrainSeeded,
   saveBrainDb,
   fetchJobs,
   upsertJobDb,
@@ -35,6 +36,9 @@ let _jobs: PublishJob[] = [];
 let _settings: DoctorSettings = { webhooks: {}, preferredFormats: ['caption', 'carousel', 'reel', 'linkedin'] };
 let _hydrated = false;
 let _channels: any[] = [];
+// Só pra saber quando avisar 1x que a Brain foi pré-preenchida com base na 1a
+// consulta real (ver subscribeRealtime) — nunca fica exposta fora do store.
+let _brainSeeded = false;
 
 type Listener = () => void;
 const listeners = new Set<Listener>();
@@ -83,16 +87,18 @@ export const getSettings = () => _settings;
 export async function hydrateStore(userId: string): Promise<void> {
   _userId = userId;
   try {
-    const [sessions, brain, jobs, settings] = await Promise.all([
+    const [sessions, brain, jobs, settings, brainSeeded] = await Promise.all([
       fetchAllSessions(userId),
       fetchBrain(userId),
       fetchJobs(userId),
       fetchSettings(userId),
+      fetchBrainSeeded(userId).catch(() => false),
     ]);
     _sessions = sessions;
     _brain = brain;
     _jobs = jobs;
     _settings = settings;
+    _brainSeeded = brainSeeded;
     _hydrated = true;
     notify();
     subscribeRealtime(userId);
@@ -136,6 +142,18 @@ function subscribeRealtime(userId: string) {
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'publish_jobs', filter: `user_id=eq.${userId}` }, async () => {
       _jobs = await fetchJobs(userId);
+      notify();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'brains', filter: `user_id=eq.${userId}` }, async () => {
+      // Sem isso, o pré-preenchimento automático que o run-pipeline grava direto
+      // no banco (depois da 1a consulta real) ficava invisível até o médico
+      // recarregar a página — o cache local só se atualiza no login.
+      const [brain, seeded] = await Promise.all([fetchBrain(userId), fetchBrainSeeded(userId).catch(() => false)]);
+      if (seeded && !_brainSeeded) {
+        toast.success('Pré-preenchemos parte da sua Brain com base na sua primeira consulta gravada — dá uma olhada em Brain e ajuste o que quiser.', { id: 'brain-seeded', duration: 8000 });
+      }
+      _brainSeeded = seeded;
+      _brain = brain;
       notify();
     })
     .subscribe();
