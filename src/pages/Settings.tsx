@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Brain as BrainIcon, ArrowRight, Database, RefreshCw, Download, Trash2, Webhook, LogOut, Upload as UploadIcon, Crown, Loader2, ExternalLink, Radio, MessageCircle, Copy, Check, UserCircle2 } from 'lucide-react';
+import { Brain as BrainIcon, ArrowRight, Database, RefreshCw, Download, Trash2, Webhook, LogOut, Upload as UploadIcon, Crown, Loader2, ExternalLink, Radio, MessageCircle, Copy, Check, UserCircle2, Megaphone } from 'lucide-react';
 import { useSessions, loadSessions } from '@/lib/storage';
 import { loadBrain, saveBrain, useBrain } from '@/lib/brainStorage';
 import { getSettings, saveSettings, upsertSession } from '@/lib/store';
@@ -60,6 +60,8 @@ export default function Settings() {
   const [heygenApiKey, setHeygenApiKey] = useState(initialSettings.heygenApiKey ?? '');
   const [heygenAvatarId, setHeygenAvatarId] = useState(initialSettings.heygenAvatarId ?? '');
   const [heygenVoiceId, setHeygenVoiceId] = useState(initialSettings.heygenVoiceId ?? '');
+  const [metaAdsAccountId, setMetaAdsAccountId] = useState(initialSettings.metaAdsAccountId ?? '');
+  const [googleAdsAccountId, setGoogleAdsAccountId] = useState(initialSettings.googleAdsAccountId ?? '');
 
   useEffect(() => {
     const s = getSettings();
@@ -71,6 +73,8 @@ export default function Settings() {
     setHeygenApiKey(s.heygenApiKey ?? '');
     setHeygenAvatarId(s.heygenAvatarId ?? '');
     setHeygenVoiceId(s.heygenVoiceId ?? '');
+    setMetaAdsAccountId(s.metaAdsAccountId ?? '');
+    setGoogleAdsAccountId(s.googleAdsAccountId ?? '');
   }, [user?.id]);
 
   const inboundUrl = whatsappInboundToken ? `${FUNCTIONS_BASE}/receive-whatsapp-reply?token=${whatsappInboundToken}` : '';
@@ -156,6 +160,15 @@ export default function Settings() {
       heygenVoiceId: heygenVoiceId.trim() || null,
     });
     toast.success('Configuração do HeyGen salva');
+  };
+
+  const saveAdsSettings = async () => {
+    await saveSettings({
+      ...getSettings(),
+      metaAdsAccountId: metaAdsAccountId.trim() || null,
+      googleAdsAccountId: googleAdsAccountId.trim() || null,
+    });
+    toast.success('Configuração de anúncios salva');
   };
 
   const saveFormats = async () => {
@@ -407,6 +420,29 @@ export default function Settings() {
           </div>
         </div>
         <Button onClick={saveHeygenSettings} variant="outline" size="sm">Salvar configuração do HeyGen</Button>
+      </div>
+
+      <div className="border-t border-border pt-8 space-y-4">
+        <div className="flex items-center gap-2">
+          <Megaphone className="h-4 w-4 text-primary" />
+          <h2 className="font-serif text-2xl">Anúncios (Meta Ads / Google Ads)</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Qual conta de anúncio, dentre as conectadas no Windsor.ai da agência, é a sua — usado pra
+          sincronizar o desempenho na aba Anúncios. Google Ads ainda não tem conta conectada no Windsor.ai;
+          preencha quando a agência conectar.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label className="text-xs">ID da conta Meta Ads</Label>
+            <Input value={metaAdsAccountId} onChange={e => setMetaAdsAccountId(e.target.value)} placeholder="Ex: 1051382225324565" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">ID da conta Google Ads</Label>
+            <Input value={googleAdsAccountId} onChange={e => setGoogleAdsAccountId(e.target.value)} placeholder="Ainda não conectado" />
+          </div>
+        </div>
+        <Button onClick={saveAdsSettings} variant="outline" size="sm">Salvar configuração de anúncios</Button>
       </div>
 
       <div className="border-t border-border pt-8 space-y-4">

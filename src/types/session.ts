@@ -251,7 +251,9 @@ export interface PreConsultationResponse {
   id: string;
   patientName: string;
   patientContact: string | null;
-  answers: Record<string, string>;
+  // Perguntas fixas guardam string; campos customizados de múltipla escolha
+  // guardam string[] — mesmo objeto jsonb pros dois, chaveado por id.
+  answers: Record<string, string | string[]>;
   submittedAt: string;
   linkedSessionId: string | null;
   // Consentimento explícito, coletado ANTES da consulta, pra mandar mensagem
@@ -307,6 +309,12 @@ export interface LeadCapture {
   // do campo "status" acima.
   suggestedStatus: LeadStatus | null;
   suggestedStatusReason: string | null;
+  // Respostas dos campos customizados que o médico criou pra esse formulário
+  // (id do campo -> valor), além do reason fixo acima.
+  customAnswers: Record<string, string | string[]>;
+  // Nome exato da campanha no Meta/Google Ads, quando o link usado carregava
+  // ?utm_campaign=... — permite calcular CAC real por campanha em Ads.
+  utmCampaign: string | null;
 }
 
 // Uma mensagem da conversa de WhatsApp com um lead (inbound = o que ele
@@ -478,4 +486,67 @@ export interface AvatarVideo {
   videoUrl: string | null;
   error: string | null;
   createdAt: string;
+}
+
+// Link curto público (/s/:slug) — só pra encurtar links de pré-consulta e
+// captação de lead que ficam grandes depois de UTM/origem. Um por URL alvo
+// exata (reaproveitado se o médico "encurtar" a mesma URL de novo).
+export interface ShortLink {
+  id: string;
+  slug: string;
+  targetUrl: string;
+  clicks: number;
+  createdAt: string;
+}
+
+// Campo extra que o médico cria pros formulários públicos, além dos campos
+// fixos (pré-consulta tem 5 fixos que o run-pipeline já lê por id; captação
+// de lead tem nome/contato/motivo fixos). Configuração separada por formulário.
+export type CustomFormType = 'pre_consulta' | 'lead_capture';
+export type CustomFieldType = 'short_text' | 'long_text' | 'single_choice' | 'multi_choice' | 'yes_no';
+
+export interface CustomFormField {
+  id: string;
+  formType: CustomFormType;
+  label: string;
+  fieldType: CustomFieldType;
+  options: string[];
+  position: number;
+  required: boolean;
+}
+
+// Campanha sincronizada do Meta Ads / Google Ads via Windsor.ai (leitura,
+// nunca escrita — não temos permissão de alterar a campanha na conta do
+// médico, só de ler o desempenho).
+export type AdPlatform = 'meta' | 'google';
+
+export interface AdCampaign {
+  id: string;
+  platform: AdPlatform;
+  externalCampaignId: string;
+  campaignName: string;
+  status: string | null;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  datePreset: string;
+  syncedAt: string;
+  // Calculado no cliente/servidor cruzando com lead_captures.utm_campaign —
+  // não vem do Windsor, é o que realmente importa pro médico (não CTR).
+  leadsGenerated: number;
+  patientsConverted: number;
+  cac: number | null;
+}
+
+export type AdSuggestionType = 'pausar' | 'aumentar_orcamento' | 'reduzir_orcamento' | 'revisar_criativo';
+export type AdSuggestionStatus = 'pendente' | 'aceita' | 'descartada';
+
+export interface AdCampaignSuggestion {
+  id: string;
+  adCampaignId: string;
+  suggestionType: AdSuggestionType;
+  reason: string;
+  status: AdSuggestionStatus;
+  createdAt: string;
+  resolvedAt: string | null;
 }

@@ -28,6 +28,8 @@ import {
   User,
   UserPlus,
   Target,
+  Megaphone,
+  ListPlus,
 } from 'lucide-react';
 
 import {
@@ -82,6 +84,7 @@ const workItems = [
   { title: 'Inteligência comercial', url: '/app/comercial', icon: Target },
   { title: 'Pré-consulta', url: '/app/pre-consulta', icon: ClipboardList },
   { title: 'Captação de leads', url: '/app/leads', icon: UserPlus },
+  { title: 'Anúncios', url: '/app/ads', icon: Megaphone },
 ];
 
 // Separado de "Trabalho" — eram os itens que ficavam enterrados no fim de uma
@@ -93,6 +96,7 @@ const resourceItems = [
   { title: 'Evidências', url: '/app/evidence', icon: Microscope },
   { title: 'Estilos de referência', url: '/app/reference-styles', icon: LayoutTemplate },
   { title: 'Fotos da marca', url: '/app/brand-photos', icon: ImageIcon },
+  { title: 'Campos personalizados', url: '/app/custom-fields', icon: ListPlus },
 ];
 
 const accountItems = [

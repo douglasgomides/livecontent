@@ -6,8 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { submitLeadCapture, fetchSchedulingLinkPublic } from '@/lib/db';
-import type { LeadOrigin } from '@/types/session';
+import { submitLeadCapture, fetchSchedulingLinkPublic, fetchPublicCustomFormFields } from '@/lib/db';
+import CustomFieldInputs from '@/components/forms/CustomFieldInputs';
+import type { LeadOrigin, CustomFormField } from '@/types/session';
 
 const VALID_ORIGINS: LeadOrigin[] = ['instagram', 'whatsapp', 'indicacao', 'outro'];
 
@@ -15,12 +16,14 @@ const VALID_ORIGINS: LeadOrigin[] = ['instagram', 'whatsapp', 'indicacao', 'outr
 // do Instagram, ou mandado direto por WhatsApp), diferente da pré-consulta
 // (que já pressupõe consulta marcada). A origem vem da URL (?origem=instagram),
 // não de um campo que o próprio lead preenche — é o médico que decide onde
-// coloca cada variante do link.
+// coloca cada variante do link. utm_campaign (quando presente) identifica de
+// qual campanha de Meta/Google Ads esse lead veio, pra CAC real em Ads.
 export default function LeadCaptureForm() {
   const { doctorId } = useParams<{ doctorId: string }>();
   const [searchParams] = useSearchParams();
   const rawOrigin = searchParams.get('origem') ?? '';
   const origin: LeadOrigin = (VALID_ORIGINS as string[]).includes(rawOrigin) ? (rawOrigin as LeadOrigin) : 'outro';
+  const utmCampaign = searchParams.get('utm_campaign');
 
   const [name, setName] = useState('');
   const [contact, setContact] = useState('');
@@ -29,11 +32,17 @@ export default function LeadCaptureForm() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [schedulingLink, setSchedulingLink] = useState<string | null>(null);
+  const [customFields, setCustomFields] = useState<CustomFormField[]>([]);
+  const [customValues, setCustomValues] = useState<Record<string, string | string[]>>({});
 
   useEffect(() => {
     if (!doctorId) return;
     fetchSchedulingLinkPublic(doctorId).then(setSchedulingLink).catch(() => setSchedulingLink(null));
+    fetchPublicCustomFormFields(doctorId, 'lead_capture').then(setCustomFields).catch(() => setCustomFields([]));
   }, [doctorId]);
+
+  const setCustomValue = (fieldId: string, value: string | string[]) =>
+    setCustomValues(prev => ({ ...prev, [fieldId]: value }));
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,9 +51,14 @@ export default function LeadCaptureForm() {
       toast.error('Preencha nome e um jeito de te chamar (telefone ou e-mail).');
       return;
     }
+    const missing = customFields.find(f => f.required && !customValues[f.id]?.length);
+    if (missing) {
+      toast.error(`Responda: ${missing.label}`);
+      return;
+    }
     setBusy(true);
     try {
-      await submitLeadCapture(doctorId, name.trim(), contact.trim(), reason.trim(), origin, whatsappConsent);
+      await submitLeadCapture(doctorId, name.trim(), contact.trim(), reason.trim(), origin, whatsappConsent, customValues, utmCampaign);
       setDone(true);
     } catch {
       toast.error('Não deu pra enviar agora. Tente de novo em instantes.');
@@ -103,6 +117,7 @@ export default function LeadCaptureForm() {
               </Label>
             </div>
           )}
+          <CustomFieldInputs fields={customFields} values={customValues} onChange={setCustomValue} />
           <Button type="submit" disabled={busy} className="w-full bg-gold-gradient text-primary-foreground gold-shadow">
             {busy ? 'Enviando...' : 'Enviar'}
           </Button>

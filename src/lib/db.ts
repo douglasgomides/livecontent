@@ -28,6 +28,12 @@ import type {
   LeadMessage,
   WhatsappFollowup,
   AvatarVideo,
+  ShortLink,
+  CustomFormField,
+  CustomFormType,
+  AdCampaign,
+  AdCampaignSuggestion,
+  AdSuggestionStatus,
 } from '@/types/session';
 import type { Brain } from '@/types/brain';
 import { EMPTY_BRAIN } from '@/types/brain';
@@ -312,6 +318,11 @@ export interface DoctorSettings {
   heygenApiKey: string | null;
   heygenAvatarId: string | null;
   heygenVoiceId: string | null;
+  // ID da conta de anúncio (Meta/Google) no Windsor.ai que pertence a ESTE
+  // médico — a chave do Windsor é compartilhada da agência, isso aqui é só
+  // qual conta, dentre as conectadas, é a dele.
+  metaAdsAccountId: string | null;
+  googleAdsAccountId: string | null;
 }
 
 export async function fetchSettings(userId: string): Promise<DoctorSettings> {
@@ -330,6 +341,8 @@ export async function fetchSettings(userId: string): Promise<DoctorSettings> {
     heygenApiKey: data?.heygen_api_key ?? null,
     heygenAvatarId: data?.heygen_avatar_id ?? null,
     heygenVoiceId: data?.heygen_voice_id ?? null,
+    metaAdsAccountId: data?.meta_ads_account_id ?? null,
+    googleAdsAccountId: data?.google_ads_account_id ?? null,
   };
 }
 
@@ -343,6 +356,8 @@ export async function saveSettingsDb(userId: string, s: DoctorSettings): Promise
     heygen_api_key: s.heygenApiKey,
     heygen_avatar_id: s.heygenAvatarId,
     heygen_voice_id: s.heygenVoiceId,
+    meta_ads_account_id: s.metaAdsAccountId,
+    google_ads_account_id: s.googleAdsAccountId,
   }, { onConflict: 'user_id' });
   if (error) throw error;
 }
@@ -869,7 +884,7 @@ export async function submitPreConsultationForm(
   doctorUserId: string,
   patientName: string,
   patientContact: string,
-  answers: Record<string, string>,
+  answers: Record<string, string | string[]>,
   whatsappConsent: boolean = false,
 ): Promise<void> {
   const { error } = await supabase.from('preconsultation_responses').insert({
@@ -1066,6 +1081,8 @@ function mapLeadCaptureRow(row: any): LeadCapture {
     whatsappConsent: !!row.whatsapp_consent,
     suggestedStatus: row.suggested_status ?? null,
     suggestedStatusReason: row.suggested_status_reason ?? null,
+    customAnswers: row.custom_answers ?? {},
+    utmCampaign: row.utm_campaign ?? null,
   };
 }
 
@@ -1078,6 +1095,8 @@ export async function submitLeadCapture(
   reason: string,
   origin: LeadOrigin,
   whatsappConsent: boolean = false,
+  customAnswers: Record<string, string | string[]> = {},
+  utmCampaign: string | null = null,
 ): Promise<void> {
   const { error } = await supabase.from('lead_captures').insert({
     user_id: doctorUserId,
@@ -1086,6 +1105,8 @@ export async function submitLeadCapture(
     reason: reason || null,
     origin,
     whatsapp_consent: whatsappConsent,
+    custom_answers: customAnswers,
+    utm_campaign: utmCampaign,
   });
   if (error) throw error;
 }
@@ -1283,4 +1304,190 @@ export async function fetchTopicUpdates(watchIds: string[]): Promise<Map<string,
     map.set(u.watchId, list);
   });
   return map;
+}
+
+// ─── Encurtador de link ─────────────────────────────────────────────────────
+
+function mapShortLinkRow(row: any): ShortLink {
+  return { id: row.id, slug: row.slug, targetUrl: row.target_url, clicks: row.clicks, createdAt: row.created_at };
+}
+
+function randomSlug(): string {
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  return Array.from({ length: 7 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
+
+// Reaproveita o slug existente se essa URL exata já foi encurtada antes
+// (unique em user_id+target_url), senão cria um novo com retry em colisão
+// de slug (extremamente raro com 7 chars base62, mas o unique garante).
+export async function createOrGetShortLink(userId: string, targetUrl: string): Promise<ShortLink> {
+  const { data: existing } = await supabase
+    .from('short_links').select('*').eq('user_id', userId).eq('target_url', targetUrl).maybeSingle();
+  if (existing) return mapShortLinkRow(existing);
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const { data, error } = await supabase
+      .from('short_links')
+      .insert({ user_id: userId, target_url: targetUrl, slug: randomSlug() })
+      .select('*')
+      .single();
+    if (!error) return mapShortLinkRow(data);
+    if (error.code !== '23505') throw error; // não é conflito de unique, propaga
+  }
+  throw new Error('Não deu pra gerar um link curto agora. Tente de novo.');
+}
+
+// Chamado pela tela pública /s/:slug — sem sessão, via RPC estreita (nunca
+// expõe a tabela toda nem qual médico é dono do link).
+export async function resolveShortLink(slug: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc('resolve_short_link', { p_slug: slug });
+  if (error) throw error;
+  return data ?? null;
+}
+
+// ─── Campos customizáveis dos formulários públicos ─────────────────────────
+
+function mapCustomFormFieldRow(row: any): CustomFormField {
+  return {
+    id: row.id,
+    formType: row.form_type,
+    label: row.label,
+    fieldType: row.field_type,
+    options: Array.isArray(row.options) ? row.options : [],
+    position: row.position,
+    required: !!row.required,
+  };
+}
+
+// Autenticado — usado na tela do médico que monta os campos.
+export async function fetchCustomFormFields(userId: string, formType: CustomFormType): Promise<CustomFormField[]> {
+  const { data, error } = await supabase
+    .from('custom_form_fields')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('form_type', formType)
+    .order('position', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map(mapCustomFormFieldRow);
+}
+
+// Público — usado pelos dois formulários públicos pra se montarem, via RPC
+// estreita (só o que o formulário precisa renderizar, nunca o user_id).
+export async function fetchPublicCustomFormFields(doctorId: string, formType: CustomFormType): Promise<CustomFormField[]> {
+  const { data, error } = await supabase.rpc('get_custom_form_fields', { p_doctor_id: doctorId, p_form_type: formType });
+  if (error) throw error;
+  return (data ?? []).map(mapCustomFormFieldRow);
+}
+
+export async function createCustomFormField(
+  userId: string,
+  formType: CustomFormType,
+  field: Omit<CustomFormField, 'id' | 'formType' | 'position'>,
+  position: number,
+): Promise<CustomFormField> {
+  const { data, error } = await supabase
+    .from('custom_form_fields')
+    .insert({
+      user_id: userId,
+      form_type: formType,
+      label: field.label,
+      field_type: field.fieldType,
+      options: field.options,
+      required: field.required,
+      position,
+    })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return mapCustomFormFieldRow(data);
+}
+
+export async function updateCustomFormField(id: string, patch: Partial<Pick<CustomFormField, 'label' | 'fieldType' | 'options' | 'required' | 'position'>>): Promise<void> {
+  const { error } = await supabase.from('custom_form_fields').update({
+    ...(patch.label !== undefined && { label: patch.label }),
+    ...(patch.fieldType !== undefined && { field_type: patch.fieldType }),
+    ...(patch.options !== undefined && { options: patch.options }),
+    ...(patch.required !== undefined && { required: patch.required }),
+    ...(patch.position !== undefined && { position: patch.position }),
+  }).eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteCustomFormField(id: string): Promise<void> {
+  const { error } = await supabase.from('custom_form_fields').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ─── Inteligência de anúncios (Meta Ads / Google Ads via Windsor.ai) ───────
+
+// Cruza ad_campaigns (sincronizado do Windsor.ai) com lead_captures.utm_campaign
+// pra mostrar CAC/conversão REAL por campanha, não só CTR/CPC da plataforma.
+export async function fetchAdCampaigns(userId: string): Promise<AdCampaign[]> {
+  const [{ data: campaigns, error: campErr }, { data: leads, error: leadErr }] = await Promise.all([
+    supabase.from('ad_campaigns').select('*').eq('user_id', userId).order('spend', { ascending: false }),
+    supabase.from('lead_captures').select('utm_campaign, status').eq('user_id', userId).not('utm_campaign', 'is', null),
+  ]);
+  if (campErr) throw campErr;
+  if (leadErr) throw leadErr;
+
+  const leadsByCampaign = new Map<string, { total: number; convertido: number }>();
+  (leads ?? []).forEach((l: any) => {
+    const key = l.utm_campaign as string;
+    const cur = leadsByCampaign.get(key) ?? { total: 0, convertido: 0 };
+    cur.total += 1;
+    if (l.status === 'convertido') cur.convertido += 1;
+    leadsByCampaign.set(key, cur);
+  });
+
+  return (campaigns ?? []).map((row: any) => {
+    const attribution = leadsByCampaign.get(row.campaign_name) ?? { total: 0, convertido: 0 };
+    return {
+      id: row.id,
+      platform: row.platform,
+      externalCampaignId: row.external_campaign_id,
+      campaignName: row.campaign_name,
+      status: row.status,
+      spend: Number(row.spend),
+      impressions: Number(row.impressions),
+      clicks: Number(row.clicks),
+      datePreset: row.date_preset,
+      syncedAt: row.synced_at,
+      leadsGenerated: attribution.total,
+      patientsConverted: attribution.convertido,
+      cac: attribution.total > 0 ? Number(row.spend) / attribution.total : null,
+    };
+  });
+}
+
+function mapAdSuggestionRow(row: any): AdCampaignSuggestion {
+  return {
+    id: row.id,
+    adCampaignId: row.ad_campaign_id,
+    suggestionType: row.suggestion_type,
+    reason: row.reason,
+    status: row.status,
+    createdAt: row.created_at,
+    resolvedAt: row.resolved_at ?? null,
+  };
+}
+
+export async function fetchAdCampaignSuggestions(userId: string): Promise<AdCampaignSuggestion[]> {
+  const { data, error } = await supabase
+    .from('ad_campaign_suggestions')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(mapAdSuggestionRow);
+}
+
+// Aprovar aqui NUNCA executa nada no Meta/Google Ads de verdade (não temos
+// escrita conectada na conta do médico) — só registra a decisão dele. A ação
+// concreta (pausar, mudar orçamento) ele ainda faz no próprio Ads Manager.
+export async function resolveAdCampaignSuggestion(id: string, status: AdSuggestionStatus): Promise<void> {
+  const { error } = await supabase
+    .from('ad_campaign_suggestions')
+    .update({ status, resolved_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw error;
 }

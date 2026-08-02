@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, UserPlus, Copy, Check, Link2, Instagram, MessageCircle, Users, ChevronRight, X, CalendarClock, StickyNote, Sparkles } from 'lucide-react';
+import { ArrowLeft, UserPlus, Copy, Check, Link2, Instagram, MessageCircle, Users, ChevronRight, X, CalendarClock, StickyNote, Sparkles, Scissors } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
-  fetchLeadCaptures, updateLeadCaptureStatus, fetchRecentSessionsForLinking,
+  fetchLeadCaptures, updateLeadCaptureStatus, fetchRecentSessionsForLinking, createOrGetShortLink,
 } from '@/lib/db';
 import { getUserId } from '@/lib/store';
 import { LEAD_ORIGIN_LABEL } from '@/lib/contentFormats';
@@ -44,6 +44,9 @@ export default function LeadCaptures() {
   const [copiedOrigin, setCopiedOrigin] = useState<LeadOrigin | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [shortUrls, setShortUrls] = useState<Partial<Record<LeadOrigin, string>>>({});
+  const [shorteningOrigin, setShorteningOrigin] = useState<LeadOrigin | null>(null);
+  const [copiedShortOrigin, setCopiedShortOrigin] = useState<LeadOrigin | null>(null);
 
   const uid = getUserId();
   const baseLink = uid ? `${window.location.origin}/captar/${uid}` : '';
@@ -72,6 +75,28 @@ export default function LeadCaptures() {
     setCopiedOrigin(origin);
     toast.success('Link copiado');
     setTimeout(() => setCopiedOrigin(null), 2000);
+  };
+
+  const shortenOrigin = async (origin: LeadOrigin) => {
+    if (!uid) return;
+    setShorteningOrigin(origin);
+    try {
+      const s = await createOrGetShortLink(uid, `${baseLink}?origem=${origin}`);
+      setShortUrls(prev => ({ ...prev, [origin]: `${window.location.origin}/s/${s.slug}` }));
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Falha ao encurtar link');
+    } finally {
+      setShorteningOrigin(null);
+    }
+  };
+
+  const copyShortOrigin = async (origin: LeadOrigin) => {
+    const url = shortUrls[origin];
+    if (!url) return;
+    await navigator.clipboard.writeText(url);
+    setCopiedShortOrigin(origin);
+    toast.success('Link curto copiado');
+    setTimeout(() => setCopiedShortOrigin(null), 2000);
   };
 
   const moveNext = async (lead: LeadCapture) => {
@@ -124,18 +149,38 @@ export default function LeadCaptures() {
         <h2 className="font-serif text-lg mb-3">Seus links (um por origem)</h2>
         <div className="space-y-2">
           {LINK_VARIANTS.map(v => (
-            <div key={v.origin} className="flex items-center gap-2">
-              <v.icon className="h-4 w-4 text-muted-foreground shrink-0" />
-              <code className="flex-1 text-xs bg-muted rounded-md px-3 py-2 truncate">{baseLink}?origem={v.origin}</code>
-              <Button size="sm" variant="outline" onClick={() => copyLink(v.origin)} disabled={!baseLink} className="shrink-0">
-                {copiedOrigin === v.origin ? <Check className="h-3.5 w-3.5 mr-1.5" /> : <Copy className="h-3.5 w-3.5 mr-1.5" />}
-                {v.label}
-              </Button>
+            <div key={v.origin} className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <v.icon className="h-4 w-4 text-muted-foreground shrink-0" />
+                <code className="flex-1 text-xs bg-muted rounded-md px-3 py-2 truncate">{baseLink}?origem={v.origin}</code>
+                <Button size="sm" variant="outline" onClick={() => copyLink(v.origin)} disabled={!baseLink} className="shrink-0">
+                  {copiedOrigin === v.origin ? <Check className="h-3.5 w-3.5 mr-1.5" /> : <Copy className="h-3.5 w-3.5 mr-1.5" />}
+                  {v.label}
+                </Button>
+              </div>
+              {shortUrls[v.origin] ? (
+                <div className="flex items-center gap-2 pl-6">
+                  <code className="flex-1 text-xs bg-primary/10 text-primary rounded-md px-3 py-2 truncate">{shortUrls[v.origin]}</code>
+                  <Button size="sm" variant="outline" onClick={() => copyShortOrigin(v.origin)} className="shrink-0">
+                    {copiedShortOrigin === v.origin ? <Check className="h-3.5 w-3.5 mr-1.5" /> : <Copy className="h-3.5 w-3.5 mr-1.5" />}
+                    Copiar
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  size="sm" variant="ghost" className="ml-6 h-6 px-1.5 text-[11px] text-muted-foreground"
+                  onClick={() => shortenOrigin(v.origin)} disabled={shorteningOrigin === v.origin || !baseLink}
+                >
+                  <Scissors className="h-3 w-3 mr-1" /> {shorteningOrigin === v.origin ? 'Encurtando…' : 'Encurtar'}
+                </Button>
+              )}
             </div>
           ))}
         </div>
         <p className="text-xs text-muted-foreground mt-3">
-          Configure o link de agendamento (pra onde o lead vai depois de enviar o contato) em Ajustes.
+          Configure o link de agendamento (pra onde o lead vai depois de enviar o contato) em Ajustes. Pra
+          rastrear uma campanha de anúncio específica, adicione <code>&amp;utm_campaign=NOME_DA_CAMPANHA</code> em
+          qualquer um dos links acima (veja em Anúncios o nome exato de cada campanha).
         </p>
       </section>
 

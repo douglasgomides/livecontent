@@ -14,6 +14,89 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_campaign_suggestions: {
+        Row: {
+          ad_campaign_id: string
+          created_at: string
+          id: string
+          reason: string
+          resolved_at: string | null
+          status: string
+          suggestion_type: string
+          user_id: string
+        }
+        Insert: {
+          ad_campaign_id: string
+          created_at?: string
+          id?: string
+          reason: string
+          resolved_at?: string | null
+          status?: string
+          suggestion_type: string
+          user_id: string
+        }
+        Update: {
+          ad_campaign_id?: string
+          created_at?: string
+          id?: string
+          reason?: string
+          resolved_at?: string | null
+          status?: string
+          suggestion_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_campaign_suggestions_ad_campaign_id_fkey"
+            columns: ["ad_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "ad_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_campaigns: {
+        Row: {
+          campaign_name: string
+          clicks: number
+          date_preset: string
+          external_campaign_id: string
+          id: string
+          impressions: number
+          platform: string
+          spend: number
+          status: string | null
+          synced_at: string
+          user_id: string
+        }
+        Insert: {
+          campaign_name: string
+          clicks?: number
+          date_preset?: string
+          external_campaign_id: string
+          id?: string
+          impressions?: number
+          platform: string
+          spend?: number
+          status?: string | null
+          synced_at?: string
+          user_id: string
+        }
+        Update: {
+          campaign_name?: string
+          clicks?: number
+          date_preset?: string
+          external_campaign_id?: string
+          id?: string
+          impressions?: number
+          platform?: string
+          spend?: number
+          status?: string | null
+          synced_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       app_admins: {
         Row: {
           created_at: string
@@ -389,12 +472,50 @@ export type Database = {
           },
         ]
       }
+      custom_form_fields: {
+        Row: {
+          created_at: string
+          field_type: string
+          form_type: string
+          id: string
+          label: string
+          options: Json
+          position: number
+          required: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          field_type: string
+          form_type: string
+          id?: string
+          label: string
+          options?: Json
+          position?: number
+          required?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          field_type?: string
+          form_type?: string
+          id?: string
+          label?: string
+          options?: Json
+          position?: number
+          required?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       doctor_settings: {
         Row: {
           created_at: string
+          google_ads_account_id: string | null
           heygen_api_key: string | null
           heygen_avatar_id: string | null
           heygen_voice_id: string | null
+          meta_ads_account_id: string | null
           preferred_formats: Json
           scheduling_link: string | null
           updated_at: string
@@ -405,9 +526,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          google_ads_account_id?: string | null
           heygen_api_key?: string | null
           heygen_avatar_id?: string | null
           heygen_voice_id?: string | null
+          meta_ads_account_id?: string | null
           preferred_formats?: Json
           scheduling_link?: string | null
           updated_at?: string
@@ -418,9 +541,11 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          google_ads_account_id?: string | null
           heygen_api_key?: string | null
           heygen_avatar_id?: string | null
           heygen_voice_id?: string | null
+          meta_ads_account_id?: string | null
           preferred_formats?: Json
           scheduling_link?: string | null
           updated_at?: string
@@ -607,6 +732,7 @@ export type Database = {
         Row: {
           contact: string
           created_at: string
+          custom_answers: Json
           id: string
           linked_session_id: string | null
           name: string
@@ -618,11 +744,13 @@ export type Database = {
           suggested_status: string | null
           suggested_status_reason: string | null
           user_id: string
+          utm_campaign: string | null
           whatsapp_consent: boolean
         }
         Insert: {
           contact: string
           created_at?: string
+          custom_answers?: Json
           id?: string
           linked_session_id?: string | null
           name: string
@@ -634,11 +762,13 @@ export type Database = {
           suggested_status?: string | null
           suggested_status_reason?: string | null
           user_id: string
+          utm_campaign?: string | null
           whatsapp_consent?: boolean
         }
         Update: {
           contact?: string
           created_at?: string
+          custom_answers?: Json
           id?: string
           linked_session_id?: string | null
           name?: string
@@ -650,6 +780,7 @@ export type Database = {
           suggested_status?: string | null
           suggested_status_reason?: string | null
           user_id?: string
+          utm_campaign?: string | null
           whatsapp_consent?: boolean
         }
         Relationships: [
@@ -1204,6 +1335,33 @@ export type Database = {
         }
         Relationships: []
       }
+      short_links: {
+        Row: {
+          clicks: number
+          created_at: string
+          id: string
+          slug: string
+          target_url: string
+          user_id: string
+        }
+        Insert: {
+          clicks?: number
+          created_at?: string
+          id?: string
+          slug: string
+          target_url: string
+          user_id: string
+        }
+        Update: {
+          clicks?: number
+          created_at?: string
+          id?: string
+          slug?: string
+          target_url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       smart_links: {
         Row: {
           archived_at: string | null
@@ -1642,6 +1800,17 @@ export type Database = {
       }
     }
     Functions: {
+      get_custom_form_fields: {
+        Args: { p_doctor_id: string; p_form_type: string }
+        Returns: {
+          field_type: string
+          id: string
+          label: string
+          options: Json
+          position: number
+          required: boolean
+        }[]
+      }
       get_scheduling_link: { Args: { doctor_id: string }; Returns: string }
       has_role: {
         Args: {
@@ -1685,6 +1854,7 @@ export type Database = {
         }
       }
       owns_tenant: { Args: { _tenant_id: string }; Returns: boolean }
+      resolve_short_link: { Args: { p_slug: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "user"

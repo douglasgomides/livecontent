@@ -11,12 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   updateLeadCaptureStatus, updateLeadCaptureNotes, updateLeadCaptureFollowUp, linkLeadCaptureToSession,
   fetchWhatsappFollowupForLead, createWhatsappFollowupForLead, updateWhatsappFollowupMessage,
-  approveAndSendWhatsappFollowup, fetchLeadMessages, dismissLeadSuggestion,
+  approveAndSendWhatsappFollowup, fetchLeadMessages, dismissLeadSuggestion, fetchCustomFormFields,
 } from '@/lib/db';
 import { getUserId } from '@/lib/store';
 import { loadBrain } from '@/lib/brainStorage';
 import { LEAD_ORIGIN_LABEL } from '@/lib/contentFormats';
-import type { LeadCapture, LeadStatus, WhatsappFollowup, LeadMessage } from '@/types/session';
+import type { LeadCapture, LeadStatus, WhatsappFollowup, LeadMessage, CustomFormField } from '@/types/session';
 
 const STATUS_LABEL: Record<LeadStatus, string> = {
   novo: 'Novo', contatado: 'Contatado', agendado: 'Agendado', convertido: 'Convertido', perdido: 'Perdido',
@@ -51,6 +51,13 @@ export default function LeadDetailDialog({
   const [draft, setDraft] = useState('');
   const [waLoading, setWaLoading] = useState(true);
   const [messages, setMessages] = useState<LeadMessage[]>([]);
+  const [customFields, setCustomFields] = useState<CustomFormField[]>([]);
+
+  useEffect(() => {
+    const uid = getUserId();
+    if (!uid) return;
+    fetchCustomFormFields(uid, 'lead_capture').then(setCustomFields).catch(() => setCustomFields([]));
+  }, []);
 
   useEffect(() => {
     if (!lead) return;
@@ -201,6 +208,19 @@ export default function LeadDetailDialog({
         <div className="space-y-5">
           {lead.reason && (
             <div className="text-sm border border-border/60 rounded-lg p-3 bg-secondary/40">{lead.reason}</div>
+          )}
+
+          {customFields.filter(f => lead.customAnswers[f.id]?.length).length > 0 && (
+            <div className="space-y-2 border border-border/60 rounded-lg p-3">
+              {customFields.filter(f => lead.customAnswers[f.id]?.length).map(f => (
+                <div key={f.id}>
+                  <div className="text-xs text-muted-foreground">{f.label}</div>
+                  <div className="text-sm">
+                    {Array.isArray(lead.customAnswers[f.id]) ? (lead.customAnswers[f.id] as string[]).join(', ') : lead.customAnswers[f.id]}
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
 
           {lead.suggestedStatus && lead.suggestedStatus !== lead.status && (

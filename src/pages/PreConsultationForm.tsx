@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,8 +7,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { submitPreConsultationForm } from '@/lib/db';
+import { submitPreConsultationForm, fetchPublicCustomFormFields } from '@/lib/db';
+import CustomFieldInputs from '@/components/forms/CustomFieldInputs';
 import { PRE_CONSULT_QUESTIONS } from '@/lib/preConsultQuestions';
+import type { CustomFormField } from '@/types/session';
 
 // Tela pública, sem autenticação — o médico manda esse link (/pre-consulta/:doctorId)
 // pro paciente antes da consulta. Não existe conta de paciente no produto.
@@ -16,12 +18,18 @@ export default function PreConsultationForm() {
   const { doctorId } = useParams<{ doctorId: string }>();
   const [name, setName] = useState('');
   const [contact, setContact] = useState('');
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
   const [whatsappConsent, setWhatsappConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [customFields, setCustomFields] = useState<CustomFormField[]>([]);
 
-  const setAnswer = (id: string, value: string) => setAnswers(prev => ({ ...prev, [id]: value }));
+  useEffect(() => {
+    if (!doctorId) return;
+    fetchPublicCustomFormFields(doctorId, 'pre_consulta').then(setCustomFields).catch(() => setCustomFields([]));
+  }, [doctorId]);
+
+  const setAnswer = (id: string, value: string | string[]) => setAnswers(prev => ({ ...prev, [id]: value }));
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,9 +38,14 @@ export default function PreConsultationForm() {
       toast.error('Informe seu nome.');
       return;
     }
-    const missing = PRE_CONSULT_QUESTIONS.find(q => q.required && !answers[q.id]?.trim());
-    if (missing) {
-      toast.error(`Responda: ${missing.label}`);
+    const missingFixed = PRE_CONSULT_QUESTIONS.find(q => q.required && !(answers[q.id] as string)?.trim());
+    if (missingFixed) {
+      toast.error(`Responda: ${missingFixed.label}`);
+      return;
+    }
+    const missingCustom = customFields.find(f => f.required && !answers[f.id]?.length);
+    if (missingCustom) {
+      toast.error(`Responda: ${missingCustom.label}`);
       return;
     }
     setBusy(true);
@@ -92,12 +105,12 @@ export default function PreConsultationForm() {
               <Label>{q.label}{q.required && <span className="text-destructive"> *</span>}</Label>
               {q.type === 'textarea' ? (
                 <Textarea
-                  value={answers[q.id] ?? ''}
+                  value={(answers[q.id] as string) ?? ''}
                   onChange={e => setAnswer(q.id, e.target.value)}
                   rows={3}
                 />
               ) : (
-                <RadioGroup value={answers[q.id] ?? ''} onValueChange={v => setAnswer(q.id, v)}>
+                <RadioGroup value={(answers[q.id] as string) ?? ''} onValueChange={v => setAnswer(q.id, v)}>
                   {q.options?.map(opt => (
                     <div key={opt} className="flex items-center gap-2">
                       <RadioGroupItem value={opt} id={`${q.id}-${opt}`} />
@@ -108,6 +121,7 @@ export default function PreConsultationForm() {
               )}
             </div>
           ))}
+          <CustomFieldInputs fields={customFields} values={answers} onChange={setAnswer} />
           <Button type="submit" disabled={busy} className="w-full bg-gold-gradient text-primary-foreground gold-shadow">
             {busy ? 'Enviando...' : 'Enviar respostas'}
           </Button>

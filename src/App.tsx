@@ -38,6 +38,9 @@ import Commercial from "./pages/Commercial";
 import Products from "./pages/Products";
 import Trends from "./pages/Trends";
 import Admin from "./pages/Admin";
+import Ads from "./pages/Ads";
+import CustomFields from "./pages/CustomFields";
+import ShortLinkRedirect from "./pages/ShortLinkRedirect";
 import NotFound from "./pages/NotFound";
 
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
@@ -80,6 +83,7 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/pre-consulta/:doctorId" element={<PreConsultationForm />} />
             <Route path="/captar/:doctorId" element={<LeadCaptureForm />} />
+            <Route path="/s/:slug" element={<ShortLinkRedirect />} />
             <Route path="/termos" element={<Terms />} />
             <Route path="/privacidade" element={<Privacy />} />
             <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
@@ -113,6 +117,8 @@ const App = () => (
               <Route path="brand-photos" element={<BrandPhotos />} />
               <Route path="pre-consulta" element={<PreConsultation />} />
               <Route path="leads" element={<LeadCaptures />} />
+              <Route path="ads" element={<Ads />} />
+              <Route path="custom-fields" element={<CustomFields />} />
               <Route path="products" element={<Products />} />
               <Route path="brain" element={<BrainPage />} />
               <Route path="settings" element={<Settings />} />

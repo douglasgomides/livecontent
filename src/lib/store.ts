@@ -33,7 +33,7 @@ let _userId: string | null = null;
 let _sessions: Session[] = [];
 let _brain: Brain = EMPTY_BRAIN;
 let _jobs: PublishJob[] = [];
-let _settings: DoctorSettings = { webhooks: {}, preferredFormats: ['caption', 'carousel', 'reel', 'linkedin'], schedulingLink: null, whatsappWebhookUrl: null, whatsappInboundToken: null, heygenApiKey: null, heygenAvatarId: null, heygenVoiceId: null };
+let _settings: DoctorSettings = { webhooks: {}, preferredFormats: ['caption', 'carousel', 'reel', 'linkedin'], schedulingLink: null, whatsappWebhookUrl: null, whatsappInboundToken: null, heygenApiKey: null, heygenAvatarId: null, heygenVoiceId: null, metaAdsAccountId: null, googleAdsAccountId: null };
 let _hydrated = false;
 let _channels: any[] = [];
 // Só pra saber quando avisar 1x que a Brain foi pré-preenchida com base na 1a
@@ -115,7 +115,7 @@ export function resetStore() {
   _sessions = [];
   _brain = EMPTY_BRAIN;
   _jobs = [];
-  _settings = { webhooks: {}, preferredFormats: ['caption', 'carousel', 'reel', 'linkedin'], schedulingLink: null, whatsappWebhookUrl: null, whatsappInboundToken: null, heygenApiKey: null, heygenAvatarId: null, heygenVoiceId: null };
+  _settings = { webhooks: {}, preferredFormats: ['caption', 'carousel', 'reel', 'linkedin'], schedulingLink: null, whatsappWebhookUrl: null, whatsappInboundToken: null, heygenApiKey: null, heygenAvatarId: null, heygenVoiceId: null, metaAdsAccountId: null, googleAdsAccountId: null };
   _hydrated = false;
   _channels.forEach(c => supabase.removeChannel(c));
   _channels = [];
