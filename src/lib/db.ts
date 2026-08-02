@@ -88,6 +88,7 @@ function sessionFromRow(
     content: pieces,
     science: row.science ?? undefined,
     errorMessage: row.error_message ?? undefined,
+    unverifiedDraft: !!row.unverified_draft,
   })!;
 }
 
@@ -161,6 +162,7 @@ export async function upsertSessionDb(userId: string, s: Session): Promise<void>
     pii_findings: (s.piiFindings ?? []) as any,
     science: (s.science ?? null) as any,
     error_message: s.errorMessage ?? null,
+    unverified_draft: !!s.unverifiedDraft,
   });
   if (e1) throw e1;
 

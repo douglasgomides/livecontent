@@ -63,6 +63,7 @@ export default function PieceDetail() {
         topic={topic}
         brain={loadBrain()}
         sessionId={session.id}
+        unverifiedDraft={session.unverifiedDraft}
         companionCaption={companionCaption}
         onChange={(updated) => {
           const content = session.content!.map(c => c.id === updated.id ? updated : c);

@@ -3,6 +3,7 @@ import type { ContentPiece, Topic } from '@/types/session';
 import type { Brain } from '@/types/brain';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { rescoreContent } from '@/lib/pipeline';
 import { FORMAT_LABEL, FORMAT_ICON, EXPORT_MODE } from '@/lib/contentFormats';
@@ -13,17 +14,19 @@ import PiecePrompts from './PiecePrompts';
 import PiecePublish from './PiecePublish';
 import ViralityBadge from '@/components/ViralityBadge';
 
-export default function ContentPieceCard({ piece, topic, brain, sessionId, companionCaption, onChange, onApprove }: {
+export default function ContentPieceCard({ piece, topic, brain, sessionId, unverifiedDraft, companionCaption, onChange, onApprove }: {
   piece: ContentPiece;
   topic?: Topic;
   brain?: Brain | null;
   sessionId: string;
+  unverifiedDraft?: boolean;
   companionCaption?: ContentPiece;
   onChange: (p: ContentPiece) => void;
   onApprove: () => void;
 }) {
   const [body, setBody] = useState(piece.body);
   const [rescoring, setRescoring] = useState(false);
+  const [draftConfirmed, setDraftConfirmed] = useState(false);
   const cfm = piece.cfm;
   const blocked = cfm.flags.some(f => f.severity === 'block');
   const warned = cfm.flags.some(f => f.severity === 'warning');
@@ -152,6 +155,16 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, compa
         </div>
       )}
 
+      {unverifiedDraft && !piece.approved && (
+        <label className="px-4 py-2.5 border-t border-warning/40 bg-warning/10 flex items-start gap-2 cursor-pointer">
+          <Checkbox checked={draftConfirmed} onCheckedChange={v => setDraftConfirmed(!!v)} className="mt-0.5" />
+          <span className="text-xs text-foreground">
+            Sei que este é um <strong>rascunho não verificado</strong> — não baseado na transcrição real do
+            vídeo/artigo — e revisei o texto antes de aprovar.
+          </span>
+        </label>
+      )}
+
       <div className="px-4 py-3 border-t border-border/60 flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="sm" onClick={copy}><Copy className="h-3.5 w-3.5 mr-1" /> Copiar</Button>
@@ -164,7 +177,7 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, compa
         </div>
         <Button
           size="sm"
-          disabled={blocked}
+          disabled={blocked || (!!unverifiedDraft && !piece.approved && !draftConfirmed)}
           onClick={onApprove}
           className={piece.approved ? '' : 'bg-gold-gradient text-primary-foreground'}
           variant={piece.approved ? 'outline' : 'default'}

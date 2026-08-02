@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Link2, Youtube, Instagram, Music, Globe, Sparkles } from 'lucide-react';
+import { ArrowLeft, Link2, Youtube, Instagram, Music, Globe, Sparkles, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { upsertSession } from '@/lib/storage';
@@ -38,6 +38,10 @@ export default function LinkImport() {
     const s = createBlankSession('link', 0);
     const kind = detect(url).label;
     s.title = `${kind} — ${new Date().toLocaleDateString('pt-BR')}`;
+    // Sem integração real de transcrição de vídeo (YouTube Data/Whisper) conectada
+    // hoje — todo conteúdo deste fluxo é rascunho não verificado, nunca baseado no
+    // vídeo/artigo real. Isso bloqueia aprovação sem confirmação explícita a jusante.
+    s.unverifiedDraft = true;
     // Placeholder transcript honest about pending API connection
     s.rawTranscript = [
       `[Rascunho a partir do link: ${url.trim()}]`,
@@ -64,6 +68,19 @@ export default function LinkImport() {
           Vídeo do YouTube, reel, TikTok ou um artigo publicado. A ferramenta extrai os temas
           e gera o pacote multi-canal com a sua Brain.
         </p>
+      </div>
+
+      <div className="border border-warning/50 bg-warning/10 rounded-xl p-4 flex items-start gap-3">
+        <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+        <div className="text-sm">
+          <p className="font-medium text-warning">Rascunho não verificado</p>
+          <p className="text-muted-foreground mt-1">
+            Este fluxo ainda não transcreve o vídeo/artigo de verdade (falta conectar YouTube Data ou
+            Whisper). O conteúdo gerado é um rascunho baseado só na URL e no contexto que você escrever
+            abaixo — <strong className="text-foreground">nunca no que foi dito no vídeo real</strong>.
+            Você vai precisar confirmar que sabe disso antes de aprovar qualquer peça.
+          </p>
+        </div>
       </div>
 
       <div className="border border-border/60 rounded-xl p-6 bg-card space-y-4">
@@ -104,11 +121,6 @@ export default function LinkImport() {
         >
           <Sparkles className="h-4 w-4 mr-2" /> Processar link
         </Button>
-
-        <p className="text-[11px] text-muted-foreground leading-relaxed">
-          A transcrição real de vídeo é ativada quando você conectar sua chave (YouTube Data ou Whisper).
-          Enquanto isso, geramos um rascunho a partir do link e do contexto para você testar o fluxo.
-        </p>
       </div>
 
       <div className="text-xs text-muted-foreground space-y-1">

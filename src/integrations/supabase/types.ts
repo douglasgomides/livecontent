@@ -1002,6 +1002,7 @@ export type Database = {
           source: Database["public"]["Enums"]["session_source"]
           status: Database["public"]["Enums"]["session_status"]
           title: string
+          unverified_draft: boolean
           updated_at: string
           user_id: string
         }
@@ -1018,6 +1019,7 @@ export type Database = {
           source?: Database["public"]["Enums"]["session_source"]
           status?: Database["public"]["Enums"]["session_status"]
           title?: string
+          unverified_draft?: boolean
           updated_at?: string
           user_id: string
         }
@@ -1034,6 +1036,7 @@ export type Database = {
           source?: Database["public"]["Enums"]["session_source"]
           status?: Database["public"]["Enums"]["session_status"]
           title?: string
+          unverified_draft?: boolean
           updated_at?: string
           user_id?: string
         }

@@ -354,6 +354,11 @@ export interface Session {
   content?: ContentPiece[];
   science?: ScienceSource;
   errorMessage?: string;
+  // true quando o conteúdo NÃO foi derivado de uma transcrição real verificada
+  // (ex.: fluxo Link → Conteúdo sem integração de YouTube Data/Whisper conectada
+  // — o rascunho é gerado só a partir da URL/contexto informado, nunca do vídeo
+  // em si). Precisa de confirmação explícita do médico antes de aprovar a peça.
+  unverifiedDraft?: boolean;
 }
 
 export interface DoctorProfile {

@@ -270,6 +270,19 @@ export default function SessionDetail() {
             )}
 
             <TabsContent value="content">
+              {session.unverifiedDraft && (
+                <div className="border border-warning/50 bg-warning/10 rounded-xl p-4 flex items-start gap-3 mb-6">
+                  <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium text-warning">Rascunho não verificado</p>
+                    <p className="text-muted-foreground mt-1">
+                      Esta consulta veio do fluxo Link → Conteúdo sem transcrição real do vídeo/artigo —
+                      todo o conteúdo abaixo é rascunho baseado só na URL e no contexto informado. Confirme
+                      que sabe disso em cada peça antes de aprovar.
+                    </p>
+                  </div>
+                </div>
+              )}
               {session.status === 'generating_content' && (
                 <div className="border border-border/60 rounded-xl p-12 text-center">
                   <Loader2 className="h-8 w-8 text-primary animate-spin mx-auto mb-4" />
@@ -324,6 +337,7 @@ export default function SessionDetail() {
                                       topic={topic}
                                       brain={loadBrain()}
                                       sessionId={session.id}
+                                      unverifiedDraft={session.unverifiedDraft}
                                       companionCaption={pairedCaption}
                                       onChange={(updated) => {
                                         const content = session.content!.map(c => c.id === updated.id ? updated : c);

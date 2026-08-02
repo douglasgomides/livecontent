@@ -11,7 +11,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
-import { CheckCircle2, ArrowRight, ShieldAlert, Inbox, XCircle, Pencil, Eye, CalendarPlus, Send } from 'lucide-react';
+import { CheckCircle2, ArrowRight, ShieldAlert, Inbox, XCircle, Pencil, Eye, CalendarPlus, Send, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { rescoreContent } from '@/lib/pipeline';
 import { schedulePiece, SUGGESTED_TIME, buildDate } from '@/lib/scheduleStorage';
@@ -38,6 +38,14 @@ export default function Approvals() {
   const [previewRow, setPreviewRow] = useState<Row | null>(null);
   const [rejectRow, setRejectRow] = useState<Row | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [draftConfirm, setDraftConfirm] = useState<{ row: Row; action: () => void } | null>(null);
+
+  // Peça de sessão sem transcrição real (fluxo Link → Conteúdo) nunca aprova
+  // direto — exige confirmação explícita de que o médico sabe que é rascunho.
+  const requestApprove = (row: Row, action: () => void) => {
+    if (row.session.unverifiedDraft) { setDraftConfirm({ row, action }); return; }
+    action();
+  };
 
   const refresh = () => setSessions(loadSessions());
 
@@ -97,9 +105,13 @@ export default function Approvals() {
 
   const approveAllInChannel = (ch: ContentChannel) => {
     let n = 0;
+    let skipped = 0;
     const map = new Map(sessions.map(s => [s.id, { ...s, content: s.content ? [...s.content] : [] }]));
     filtered.forEach(row => {
       if (row.piece.channel !== ch) return;
+      // Rascunho não verificado nunca entra na aprovação em massa — precisa de
+      // confirmação individual explícita, então fica de fora e o médico aprova à parte.
+      if (row.session.unverifiedDraft) { skipped++; return; }
       const s = map.get(row.session.id);
       if (!s) return;
       s.content = s.content.map(c => c.id === row.piece.id ? { ...c, approved: true } : c);
@@ -107,7 +119,7 @@ export default function Approvals() {
     });
     map.forEach(s => upsertSession(s));
     refresh();
-    toast.success(`${n} peça(s) aprovada(s) em ${CHANNEL_LABEL[ch]}`);
+    toast.success(`${n} peça(s) aprovada(s) em ${CHANNEL_LABEL[ch]}${skipped ? ` — ${skipped} rascunho(s) não verificado(s) pulado(s), aprove individualmente` : ''}`);
   };
 
   const confirmReject = (reason: RejectReason, note: string) => {
@@ -184,9 +196,9 @@ export default function Approvals() {
                   <PendingCard
                     key={row.piece.id}
                     row={row}
-                    onApprove={() => approve(row)}
-                    onApproveSchedule={() => approveAndSchedule(row)}
-                    onApproveEnqueue={() => approveAndEnqueue(row)}
+                    onApprove={() => requestApprove(row, () => approve(row))}
+                    onApproveSchedule={() => requestApprove(row, () => approveAndSchedule(row))}
+                    onApproveEnqueue={() => requestApprove(row, () => approveAndEnqueue(row))}
                     onEdit={() => setEditRow(row)}
                     onReject={() => setRejectRow(row)}
                     onPreview={() => setPreviewRow(row)}
@@ -263,6 +275,31 @@ export default function Approvals() {
 
       {/* Reject dialog */}
       <RejectDialog row={rejectRow} onClose={() => setRejectRow(null)} onConfirm={confirmReject} />
+
+      {/* Confirmação de rascunho não verificado (Link → Conteúdo sem transcrição real) */}
+      <Dialog open={!!draftConfirm} onOpenChange={() => setDraftConfirm(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-warning">
+              <AlertTriangle className="h-4 w-4" /> Rascunho não verificado
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Esta peça veio de uma consulta sem transcrição real do vídeo/artigo (fluxo Link → Conteúdo) —
+            o texto é um rascunho baseado só na URL e no contexto informado, nunca no conteúdo real.
+            Confirme que já revisou antes de aprovar.
+          </p>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDraftConfirm(null)}>Cancelar</Button>
+            <Button
+              className="bg-gold-gradient text-primary-foreground"
+              onClick={() => { draftConfirm?.action(); setDraftConfirm(null); }}
+            >
+              Já revisei, aprovar mesmo assim
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -115,6 +115,7 @@ export function normalizeSession(raw: any): Session | null {
       content: asArray(s.content).map(normalizePiece),
       science: s.science && typeof s.science === 'object' ? s.science : undefined,
       errorMessage: typeof s.errorMessage === 'string' ? s.errorMessage : undefined,
+      unverifiedDraft: asBool(s.unverifiedDraft),
     };
   } catch (err) {
     console.warn('[migrations] dropping corrupted session', err);
