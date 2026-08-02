@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Brain as BrainIcon, ArrowRight, Database, RefreshCw, Download, Trash2, Webhook, LogOut, Upload as UploadIcon, Crown, Loader2, ExternalLink, Radio } from 'lucide-react';
+import { Brain as BrainIcon, ArrowRight, Database, RefreshCw, Download, Trash2, Webhook, LogOut, Upload as UploadIcon, Crown, Loader2, ExternalLink, Radio, MessageCircle, Copy, Check } from 'lucide-react';
 import { useSessions, loadSessions } from '@/lib/storage';
 import { loadBrain, saveBrain, useBrain } from '@/lib/brainStorage';
 import { getSettings, saveSettings, upsertSession } from '@/lib/store';
@@ -23,6 +23,10 @@ const TONES: { id: Brain['doctor']['tone']; label: string }[] = [
   { id: 'direct', label: 'Direto' },
   { id: 'technical', label: 'Técnico acessível' },
 ];
+
+// Mesmo fallback hardcoded do client.ts gerado (evita depender de env var em
+// runtime pra montar a URL pública da function de recebimento de WhatsApp).
+const FUNCTIONS_BASE = `${(import.meta.env.VITE_SUPABASE_URL || 'https://ifrsvvstjoduvxfcsozu.supabase.co').replace(/\/$/, '')}/functions/v1`;
 
 const CHANNELS: { id: string; label: string; placeholder: string }[] = [
   { id: 'instagram', label: 'Instagram', placeholder: 'https://hooks.zapier.com/... ou webhook do Make/n8n' },
@@ -51,6 +55,8 @@ export default function Settings() {
   const [preferredFormats, setPreferredFormats] = useState<ContentFormat[]>(initialSettings.preferredFormats as ContentFormat[]);
   const [schedulingLink, setSchedulingLink] = useState(initialSettings.schedulingLink ?? '');
   const [whatsappWebhookUrl, setWhatsappWebhookUrl] = useState(initialSettings.whatsappWebhookUrl ?? '');
+  const [whatsappInboundToken, setWhatsappInboundToken] = useState(initialSettings.whatsappInboundToken ?? '');
+  const [copiedInbound, setCopiedInbound] = useState(false);
 
   useEffect(() => {
     const s = getSettings();
@@ -58,7 +64,17 @@ export default function Settings() {
     setPreferredFormats(s.preferredFormats as ContentFormat[]);
     setSchedulingLink(s.schedulingLink ?? '');
     setWhatsappWebhookUrl(s.whatsappWebhookUrl ?? '');
+    setWhatsappInboundToken(s.whatsappInboundToken ?? '');
   }, [user?.id]);
+
+  const inboundUrl = whatsappInboundToken ? `${FUNCTIONS_BASE}/receive-whatsapp-reply?token=${whatsappInboundToken}` : '';
+  const copyInboundUrl = async () => {
+    if (!inboundUrl) return;
+    await navigator.clipboard.writeText(inboundUrl);
+    setCopiedInbound(true);
+    toast.success('Link copiado');
+    setTimeout(() => setCopiedInbound(false), 2000);
+  };
 
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [billingBusy, setBillingBusy] = useState(false);
@@ -324,6 +340,29 @@ export default function Settings() {
           placeholder="https://hooks.zapier.com/... ou webhook do Make/n8n/Z-API"
         />
         <Button onClick={saveWhatsappWebhook} variant="outline" size="sm">Salvar webhook do WhatsApp</Button>
+      </div>
+
+      <div className="border-t border-border pt-8 space-y-4">
+        <div className="flex items-center gap-2">
+          <MessageCircle className="h-4 w-4 text-primary" />
+          <h2 className="font-serif text-2xl">Recebimento de resposta por WhatsApp</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Cole este link no passo "quando uma mensagem chegar" da sua automação (Zapier/Make/n8n/Z-API) —
+          quando um lead responder, ela deve chamar este endereço com o telefone e a mensagem. A IA lê a
+          resposta e já deixa um rascunho pronto no card do lead, mas nunca envia nem move a etapa sozinha.
+        </p>
+        {inboundUrl ? (
+          <div className="flex items-center gap-2">
+            <code className="flex-1 text-xs bg-muted rounded-md px-3 py-2 truncate">{inboundUrl}</code>
+            <Button size="sm" variant="outline" onClick={copyInboundUrl} className="shrink-0">
+              {copiedInbound ? <Check className="h-3.5 w-3.5 mr-1.5" /> : <Copy className="h-3.5 w-3.5 mr-1.5" />}
+              Copiar
+            </Button>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">Salve qualquer ajuste acima uma vez pra gerar seu link de recebimento.</p>
+        )}
       </div>
 
       <div className="border-t border-border pt-8 space-y-4">

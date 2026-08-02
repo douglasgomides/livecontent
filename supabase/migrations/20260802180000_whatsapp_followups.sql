@@ -1,8 +1,3 @@
--- PENDENTE DE APLICAÇÃO — escrito com o Supabase MCP desconectado nesta sessão.
--- Aplicar via apply_migration assim que a conexão voltar, depois confirmar com
--- list_tables/get_advisors, regenerar src/integrations/supabase/types.ts, e
--- fazer o deploy da edge function supabase/functions/dispatch-whatsapp-followup/.
---
 -- Consentimento explícito coletado ANTES da consulta (via Pré-consulta) — sem
 -- isso, nenhuma mensagem de acompanhamento é gerada nem enviada pra esse
 -- paciente, mesmo que o contato dele já esteja registrado.

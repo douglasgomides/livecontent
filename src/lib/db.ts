@@ -25,6 +25,7 @@ import type {
   LeadCapture,
   LeadOrigin,
   LeadStatus,
+  LeadMessage,
   WhatsappFollowup,
 } from '@/types/session';
 import type { Brain } from '@/types/brain';
@@ -297,16 +298,18 @@ export interface DoctorSettings {
   preferredFormats: string[];
   // Onde o CTA "Agendar" da captação de leads manda o lead (WhatsApp,
   // Doctoralia, o que o médico já usa hoje) — null até ele configurar.
-  // Coluna pendente de aplicação, ver migration 20260802170000_lead_captures.sql.
   schedulingLink: string | null;
   // Webhook do WhatsApp (mesmo modelo dos webhooks de canal, mas separado —
-  // é envio individual por paciente, não broadcast de conteúdo). Coluna
-  // pendente, ver migration 20260802180000_whatsapp_followups.sql.
+  // é envio individual por paciente/lead, não broadcast de conteúdo).
   whatsappWebhookUrl: string | null;
+  // Token pra autenticar o webhook de ENTRADA (a automação do médico chama
+  // esse endpoint quando um lead responde por WhatsApp) — gerado automático
+  // pelo banco, só leitura aqui.
+  whatsappInboundToken: string | null;
 }
 
 export async function fetchSettings(userId: string): Promise<DoctorSettings> {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('doctor_settings')
     .select('*')
     .eq('user_id', userId)
@@ -317,11 +320,12 @@ export async function fetchSettings(userId: string): Promise<DoctorSettings> {
     preferredFormats: (data?.preferred_formats as any) ?? ['caption', 'carousel', 'reel', 'linkedin'],
     schedulingLink: data?.scheduling_link ?? null,
     whatsappWebhookUrl: data?.whatsapp_webhook_url ?? null,
+    whatsappInboundToken: data?.whatsapp_inbound_token ?? null,
   };
 }
 
 export async function saveSettingsDb(userId: string, s: DoctorSettings): Promise<void> {
-  const { error } = await (supabase as any).from('doctor_settings').upsert({
+  const { error } = await supabase.from('doctor_settings').upsert({
     user_id: userId,
     webhooks: s.webhooks as any,
     preferred_formats: s.preferredFormats as any,
@@ -547,7 +551,7 @@ function mapBrandPhotoRow(row: any): BrandPhoto {
 }
 
 export async function fetchBrandPhotos(userId: string): Promise<BrandPhoto[]> {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('brand_photos')
     .select('*')
     .eq('user_id', userId)
@@ -563,7 +567,7 @@ export async function uploadBrandPhoto(userId: string, file: File, category: Bra
     .from('brand-photos')
     .upload(path, file, { contentType: file.type || 'image/jpeg' });
   if (upErr) throw upErr;
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('brand_photos')
     .insert({ user_id: userId, storage_path: path, category })
     .select('*')
@@ -574,7 +578,7 @@ export async function uploadBrandPhoto(userId: string, file: File, category: Bra
 
 export async function deleteBrandPhoto(id: string, storagePath: string): Promise<void> {
   await supabase.storage.from('brand-photos').remove([storagePath]);
-  const { error } = await (supabase as any).from('brand_photos').delete().eq('id', id);
+  const { error } = await supabase.from('brand_photos').delete().eq('id', id);
   if (error) throw error;
 }
 
@@ -604,7 +608,7 @@ function mapPatientSignalRow(row: any): PatientSignal {
 }
 
 export async function fetchPatientSignals(userId: string): Promise<PatientSignal[]> {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('patient_signals')
     .select('*')
     .eq('user_id', userId)
@@ -617,7 +621,7 @@ export async function fetchPatientSignals(userId: string): Promise<PatientSignal
 // principal, sentimento) logo que a consulta fica pronta, sem puxar o
 // histórico inteiro do médico só pra mostrar uma tela.
 export async function fetchPatientSignalsForSession(sessionId: string): Promise<PatientSignal[]> {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('patient_signals')
     .select('*')
     .eq('session_id', sessionId)
@@ -856,7 +860,7 @@ export async function submitPreConsultationForm(
   answers: Record<string, string>,
   whatsappConsent: boolean = false,
 ): Promise<void> {
-  const { error } = await (supabase as any).from('preconsultation_responses').insert({
+  const { error } = await supabase.from('preconsultation_responses').insert({
     user_id: doctorUserId,
     patient_name: patientName,
     patient_contact: patientContact || null,
@@ -897,9 +901,7 @@ export async function linkPreConsultationResponse(responseId: string, sessionId:
   if (error) throw error;
 }
 
-// ─── Follow-up de WhatsApp por paciente (rascunho -> aprovação -> envio) ────
-// (supabase as any): tabela whatsapp_followups pendente de aplicação — ver
-// migration 20260802180000_whatsapp_followups.sql.
+// ─── Follow-up de WhatsApp por paciente/lead (rascunho -> aprovação -> envio) ──
 
 function mapWhatsappFollowupRow(row: any): WhatsappFollowup {
   return {
@@ -916,7 +918,7 @@ function mapWhatsappFollowupRow(row: any): WhatsappFollowup {
 }
 
 export async function fetchWhatsappFollowupForSession(sessionId: string): Promise<WhatsappFollowup | null> {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('whatsapp_followups')
     .select('*')
     .eq('session_id', sessionId)
@@ -928,7 +930,7 @@ export async function fetchWhatsappFollowupForSession(sessionId: string): Promis
 export async function createWhatsappFollowup(
   userId: string, sessionId: string, preconsultResponseId: string, phone: string, message: string,
 ): Promise<WhatsappFollowup> {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('whatsapp_followups')
     .insert({ user_id: userId, session_id: sessionId, preconsult_response_id: preconsultResponseId, phone, message })
     .select('*')
@@ -938,20 +940,24 @@ export async function createWhatsappFollowup(
 }
 
 // Idem, pra um lead (ainda não-paciente) — sem sessão/pré-consulta vinculada.
+// Um lead pode trocar várias mensagens ao longo do tempo (diferente de
+// paciente, que só tem UM follow-up pós-consulta) — pega sempre a mais
+// recente, nunca assume linha única.
 export async function fetchWhatsappFollowupForLead(leadId: string): Promise<WhatsappFollowup | null> {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('whatsapp_followups')
     .select('*')
     .eq('lead_id', leadId)
-    .maybeSingle();
+    .order('created_at', { ascending: false })
+    .limit(1);
   if (error) throw error;
-  return data ? mapWhatsappFollowupRow(data) : null;
+  return data && data[0] ? mapWhatsappFollowupRow(data[0]) : null;
 }
 
 export async function createWhatsappFollowupForLead(
   userId: string, leadId: string, phone: string, message: string,
 ): Promise<WhatsappFollowup> {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('whatsapp_followups')
     .insert({ user_id: userId, lead_id: leadId, phone, message })
     .select('*')
@@ -961,7 +967,7 @@ export async function createWhatsappFollowupForLead(
 }
 
 export async function updateWhatsappFollowupMessage(id: string, message: string): Promise<void> {
-  const { error } = await (supabase as any).from('whatsapp_followups').update({ message }).eq('id', id);
+  const { error } = await supabase.from('whatsapp_followups').update({ message }).eq('id', id);
   if (error) throw error;
 }
 
@@ -969,7 +975,7 @@ export async function updateWhatsappFollowupMessage(id: string, message: string)
 // direto do cliente pro webhook de terceiro (mesmo padrão de segurança das
 // publicações em Instagram/LinkedIn/etc via dispatch-publish-webhook).
 export async function approveAndSendWhatsappFollowup(followupId: string): Promise<{ ok: boolean; error?: string }> {
-  await (supabase as any).from('whatsapp_followups').update({ status: 'approved' }).eq('id', followupId);
+  await supabase.from('whatsapp_followups').update({ status: 'approved' }).eq('id', followupId);
   const { data, error } = await supabase.functions.invoke('dispatch-whatsapp-followup', { body: { followup_id: followupId } });
   if (error) return { ok: false, error: error.message ?? 'Falha ao enviar' };
   return data as { ok: boolean; error?: string };
@@ -987,9 +993,6 @@ export async function fetchRecentSessionsForLinking(userId: string, limit = 20):
 }
 
 // ─── Captação de lead (link público avulso, pra quem ainda não é paciente) ──
-// (supabase as any): tabela lead_captures pendente de aplicação — ver migration
-// 20260802170000_lead_captures.sql. Trocar por tipagem real assim que aplicada
-// e os tipos gerados (types.ts) forem atualizados.
 
 function mapLeadCaptureRow(row: any): LeadCapture {
   return {
@@ -1004,6 +1007,8 @@ function mapLeadCaptureRow(row: any): LeadCapture {
     notes: row.notes ?? null,
     nextFollowUpAt: row.next_follow_up_at ?? null,
     whatsappConsent: !!row.whatsapp_consent,
+    suggestedStatus: row.suggested_status ?? null,
+    suggestedStatusReason: row.suggested_status_reason ?? null,
   };
 }
 
@@ -1017,7 +1022,7 @@ export async function submitLeadCapture(
   origin: LeadOrigin,
   whatsappConsent: boolean = false,
 ): Promise<void> {
-  const { error } = await (supabase as any).from('lead_captures').insert({
+  const { error } = await supabase.from('lead_captures').insert({
     user_id: doctorUserId,
     name,
     contact,
@@ -1029,7 +1034,7 @@ export async function submitLeadCapture(
 }
 
 export async function fetchLeadCaptures(userId: string): Promise<LeadCapture[]> {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('lead_captures')
     .select('*')
     .eq('user_id', userId)
@@ -1038,36 +1043,65 @@ export async function fetchLeadCaptures(userId: string): Promise<LeadCapture[]> 
   return (data ?? []).map(mapLeadCaptureRow);
 }
 
+// Qualquer mudança manual de etapa invalida uma sugestão da IA pendente
+// (ela já cumpriu o papel, seja porque o médico seguiu ou porque decidiu
+// diferente) — sempre limpa junto, nunca deixa uma sugestão velha na tela.
 export async function updateLeadCaptureStatus(id: string, status: LeadStatus): Promise<void> {
-  const { error } = await (supabase as any).from('lead_captures').update({ status }).eq('id', id);
+  const { error } = await supabase
+    .from('lead_captures')
+    .update({ status, suggested_status: null, suggested_status_reason: null })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+// Descarta a sugestão sem mudar a etapa — "não, obrigado" do médico.
+export async function dismissLeadSuggestion(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('lead_captures')
+    .update({ suggested_status: null, suggested_status_reason: null })
+    .eq('id', id);
   if (error) throw error;
 }
 
 // Nota livre e data de retorno — mini-CRM, nenhum dos dois dispara nada
 // sozinho, é só estado do acompanhamento manual do médico.
 export async function updateLeadCaptureNotes(id: string, notes: string): Promise<void> {
-  const { error } = await (supabase as any).from('lead_captures').update({ notes: notes || null }).eq('id', id);
+  const { error } = await supabase.from('lead_captures').update({ notes: notes || null }).eq('id', id);
   if (error) throw error;
 }
 
 export async function updateLeadCaptureFollowUp(id: string, date: string | null): Promise<void> {
-  const { error } = await (supabase as any).from('lead_captures').update({ next_follow_up_at: date }).eq('id', id);
+  const { error } = await supabase.from('lead_captures').update({ next_follow_up_at: date }).eq('id', id);
   if (error) throw error;
 }
 
 export async function linkLeadCaptureToSession(id: string, sessionId: string): Promise<void> {
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('lead_captures')
     .update({ linked_session_id: sessionId, status: 'convertido' })
     .eq('id', id);
   if (error) throw error;
 }
 
+// Histórico de conversa por WhatsApp com um lead — só leitura, quem grava é
+// o servidor (edge function no inbound, e o dispatch no outbound).
+export async function fetchLeadMessages(leadId: string): Promise<LeadMessage[]> {
+  const { data, error } = await supabase
+    .from('lead_messages')
+    .select('*')
+    .eq('lead_id', leadId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((row: any) => ({
+    id: row.id, leadId: row.lead_id, direction: row.direction, body: row.body, createdAt: row.created_at,
+  }));
+}
+
 // Chamado da tela pública /captar/:doctorId — RPC estreita (só devolve o link
 // de agendamento, nunca a linha inteira de doctor_settings, que também guarda
 // URLs de webhook) porque a tabela não tem select público.
 export async function fetchSchedulingLinkPublic(doctorId: string): Promise<string | null> {
-  const { data, error } = await (supabase as any).rpc('get_scheduling_link', { doctor_id: doctorId });
+  const { data, error } = await supabase.rpc('get_scheduling_link', { doctor_id: doctorId });
   if (error) { console.warn('[fetchSchedulingLinkPublic] failed', error); return null; }
   return data ?? null;
 }

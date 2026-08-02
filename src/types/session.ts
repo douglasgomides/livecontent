@@ -302,6 +302,22 @@ export interface LeadCapture {
   // Consentimento explícito pra WhatsApp, coletado no próprio formulário de
   // captação — sem isso, nunca gera nem envia follow-up pra esse lead.
   whatsappConsent: boolean;
+  // Sugestão da IA a partir da resposta do lead por WhatsApp — SEMPRE um
+  // convite pro médico aplicar com um clique, nunca uma mudança automática
+  // do campo "status" acima.
+  suggestedStatus: LeadStatus | null;
+  suggestedStatusReason: string | null;
+}
+
+// Uma mensagem da conversa de WhatsApp com um lead (inbound = o que ele
+// mandou, outbound = o que o médico aprovou e foi enviado) — só histórico
+// pra dar contexto, quem dispara envio é sempre whatsapp_followups.
+export interface LeadMessage {
+  id: string;
+  leadId: string;
+  direction: 'inbound' | 'outbound';
+  body: string;
+  createdAt: string;
 }
 
 // Assinatura de tema pra monitoramento automático de novidades (evidência

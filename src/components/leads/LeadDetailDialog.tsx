@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { MessageCircle, Send, Link2 } from 'lucide-react';
+import { MessageCircle, Send, Link2, Sparkles, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -11,12 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   updateLeadCaptureStatus, updateLeadCaptureNotes, updateLeadCaptureFollowUp, linkLeadCaptureToSession,
   fetchWhatsappFollowupForLead, createWhatsappFollowupForLead, updateWhatsappFollowupMessage,
-  approveAndSendWhatsappFollowup,
+  approveAndSendWhatsappFollowup, fetchLeadMessages, dismissLeadSuggestion,
 } from '@/lib/db';
 import { getUserId } from '@/lib/store';
 import { loadBrain } from '@/lib/brainStorage';
 import { LEAD_ORIGIN_LABEL } from '@/lib/contentFormats';
-import type { LeadCapture, LeadStatus, WhatsappFollowup } from '@/types/session';
+import type { LeadCapture, LeadStatus, WhatsappFollowup, LeadMessage } from '@/types/session';
 
 const STATUS_LABEL: Record<LeadStatus, string> = {
   novo: 'Novo', contatado: 'Contatado', agendado: 'Agendado', convertido: 'Convertido', perdido: 'Perdido',
@@ -50,6 +50,7 @@ export default function LeadDetailDialog({
   const [followup, setFollowup] = useState<WhatsappFollowup | null>(null);
   const [draft, setDraft] = useState('');
   const [waLoading, setWaLoading] = useState(true);
+  const [messages, setMessages] = useState<LeadMessage[]>([]);
 
   useEffect(() => {
     if (!lead) return;
@@ -57,9 +58,9 @@ export default function LeadDetailDialog({
     setFollowUp(lead.nextFollowUpAt ?? '');
     if (!lead.whatsappConsent) { setWaLoading(false); return; }
     setWaLoading(true);
-    fetchWhatsappFollowupForLead(lead.id)
-      .then(fu => { setFollowup(fu); if (fu) setDraft(fu.message); })
-      .catch(() => setFollowup(null))
+    Promise.all([fetchWhatsappFollowupForLead(lead.id), fetchLeadMessages(lead.id)])
+      .then(([fu, msgs]) => { setFollowup(fu); if (fu) setDraft(fu.message); setMessages(msgs); })
+      .catch(() => { setFollowup(null); setMessages([]); })
       .finally(() => setWaLoading(false));
   }, [lead?.id]);
 
@@ -105,6 +106,23 @@ export default function LeadDetailDialog({
       onChanged();
     } catch (err: any) {
       toast.error(err?.message ?? 'Falha ao atualizar etapa');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const applySuggestion = async () => {
+    if (!lead.suggestedStatus) return;
+    await handleStatus(lead.suggestedStatus);
+  };
+
+  const ignoreSuggestion = async () => {
+    setBusy(true);
+    try {
+      await dismissLeadSuggestion(lead.id);
+      onChanged();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Falha ao descartar sugestão');
     } finally {
       setBusy(false);
     }
@@ -185,6 +203,26 @@ export default function LeadDetailDialog({
             <div className="text-sm border border-border/60 rounded-lg p-3 bg-secondary/40">{lead.reason}</div>
           )}
 
+          {lead.suggestedStatus && lead.suggestedStatus !== lead.status && (
+            <div className="border border-primary/40 bg-primary/5 rounded-lg p-3 space-y-2">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-primary uppercase tracking-wide">
+                <Sparkles className="h-3.5 w-3.5" /> Sugestão da IA
+              </div>
+              <p className="text-sm">
+                Mover pra <span className="font-medium">{STATUS_LABEL[lead.suggestedStatus]}</span>
+                {lead.suggestedStatusReason && <> — {lead.suggestedStatusReason}</>}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button size="sm" disabled={busy} onClick={applySuggestion} className="bg-gold-gradient text-primary-foreground">
+                  <Check className="h-3.5 w-3.5 mr-1.5" /> Aplicar
+                </Button>
+                <Button size="sm" variant="outline" disabled={busy} onClick={ignoreSuggestion}>
+                  <X className="h-3.5 w-3.5 mr-1.5" /> Ignorar
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wide text-muted-foreground">Etapa</Label>
             <Select value={lead.status} onValueChange={v => handleStatus(v as LeadStatus)} disabled={busy}>
@@ -239,6 +277,15 @@ export default function LeadDetailDialog({
                 <p className="text-sm text-muted-foreground">Carregando…</p>
               ) : (
                 <>
+                  {messages.length > 0 && (
+                    <div className="space-y-1.5 max-h-40 overflow-y-auto border border-border/60 rounded-lg p-2.5 bg-background/60">
+                      {messages.map(m => (
+                        <div key={m.id} className={`text-xs ${m.direction === 'inbound' ? 'text-foreground' : 'text-muted-foreground text-right'}`}>
+                          <span className="font-medium">{m.direction === 'inbound' ? lead.name.split(' ')[0] : 'Você'}:</span> {m.body}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <Textarea value={draft} onChange={e => setDraft(e.target.value)} rows={4} disabled={sent || busy} />
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     {followup && (
@@ -250,7 +297,11 @@ export default function LeadDetailDialog({
                         {WA_STATUS_LABEL[followup.status]}
                       </span>
                     )}
-                    {!sent && (
+                    {sent ? (
+                      <Button size="sm" variant="outline" className="ml-auto" onClick={() => { setFollowup(null); setDraft(''); }}>
+                        Escrever nova mensagem
+                      </Button>
+                    ) : (
                       <div className="flex items-center gap-2 ml-auto">
                         <Button size="sm" variant="outline" disabled={busy} onClick={saveDraft}>Salvar rascunho</Button>
                         <Button size="sm" disabled={busy} onClick={approveAndSend} className="bg-gold-gradient text-primary-foreground">

@@ -349,23 +349,32 @@ export type Database = {
         Row: {
           created_at: string
           preferred_formats: Json
+          scheduling_link: string | null
           updated_at: string
           user_id: string
           webhooks: Json
+          whatsapp_inbound_token: string | null
+          whatsapp_webhook_url: string | null
         }
         Insert: {
           created_at?: string
           preferred_formats?: Json
+          scheduling_link?: string | null
           updated_at?: string
           user_id: string
           webhooks?: Json
+          whatsapp_inbound_token?: string | null
+          whatsapp_webhook_url?: string | null
         }
         Update: {
           created_at?: string
           preferred_formats?: Json
+          scheduling_link?: string | null
           updated_at?: string
           user_id?: string
           webhooks?: Json
+          whatsapp_inbound_token?: string | null
+          whatsapp_webhook_url?: string | null
         }
         Relationships: []
       }
@@ -540,6 +549,100 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      lead_captures: {
+        Row: {
+          contact: string
+          created_at: string
+          id: string
+          linked_session_id: string | null
+          name: string
+          next_follow_up_at: string | null
+          notes: string | null
+          origin: string
+          reason: string | null
+          status: string
+          suggested_status: string | null
+          suggested_status_reason: string | null
+          user_id: string
+          whatsapp_consent: boolean
+        }
+        Insert: {
+          contact: string
+          created_at?: string
+          id?: string
+          linked_session_id?: string | null
+          name: string
+          next_follow_up_at?: string | null
+          notes?: string | null
+          origin?: string
+          reason?: string | null
+          status?: string
+          suggested_status?: string | null
+          suggested_status_reason?: string | null
+          user_id: string
+          whatsapp_consent?: boolean
+        }
+        Update: {
+          contact?: string
+          created_at?: string
+          id?: string
+          linked_session_id?: string | null
+          name?: string
+          next_follow_up_at?: string | null
+          notes?: string | null
+          origin?: string
+          reason?: string | null
+          status?: string
+          suggested_status?: string | null
+          suggested_status_reason?: string | null
+          user_id?: string
+          whatsapp_consent?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_captures_linked_session_id_fkey"
+            columns: ["linked_session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_messages: {
+        Row: {
+          body: string
+          created_at: string
+          direction: string
+          id: string
+          lead_id: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          direction: string
+          id?: string
+          lead_id: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          direction?: string
+          id?: string
+          lead_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_messages_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "lead_captures"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       leads: {
         Row: {
@@ -794,6 +897,7 @@ export type Database = {
           patient_name: string
           submitted_at: string
           user_id: string
+          whatsapp_consent: boolean
         }
         Insert: {
           answers?: Json
@@ -803,6 +907,7 @@ export type Database = {
           patient_name: string
           submitted_at?: string
           user_id: string
+          whatsapp_consent?: boolean
         }
         Update: {
           answers?: Json
@@ -812,6 +917,7 @@ export type Database = {
           patient_name?: string
           submitted_at?: string
           user_id?: string
+          whatsapp_consent?: boolean
         }
         Relationships: [
           {
@@ -1392,6 +1498,67 @@ export type Database = {
           },
         ]
       }
+      whatsapp_followups: {
+        Row: {
+          created_at: string
+          id: string
+          lead_id: string | null
+          message: string
+          phone: string
+          preconsult_response_id: string | null
+          sent_at: string | null
+          session_id: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lead_id?: string | null
+          message: string
+          phone: string
+          preconsult_response_id?: string | null
+          sent_at?: string | null
+          session_id?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lead_id?: string | null
+          message?: string
+          phone?: string
+          preconsult_response_id?: string | null
+          sent_at?: string | null
+          session_id?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_followups_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "lead_captures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_followups_preconsult_response_id_fkey"
+            columns: ["preconsult_response_id"]
+            isOneToOne: false
+            referencedRelation: "preconsultation_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_followups_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       pages_public: {
@@ -1422,6 +1589,7 @@ export type Database = {
       }
     }
     Functions: {
+      get_scheduling_link: { Args: { doctor_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

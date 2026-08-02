@@ -2,3 +2,6 @@ project_id = "ifrsvvstjoduvxfcsozu"
 
 [functions.stripe-webhook]
 verify_jwt = false
+
+[functions.receive-whatsapp-reply]
+verify_jwt = false

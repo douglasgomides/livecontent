@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, UserPlus, Copy, Check, Link2, Instagram, MessageCircle, Users, ChevronRight, X, CalendarClock, StickyNote } from 'lucide-react';
+import { ArrowLeft, UserPlus, Copy, Check, Link2, Instagram, MessageCircle, Users, ChevronRight, X, CalendarClock, StickyNote, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -164,6 +164,11 @@ export default function LeadCaptures() {
                       >
                         <div className="flex items-center gap-1.5 flex-wrap mb-1">
                           <span className="text-sm font-medium truncate">{lead.name}</span>
+                          {lead.suggestedStatus && lead.suggestedStatus !== lead.status && (
+                            <span title={`IA sugere: ${STATUS_LABEL[lead.suggestedStatus]}`} className="h-4 w-4 rounded-full bg-primary/15 text-primary flex items-center justify-center shrink-0">
+                              <Sparkles className="h-2.5 w-2.5" />
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
                           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground">{LEAD_ORIGIN_LABEL[lead.origin]}</span>

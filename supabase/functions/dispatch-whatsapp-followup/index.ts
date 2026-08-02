@@ -65,6 +65,13 @@ Deno.serve(async (req) => {
         status: ok ? 'sent' : 'failed',
         sent_at: ok ? new Date().toISOString() : null,
       }).eq('id', followup_id);
+      // Histórico da conversa com o lead — só registro pra dar contexto à
+      // próxima sugestão da IA e pro médico ver no kanban, nunca aciona nada.
+      if (ok && followup.lead_id) {
+        await supabase.from('lead_messages').insert({
+          user_id: userId, lead_id: followup.lead_id, direction: 'outbound', body: followup.message,
+        });
+      }
       return json({ ok, status: r.status, message: text.slice(0, 300) });
     } catch (err) {
       await supabase.from('whatsapp_followups').update({ status: 'failed' }).eq('id', followup_id);

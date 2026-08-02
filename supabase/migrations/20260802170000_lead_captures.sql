@@ -1,7 +1,3 @@
--- PENDENTE DE APLICAÇÃO — escrito com o Supabase MCP desconectado nesta sessão.
--- Aplicar via apply_migration assim que a conexão voltar, depois confirmar com
--- list_tables/get_advisors e regenerar src/integrations/supabase/types.ts.
---
 -- Captação de lead: link público avulso pra quem AINDA NÃO é paciente (bio do
 -- Instagram, envio direto por WhatsApp) — diferente da pré-consulta (que é pra
 -- quem já tem consulta marcada). Mesmo padrão de RLS de preconsultation_responses:
