@@ -12,6 +12,7 @@ import AnonymizationReview from '@/components/session/AnonymizationReview';
 import TopicsReview from '@/components/session/TopicsReview';
 import ContentPieceCard from '@/components/session/ContentPieceCard';
 import ClosingSummaryCard from '@/components/session/ClosingSummaryCard';
+import WhatsappFollowupCard from '@/components/session/WhatsappFollowupCard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ArrowLeft, Check, Circle, Loader2, Sparkles, FlaskConical, FileText, AlertTriangle, RefreshCw, Target, Lightbulb, TrendingUp, X } from 'lucide-react';
@@ -164,7 +165,10 @@ export default function SessionDetail() {
       </div>
 
       {showCommercial && session.status === 'ready' && (
-        <ClosingSummaryCard signals={signals} commercial={commercial} products={products} history={history} allSignals={allSignals} />
+        <>
+          <ClosingSummaryCard signals={signals} commercial={commercial} products={products} history={history} allSignals={allSignals} />
+          <WhatsappFollowupCard sessionId={session.id} signals={signals} commercial={commercial} products={products} />
+        </>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">

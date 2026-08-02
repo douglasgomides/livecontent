@@ -254,6 +254,26 @@ export interface PreConsultationResponse {
   answers: Record<string, string>;
   submittedAt: string;
   linkedSessionId: string | null;
+  // Consentimento explícito, coletado ANTES da consulta, pra mandar mensagem
+  // de acompanhamento por WhatsApp depois — sem isso, nunca gera nem envia
+  // nada pra esse paciente, mesmo que o médico tenha o contato dele.
+  whatsappConsent: boolean;
+}
+
+export type WhatsappFollowupStatus = 'draft' | 'approved' | 'sent' | 'failed';
+
+// Mensagem de acompanhamento por paciente específico — gerada a partir da
+// objeção/sentimento/produto já extraídos da consulta, sempre revisável e
+// só sai depois de aprovação explícita do médico (nunca automático).
+export interface WhatsappFollowup {
+  id: string;
+  sessionId: string;
+  preconsultResponseId: string;
+  phone: string;
+  message: string;
+  status: WhatsappFollowupStatus;
+  createdAt: string;
+  sentAt: string | null;
 }
 
 // Captação de lead: quem AINDA NÃO é paciente, veio de um link avulso (bio do

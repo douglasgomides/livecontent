@@ -25,6 +25,7 @@ import type {
   LeadCapture,
   LeadOrigin,
   LeadStatus,
+  WhatsappFollowup,
 } from '@/types/session';
 import type { Brain } from '@/types/brain';
 import { EMPTY_BRAIN } from '@/types/brain';
@@ -298,6 +299,10 @@ export interface DoctorSettings {
   // Doctoralia, o que o médico já usa hoje) — null até ele configurar.
   // Coluna pendente de aplicação, ver migration 20260802170000_lead_captures.sql.
   schedulingLink: string | null;
+  // Webhook do WhatsApp (mesmo modelo dos webhooks de canal, mas separado —
+  // é envio individual por paciente, não broadcast de conteúdo). Coluna
+  // pendente, ver migration 20260802180000_whatsapp_followups.sql.
+  whatsappWebhookUrl: string | null;
 }
 
 export async function fetchSettings(userId: string): Promise<DoctorSettings> {
@@ -311,6 +316,7 @@ export async function fetchSettings(userId: string): Promise<DoctorSettings> {
     webhooks: (data?.webhooks as any) ?? {},
     preferredFormats: (data?.preferred_formats as any) ?? ['caption', 'carousel', 'reel', 'linkedin'],
     schedulingLink: data?.scheduling_link ?? null,
+    whatsappWebhookUrl: data?.whatsapp_webhook_url ?? null,
   };
 }
 
@@ -320,6 +326,7 @@ export async function saveSettingsDb(userId: string, s: DoctorSettings): Promise
     webhooks: s.webhooks as any,
     preferred_formats: s.preferredFormats as any,
     scheduling_link: s.schedulingLink,
+    whatsapp_webhook_url: s.whatsappWebhookUrl,
   }, { onConflict: 'user_id' });
   if (error) throw error;
 }
@@ -836,6 +843,7 @@ function mapPreConsultationRow(row: any): PreConsultationResponse {
     answers: row.answers ?? {},
     submittedAt: row.submitted_at,
     linkedSessionId: row.linked_session_id ?? null,
+    whatsappConsent: !!row.whatsapp_consent,
   };
 }
 
@@ -846,12 +854,14 @@ export async function submitPreConsultationForm(
   patientName: string,
   patientContact: string,
   answers: Record<string, string>,
+  whatsappConsent: boolean = false,
 ): Promise<void> {
-  const { error } = await supabase.from('preconsultation_responses').insert({
+  const { error } = await (supabase as any).from('preconsultation_responses').insert({
     user_id: doctorUserId,
     patient_name: patientName,
     patient_contact: patientContact || null,
     answers,
+    whatsapp_consent: whatsappConsent,
   });
   if (error) throw error;
 }
@@ -866,12 +876,79 @@ export async function fetchPreConsultationResponses(userId: string): Promise<Pre
   return (data ?? []).map(mapPreConsultationRow);
 }
 
+// Acha a resposta de pré-consulta vinculada a ESTA consulta específica — usado
+// pra decidir se dá pra oferecer follow-up de WhatsApp (precisa de consentimento
+// + contato reais, coletados antes, nunca inventados na hora).
+export async function fetchPreConsultationForSession(sessionId: string): Promise<PreConsultationResponse | null> {
+  const { data, error } = await supabase
+    .from('preconsultation_responses')
+    .select('*')
+    .eq('linked_session_id', sessionId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapPreConsultationRow(data) : null;
+}
+
 export async function linkPreConsultationResponse(responseId: string, sessionId: string): Promise<void> {
   const { error } = await supabase
     .from('preconsultation_responses')
     .update({ linked_session_id: sessionId })
     .eq('id', responseId);
   if (error) throw error;
+}
+
+// ─── Follow-up de WhatsApp por paciente (rascunho -> aprovação -> envio) ────
+// (supabase as any): tabela whatsapp_followups pendente de aplicação — ver
+// migration 20260802180000_whatsapp_followups.sql.
+
+function mapWhatsappFollowupRow(row: any): WhatsappFollowup {
+  return {
+    id: row.id,
+    sessionId: row.session_id,
+    preconsultResponseId: row.preconsult_response_id,
+    phone: row.phone,
+    message: row.message,
+    status: row.status,
+    createdAt: row.created_at,
+    sentAt: row.sent_at ?? null,
+  };
+}
+
+export async function fetchWhatsappFollowupForSession(sessionId: string): Promise<WhatsappFollowup | null> {
+  const { data, error } = await (supabase as any)
+    .from('whatsapp_followups')
+    .select('*')
+    .eq('session_id', sessionId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapWhatsappFollowupRow(data) : null;
+}
+
+export async function createWhatsappFollowup(
+  userId: string, sessionId: string, preconsultResponseId: string, phone: string, message: string,
+): Promise<WhatsappFollowup> {
+  const { data, error } = await (supabase as any)
+    .from('whatsapp_followups')
+    .insert({ user_id: userId, session_id: sessionId, preconsult_response_id: preconsultResponseId, phone, message })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return mapWhatsappFollowupRow(data);
+}
+
+export async function updateWhatsappFollowupMessage(id: string, message: string): Promise<void> {
+  const { error } = await (supabase as any).from('whatsapp_followups').update({ message }).eq('id', id);
+  if (error) throw error;
+}
+
+// Chama a edge function que de fato dispara o webhook do médico — nunca envia
+// direto do cliente pro webhook de terceiro (mesmo padrão de segurança das
+// publicações em Instagram/LinkedIn/etc via dispatch-publish-webhook).
+export async function approveAndSendWhatsappFollowup(followupId: string): Promise<{ ok: boolean; error?: string }> {
+  await (supabase as any).from('whatsapp_followups').update({ status: 'approved' }).eq('id', followupId);
+  const { data, error } = await supabase.functions.invoke('dispatch-whatsapp-followup', { body: { followup_id: followupId } });
+  if (error) return { ok: false, error: error.message ?? 'Falha ao enviar' };
+  return data as { ok: boolean; error?: string };
 }
 
 export async function fetchRecentSessionsForLinking(userId: string, limit = 20): Promise<{ id: string; title: string; createdAt: string }[]> {

@@ -50,12 +50,14 @@ export default function Settings() {
   const [webhooks, setWebhooks] = useState<Record<string, string>>(initialSettings.webhooks as Record<string, string>);
   const [preferredFormats, setPreferredFormats] = useState<ContentFormat[]>(initialSettings.preferredFormats as ContentFormat[]);
   const [schedulingLink, setSchedulingLink] = useState(initialSettings.schedulingLink ?? '');
+  const [whatsappWebhookUrl, setWhatsappWebhookUrl] = useState(initialSettings.whatsappWebhookUrl ?? '');
 
   useEffect(() => {
     const s = getSettings();
     setWebhooks(s.webhooks as Record<string, string>);
     setPreferredFormats(s.preferredFormats as ContentFormat[]);
     setSchedulingLink(s.schedulingLink ?? '');
+    setWhatsappWebhookUrl(s.whatsappWebhookUrl ?? '');
   }, [user?.id]);
 
   const [subscription, setSubscription] = useState<Subscription | null>(null);
@@ -117,6 +119,11 @@ export default function Settings() {
   const saveSchedulingLink = async () => {
     await saveSettings({ ...getSettings(), schedulingLink: schedulingLink.trim() || null });
     toast.success('Link de agendamento salvo');
+  };
+
+  const saveWhatsappWebhook = async () => {
+    await saveSettings({ ...getSettings(), whatsappWebhookUrl: whatsappWebhookUrl.trim() || null });
+    toast.success('Webhook do WhatsApp salvo');
   };
 
   const saveFormats = async () => {
@@ -299,6 +306,24 @@ export default function Settings() {
           placeholder="https://wa.me/55..."
         />
         <Button onClick={saveSchedulingLink} variant="outline" size="sm">Salvar link de agendamento</Button>
+      </div>
+
+      <div className="border-t border-border pt-8 space-y-4">
+        <div className="flex items-center gap-2">
+          <Webhook className="h-4 w-4 text-primary" />
+          <h2 className="font-serif text-2xl">Webhook de follow-up por WhatsApp</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Mesmo modelo dos webhooks acima, mas pra mensagem individual de acompanhamento por paciente —
+          sua automação (Zapier/Make/n8n/Z-API etc.) recebe telefone + mensagem já aprovada e envia.
+          Nunca envia nada sem consentimento do paciente e aprovação sua.
+        </p>
+        <Input
+          value={whatsappWebhookUrl}
+          onChange={e => setWhatsappWebhookUrl(e.target.value)}
+          placeholder="https://hooks.zapier.com/... ou webhook do Make/n8n/Z-API"
+        />
+        <Button onClick={saveWhatsappWebhook} variant="outline" size="sm">Salvar webhook do WhatsApp</Button>
       </div>
 
       <div className="border-t border-border pt-8 space-y-4">

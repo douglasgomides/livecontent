@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { submitPreConsultationForm } from '@/lib/db';
 import { PRE_CONSULT_QUESTIONS } from '@/lib/preConsultQuestions';
@@ -16,6 +17,7 @@ export default function PreConsultationForm() {
   const [name, setName] = useState('');
   const [contact, setContact] = useState('');
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [whatsappConsent, setWhatsappConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -35,7 +37,7 @@ export default function PreConsultationForm() {
     }
     setBusy(true);
     try {
-      await submitPreConsultationForm(doctorId, name.trim(), contact.trim(), answers);
+      await submitPreConsultationForm(doctorId, name.trim(), contact.trim(), answers, whatsappConsent);
       setDone(true);
     } catch {
       toast.error('Não deu pra enviar agora. Tente de novo em instantes.');
@@ -77,6 +79,14 @@ export default function PreConsultationForm() {
             <Label>WhatsApp ou e-mail (opcional)</Label>
             <Input value={contact} onChange={e => setContact(e.target.value)} autoComplete="tel" />
           </div>
+          {contact.trim() && (
+            <div className="flex items-start gap-2.5 border border-border rounded-lg p-3">
+              <Checkbox checked={whatsappConsent} onCheckedChange={v => setWhatsappConsent(!!v)} className="mt-0.5" />
+              <Label className="font-normal cursor-pointer text-sm" onClick={() => setWhatsappConsent(v => !v)}>
+                Aceito receber mensagem de acompanhamento por WhatsApp depois da consulta.
+              </Label>
+            </div>
+          )}
           {PRE_CONSULT_QUESTIONS.map(q => (
             <div key={q.id} className="space-y-2">
               <Label>{q.label}{q.required && <span className="text-destructive"> *</span>}</Label>

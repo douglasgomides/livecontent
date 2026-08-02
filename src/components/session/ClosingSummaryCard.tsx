@@ -1,6 +1,7 @@
 import { Target, Heart, Package, Lightbulb, Gauge } from 'lucide-react';
 import { OBJECTION_LABEL, SENTIMENT_LABEL } from '@/lib/contentFormats';
 import { predictCloseProbability, MIN_SAMPLE_CLOSE_PROBABILITY } from '@/lib/closeProbability';
+import { deriveClosingSummary } from '@/lib/closingSummary';
 import type { PatientSignal, SessionCommercialIntelligence, Product } from '@/types/session';
 import type { CommercialIntelligenceWithMeta } from '@/lib/db';
 
@@ -10,13 +11,6 @@ import type { CommercialIntelligenceWithMeta } from '@/lib/db';
 // do catálogo que melhor casa com a queixa (com preço, se o médico cadastrou) e
 // o argumento curto já pronto pra usar. Só aparece quando tem alguma coisa real
 // pra mostrar — nunca força uma seção vazia.
-function fmtPrice(product: Product | undefined): string | null {
-  if (!product) return null;
-  if (product.avgPrice != null) {
-    return product.avgPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  }
-  return product.priceRange;
-}
 
 export default function ClosingSummaryCard({
   signals, commercial, products, history = [], allSignals = [],
@@ -30,12 +24,7 @@ export default function ClosingSummaryCard({
   history?: CommercialIntelligenceWithMeta[];
   allSignals?: PatientSignal[];
 }) {
-  const topObjection = [...signals].filter(s => s.kind === 'objection').sort((a, b) => b.confidence - a.confidence)[0];
-  const topSentiment = [...signals].filter(s => s.kind === 'sentiment').sort((a, b) => b.confidence - a.confidence)[0];
-  const bestUpsell = commercial?.oportunidadesUpsell.find(u => u.produtoCatalogoId) ?? commercial?.oportunidadesUpsell[0];
-  const bestProduct = bestUpsell?.produtoCatalogoId ? products.find(p => p.id === bestUpsell.produtoCatalogoId) : undefined;
-  const price = fmtPrice(bestProduct);
-  const pitch = commercial?.argumentoRecomendadoProximoContato || topSentiment?.actionTip || topObjection?.actionTip;
+  const { topObjection, topSentiment, bestUpsell, price, pitch } = deriveClosingSummary(signals, commercial, products);
   const prediction = predictCloseProbability(history, allSignals, topObjection?.category, topSentiment?.category);
   const showPredictionGap = !!((topObjection || topSentiment) && !prediction);
 
