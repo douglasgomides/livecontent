@@ -143,10 +143,12 @@ export default function LeadCaptures() {
         <h2 className="font-serif text-lg mb-4">Funil de leads</h2>
         {loading ? (
           <p className="text-sm text-muted-foreground">Carregando…</p>
-        ) : leads.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhum lead ainda. Compartilhe um dos links acima.</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
+          <>
+            {leads.length === 0 && (
+              <p className="text-sm text-muted-foreground mb-4">Nenhum lead ainda. Compartilhe um dos links acima.</p>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
             {COLUMN_ORDER.map(status => {
               const columnLeads = leads.filter(l => l.status === status);
               return (
@@ -208,7 +210,8 @@ export default function LeadCaptures() {
                 </div>
               );
             })}
-          </div>
+            </div>
+          </>
         )}
       </section>
 
