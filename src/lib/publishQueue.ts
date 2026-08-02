@@ -52,14 +52,16 @@ function initialMessage(ch: ContentChannel): string {
       return 'Texto pronto. Cole no seu perfil da Doctoralia.';
     case 'gmb':
       return 'Texto pronto. Cole no painel do Google Meu Negócio.';
+    // Texto pronto pra copiar e colar já funciona agora — a webhook em Ajustes é só
+    // pra quem quiser automatizar o envio depois, nunca um bloqueio pra publicar.
     case 'instagram':
-      return 'Configure a webhook do Instagram em Ajustes para publicar.';
+      return 'Texto pronto pra copiar e colar. Pra automatizar, configure a webhook do Instagram em Ajustes.';
     case 'linkedin':
-      return 'Configure a webhook do LinkedIn em Ajustes para publicar.';
+      return 'Texto pronto pra copiar e colar. Pra automatizar, configure a webhook do LinkedIn em Ajustes.';
     case 'youtube':
-      return 'Configure a webhook do YouTube em Ajustes para publicar.';
+      return 'Texto pronto pra copiar e colar na descrição. Pra automatizar, configure a webhook do YouTube em Ajustes.';
     case 'tiktok':
-      return 'Configure a webhook do TikTok em Ajustes para publicar.';
+      return 'Legenda pronta pra copiar e colar. Pra automatizar, configure a webhook do TikTok em Ajustes.';
     case 'podcast':
       return 'Roteiro pronto. Gere o áudio (Notebook LM / ElevenLabs) e publique.';
   }

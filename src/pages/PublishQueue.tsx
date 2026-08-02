@@ -9,12 +9,14 @@ import { Button } from '@/components/ui/button';
 import { Send, Inbox, CheckCircle2, AlertCircle, Trash2, ArrowRight, Copy, XCircle, Clock, Loader2 } from 'lucide-react';
 import type { PublishJob, PublishStatus, ContentPiece } from '@/types/session';
 import { toast } from 'sonner';
+import PublishCopyModal from '@/components/session/PublishCopyModal';
+import { stripMarkdown } from '@/components/MarkdownPreview';
 
 const STATUS_META: Record<PublishStatus, { label: string; cls: string }> = {
   queued: { label: 'Agendada', cls: 'bg-secondary text-muted-foreground' },
   publishing: { label: 'Publicando', cls: 'bg-primary/15 text-primary' },
   published: { label: 'Publicado', cls: 'bg-success/15 text-success' },
-  needs_connection: { label: 'Configure webhook', cls: 'bg-warning/15 text-warning' },
+  needs_connection: { label: 'Pronto pra copiar (ou automatize)', cls: 'bg-warning/15 text-warning' },
   downloaded: { label: 'Pronto pra copiar', cls: 'bg-success/15 text-success' },
   failed: { label: 'Falhou', cls: 'bg-destructive/15 text-destructive' },
 };
@@ -91,7 +93,12 @@ export default function PublishQueue() {
   const copyAllVisible = async () => {
     const chunks = filtered
       .map(j => {
-        const body = pieceMap.get(j.pieceId)?.body || '';
+        const piece = pieceMap.get(j.pieceId);
+        if (!piece) return null;
+        // Markdown cru (##, **) só serve pro destino final quando ele mesmo entende
+        // Markdown (blog/site) — em qualquer rede social vira símbolo literal na tela.
+        const keepsMarkdown = piece.format === 'blog' || piece.format === 'website';
+        const body = keepsMarkdown ? piece.body : stripMarkdown(piece.body);
         return body ? `--- ${CHANNEL_LABEL[j.channel]} · ${j.title} ---\n${body}` : null;
       })
       .filter(Boolean);
@@ -160,9 +167,26 @@ export default function PublishQueue() {
                   {j.message && <div className="text-xs text-muted-foreground mt-0.5">{j.message}</div>}
                 </div>
                 <div className="flex items-center gap-1">
-                  <Button size="sm" variant="ghost" onClick={() => copyBody(j)} title="Copiar texto">
-                    <Copy className="h-3.5 w-3.5" />
-                  </Button>
+                  {pieceMap.get(j.pieceId) ? (
+                    <PublishCopyModal
+                      piece={pieceMap.get(j.pieceId)!}
+                      channel={j.channel}
+                      onCopied={() => {
+                        if (j.status === 'queued' || j.status === 'needs_connection') {
+                          updateJob(j.id, { status: 'downloaded', message: 'Copiado. Cole no canal.' });
+                        }
+                      }}
+                      trigger={
+                        <Button size="sm" variant="ghost" title="Ver e copiar texto pronto pra publicar">
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                      }
+                    />
+                  ) : (
+                    <Button size="sm" variant="ghost" onClick={() => copyBody(j)} title="Copiar texto">
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                   <Link to={`/app/session/${j.sessionId}`}>
                     <Button size="sm" variant="ghost" className="text-xs">
                       Consulta <ArrowRight className="h-3 w-3 ml-1" />
@@ -198,7 +222,7 @@ export default function PublishQueue() {
 
       <div className="text-[11px] text-muted-foreground border-t border-border/60 pt-4 flex items-start gap-2">
         <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-        <span>Publicação em IG/LinkedIn/YouTube/TikTok/Podcast usa uma webhook configurável (Zapier/Make/n8n) em Ajustes. Blog, site, GMB e Doctoralia saem prontos pra copiar e colar.</span>
+        <span>Todo canal sai pronto pra copiar e colar (clique no ícone de cópia). IG/LinkedIn/YouTube/TikTok também aceitam uma webhook configurável (Zapier/Make/n8n) em Ajustes pra automatizar o envio.</span>
       </div>
     </div>
   );
