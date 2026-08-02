@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Brain as BrainIcon, Sparkles, User, Users, Palette, Eye, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import MarkdownPreview from '@/components/MarkdownPreview';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -256,9 +257,9 @@ function BrainPreview({ brain }: { brain: Brain }) {
           ))}
         </div>
       )}
-      <pre className="whitespace-pre-wrap text-sm border border-border/60 rounded-lg p-4 bg-secondary/30 font-sans">
-        {piece.body}
-      </pre>
+      <div className="border border-border/60 rounded-lg p-4 bg-secondary/30">
+        <MarkdownPreview text={piece.body} />
+      </div>
       <div className="text-xs text-muted-foreground">
         {piece.cfm.evaluated
           ? <>CFM Score: <span className="font-medium text-foreground">{piece.cfm.score}</span></>

@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import ViralityBadge from '@/components/ViralityBadge';
+import MarkdownPreview, { stripMarkdown } from '@/components/MarkdownPreview';
 
 const fmtWhen = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 
@@ -251,7 +252,9 @@ function PieceCard({ session, piece, topicTitle }: any) {
           <span className={`text-xs px-2 py-0.5 rounded-full ${pill.cls}`}>{pill.label}</span>
         </div>
       </div>
-      <p className="text-sm line-clamp-4 text-muted-foreground mb-3">{piece.body.slice(0, 200)}</p>
+      <div className="text-sm line-clamp-4 text-muted-foreground mb-3 [&_*]:!m-0">
+        <MarkdownPreview text={piece.body.slice(0, 200)} />
+      </div>
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span className="truncate">
           <span className="text-foreground">{topicTitle}</span>
@@ -271,7 +274,7 @@ function PieceRow({ session, piece, topicTitle }: any) {
     <Link to={`/app/piece/${piece.id}`} className="border border-border/60 rounded-lg p-3 hover:border-primary/50 transition flex items-center gap-3">
       <Icon className="h-4 w-4 text-primary shrink-0" />
       <div className="min-w-0 flex-1">
-        <div className="text-sm truncate">{piece.body.slice(0, 120)}</div>
+        <div className="text-sm truncate">{stripMarkdown(piece.body.slice(0, 120))}</div>
         <div className="text-xs text-muted-foreground truncate mt-0.5">{topicTitle} · {session.title}</div>
       </div>
       <ViralityBadge virality={piece.virality} className="shrink-0" />

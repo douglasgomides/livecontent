@@ -17,6 +17,7 @@ import { rescoreContent } from '@/lib/pipeline';
 import { schedulePiece, SUGGESTED_TIME, buildDate } from '@/lib/scheduleStorage';
 import { enqueueJobs, recommendedChannelsForPiece } from '@/lib/publishQueue';
 import { REJECT_LABEL } from '@/lib/pieceStatus';
+import MarkdownPreview from '@/components/MarkdownPreview';
 
 type Row = { session: Session; piece: ContentPiece; topicTitle: string };
 
@@ -267,7 +268,7 @@ export default function Approvals() {
                 <span className="text-muted-foreground">·</span>
                 <span className="text-muted-foreground">{previewRow.piece.cfm.evaluated ? `CFM ${previewRow.piece.cfm.score}` : 'Não avaliado — revisar manualmente'}</span>
               </div>
-              <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">{previewRow.piece.body}</pre>
+              <MarkdownPreview text={previewRow.piece.body} />
               {previewRow.piece.cfm.flags.length > 0 && (
                 <div className="border-t border-border/60 pt-3 space-y-1">
                   {previewRow.piece.cfm.flags.map((f, i) => (
@@ -355,7 +356,9 @@ function PendingCard({
         <div className="t-micro text-muted-foreground truncate mt-0.5">{row.session.title}</div>
       </div>
       <button onClick={onPreview} className="text-left w-full">
-        <p className="text-xs text-muted-foreground line-clamp-3 hover:text-foreground transition">{row.piece.body.slice(0, 220)}</p>
+        <div className="text-xs text-muted-foreground line-clamp-3 hover:text-foreground transition [&_*]:!m-0">
+          <MarkdownPreview text={row.piece.body.slice(0, 220)} />
+        </div>
       </button>
       <div className="flex items-center gap-1 pt-1 flex-wrap">
         <Button size="sm" variant="ghost" onClick={onPreview} title="Ver">

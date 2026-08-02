@@ -7,12 +7,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { rescoreContent } from '@/lib/pipeline';
 import { FORMAT_LABEL, FORMAT_ICON, EXPORT_MODE } from '@/lib/contentFormats';
-import { Copy, CheckCircle2, AlertTriangle, ShieldAlert, RefreshCw, Download, Loader2, Share2 } from 'lucide-react';
+import { Copy, CheckCircle2, AlertTriangle, ShieldAlert, RefreshCw, Download, Loader2, Share2, Pencil, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import PieceArtwork from './PieceArtwork';
 import PiecePrompts from './PiecePrompts';
 import PiecePublish from './PiecePublish';
 import ViralityBadge from '@/components/ViralityBadge';
+import MarkdownPreview from '@/components/MarkdownPreview';
 
 export default function ContentPieceCard({ piece, topic, brain, sessionId, unverifiedDraft, companionCaption, onChange, onApprove }: {
   piece: ContentPiece;
@@ -28,6 +29,7 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, unver
   const [rescoring, setRescoring] = useState(false);
   const [draftConfirmed, setDraftConfirmed] = useState(false);
   const [cfmOverrideConfirmed, setCfmOverrideConfirmed] = useState(false);
+  const [editingText, setEditingText] = useState(false);
   const cfm = piece.cfm;
   const blocked = cfm.flags.some(f => f.severity === 'block');
   const warned = cfm.flags.some(f => f.severity === 'warning');
@@ -112,7 +114,18 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, unver
 
         <TabsContent value="text" className="m-0">
           {piece.meta && <MetaBlock meta={piece.meta} />}
-          <Textarea value={body} onChange={e => setBody(e.target.value)} rows={12} className="border-0 rounded-none focus-visible:ring-0 font-mono text-xs" />
+          <div className="flex items-center justify-end px-4 pt-2">
+            <Button variant="ghost" size="sm" className="h-6 text-[11px]" onClick={() => setEditingText(v => !v)}>
+              {editingText ? <><Eye className="h-3 w-3 mr-1" /> Ver formatado</> : <><Pencil className="h-3 w-3 mr-1" /> Editar texto</>}
+            </Button>
+          </div>
+          {editingText ? (
+            <Textarea value={body} onChange={e => setBody(e.target.value)} rows={12} className="border-0 rounded-none focus-visible:ring-0 font-mono text-xs" />
+          ) : (
+            <div className="px-4 py-3">
+              <MarkdownPreview text={body} />
+            </div>
+          )}
           <div className="px-4 py-3 border-t border-border/60 space-y-2">
             {cfm.flags.map((f, i) => (
               <div key={i} className={`text-xs flex items-start gap-2 ${
