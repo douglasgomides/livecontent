@@ -12,6 +12,7 @@ import { loadBrain, saveBrain } from '@/lib/brainStorage';
 import { fetchPatientSignals, fetchAllCommercialIntelligence, fetchProducts, type CommercialIntelligenceWithMeta } from '@/lib/db';
 import { fetchCommercialBenchmark, type CommercialBenchmark } from '@/lib/pipeline';
 import { FORMAT_LABEL, FUNNEL_STAGE_LABEL, OBJECTION_LABEL, SENTIMENT_LABEL, MIN_TOTAL_OBJECTIONS, MIN_LEADING_CATEGORY } from '@/lib/contentFormats';
+import { objectionByFunnelStage, formatBySentiment, MIN_CROSSTAB_SAMPLE } from '@/lib/crossTab';
 import type { ContentFormat, PatientSignal, Product } from '@/types/session';
 
 // Mesma cautela pra probabilidade de fechar upsell — sem isso, 1 aceito de 1
@@ -158,6 +159,12 @@ export default function Insights() {
       .sort((a, b) => b.quantidade - a.quantidade)
       .slice(0, 8);
   }, [signals]);
+
+  // Cruzamentos: em vez de mostrar funil, objeção, sentimento e formato como
+  // métricas isoladas, junta as dimensões — qual objeção pesa mais em cada
+  // estágio, qual formato aprova mais pra cada perfil de sentimento.
+  const objectionStageRows = useMemo(() => objectionByFunnelStage(sessions, signals), [sessions, signals]);
+  const sentimentFormatRows = useMemo(() => formatBySentiment(sessions, signals), [sessions, signals]);
 
   // Elegibilidade do opt-in "IA aprende com as objeções" — pisos mínimos pra
   // evitar sugerir padrão a partir de amostra pequena demais pra ser confiável.
@@ -721,6 +728,65 @@ export default function Insights() {
                 )}
               </>
             )}
+          </section>
+
+          <section className="border border-border/60 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <Gauge className="h-4 w-4 text-primary" />
+              <h2 className="font-serif text-xl">Cruzamentos</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Funil, objeção, sentimento e formato não contam a história sozinhos — juntos, mostram
+              onde agir. Só aparece o que tem amostra confiável (mínimo {MIN_CROSSTAB_SAMPLE} casos por célula).
+            </p>
+
+            <div className="mb-5">
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                Objeção predominante por estágio do funil
+              </div>
+              {objectionStageRows.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Ainda sem amostra suficiente pra cruzar objeção com estágio do funil.</p>
+              ) : (
+                <div className="space-y-2">
+                  {objectionStageRows.map(row => (
+                    <div key={row.stage} className="border border-border/60 rounded-lg p-3">
+                      <div className="text-sm font-medium mb-1.5">{FUNNEL_STAGE_LABEL[row.stage as keyof typeof FUNNEL_STAGE_LABEL] ?? row.stage}</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {row.entries.slice(0, 3).map(e => (
+                          <span key={e.category} className="text-[11px] px-2 py-0.5 rounded-full bg-secondary text-foreground">
+                            {OBJECTION_LABEL[e.category] ?? e.category} · {e.count}x
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                Formato que mais aprova por perfil de sentimento
+              </div>
+              {sentimentFormatRows.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Ainda sem amostra suficiente pra cruzar formato com sentimento.</p>
+              ) : (
+                <div className="space-y-2">
+                  {sentimentFormatRows.map(row => (
+                    <div key={row.sentiment} className="border border-border/60 rounded-lg p-3">
+                      <div className="text-sm font-medium mb-1.5">{SENTIMENT_LABEL[row.sentiment] ?? row.sentiment}</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {row.entries.slice(0, 3).map(e => (
+                          <span key={e.format} className="text-[11px] px-2 py-0.5 rounded-full bg-secondary text-foreground">
+                            {FORMAT_LABEL[e.format] ?? e.format} · {Math.round(e.approvalRate * 100)}% aprova ({e.sample})
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </section>
 
           <section className="border border-border/60 rounded-xl p-5">
