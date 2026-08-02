@@ -597,6 +597,19 @@ export async function fetchPatientSignals(userId: string): Promise<PatientSignal
   return (data ?? []).map(mapPatientSignalRow);
 }
 
+// Só os sinais de UMA consulta — usado pelo resumo de fechamento (objeção
+// principal, sentimento) logo que a consulta fica pronta, sem puxar o
+// histórico inteiro do médico só pra mostrar uma tela.
+export async function fetchPatientSignalsForSession(sessionId: string): Promise<PatientSignal[]> {
+  const { data, error } = await (supabase as any)
+    .from('patient_signals')
+    .select('*')
+    .eq('session_id', sessionId)
+    .order('confidence', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(mapPatientSignalRow);
+}
+
 // ─── Sugestão semanal de conteúdo (fecha o loop de objeções) ───────────────
 // Uma linha por (médico, semana) — calculada sob demanda no cliente na
 // primeira visita à Trends da semana (ver src/lib/weeklySuggestion.ts).

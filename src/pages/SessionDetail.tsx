@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import type { Session, SessionStatus, SessionCommercialIntelligence } from '@/types/session';
+import type { Session, SessionStatus, SessionCommercialIntelligence, PatientSignal, Product } from '@/types/session';
 import { getSession, upsertSession } from '@/lib/storage';
 import { retryPipeline } from '@/lib/pipeline';
-import { fetchCommercialIntelligenceForSession, updateUpsellOpportunityStatus } from '@/lib/db';
+import { fetchCommercialIntelligenceForSession, updateUpsellOpportunityStatus, fetchPatientSignalsForSession, fetchProducts } from '@/lib/db';
 import { loadBrain } from '@/lib/brainStorage';
-import { useStoreVersion } from '@/lib/store';
+import { useStoreVersion, getUserId } from '@/lib/store';
 import { toast } from 'sonner';
 
 import AnonymizationReview from '@/components/session/AnonymizationReview';
 import TopicsReview from '@/components/session/TopicsReview';
 import ContentPieceCard from '@/components/session/ContentPieceCard';
+import ClosingSummaryCard from '@/components/session/ClosingSummaryCard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ArrowLeft, Check, Circle, Loader2, Sparkles, FlaskConical, FileText, AlertTriangle, RefreshCw, Target, Lightbulb, TrendingUp, X } from 'lucide-react';
@@ -54,6 +55,8 @@ export default function SessionDetail() {
   const [retrying, setRetrying] = useState(false);
   const [commercial, setCommercial] = useState<SessionCommercialIntelligence | null>(null);
   const [commercialLoading, setCommercialLoading] = useState(true);
+  const [signals, setSignals] = useState<PatientSignal[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
 
   const stages = useMemo(() => session ? stagesFor(session.source) : ALL_STAGES, [session?.source]);
   const setSession = (s: Session | null) => { if (s) upsertSession(s); };
@@ -72,6 +75,16 @@ export default function SessionDetail() {
       .then(setCommercial)
       .catch(() => setCommercial(null))
       .finally(() => setCommercialLoading(false));
+  }, [session?.id, session?.status]);
+
+  // Resumo de fechamento: objeção/sentimento desta consulta + catálogo de
+  // produtos (pra achar preço) — mesmo gate de consulta real + pronta acima.
+  useEffect(() => {
+    if (!session || session.status !== 'ready') return;
+    if (session.source !== 'recording' && session.source !== 'upload') return;
+    fetchPatientSignalsForSession(session.id).then(setSignals).catch(() => setSignals([]));
+    const uid = getUserId();
+    if (uid) fetchProducts(uid).then(setProducts).catch(() => setProducts([]));
   }, [session?.id, session?.status]);
 
   const markUpsellStatus = async (index: number, status: 'aceito' | 'recusado') => {
@@ -136,6 +149,10 @@ export default function SessionDetail() {
           </div>
         </div>
       </div>
+
+      {showCommercial && session.status === 'ready' && (
+        <ClosingSummaryCard signals={signals} commercial={commercial} products={products} />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
         {/* Main column */}

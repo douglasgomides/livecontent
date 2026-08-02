@@ -111,6 +111,12 @@ export const OBJECTION_LABEL: Record<string, string> = {
   scheduling_time: 'Tempo/agenda', other: 'Outro',
 };
 
+// Idem, taxonomia fixa de sentimento (mesma fonte em patientSignals.ts).
+export const SENTIMENT_LABEL: Record<string, string> = {
+  hesitant: 'Hesitante', skeptical: 'Cético', anxious: 'Ansioso', excited: 'Animado',
+  frustrated: 'Frustrado', reassured: 'Tranquilizado', indifferent: 'Indiferente', other: 'Outro',
+};
+
 // Pisos mínimos antes de confiar em qualquer padrão aprendido a partir de
 // patient_signals (opt-in de objeções em Insights, sugestão semanal de
 // conteúdo) — amostra pequena demais vira ruído, não sinal.

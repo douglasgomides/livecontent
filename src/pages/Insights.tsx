@@ -11,7 +11,7 @@ import { getUserId } from '@/lib/store';
 import { loadBrain, saveBrain } from '@/lib/brainStorage';
 import { fetchPatientSignals, fetchAllCommercialIntelligence, fetchProducts, type CommercialIntelligenceWithMeta } from '@/lib/db';
 import { fetchCommercialBenchmark, type CommercialBenchmark } from '@/lib/pipeline';
-import { FORMAT_LABEL, FUNNEL_STAGE_LABEL, OBJECTION_LABEL, MIN_TOTAL_OBJECTIONS, MIN_LEADING_CATEGORY } from '@/lib/contentFormats';
+import { FORMAT_LABEL, FUNNEL_STAGE_LABEL, OBJECTION_LABEL, SENTIMENT_LABEL, MIN_TOTAL_OBJECTIONS, MIN_LEADING_CATEGORY } from '@/lib/contentFormats';
 import type { ContentFormat, PatientSignal, Product } from '@/types/session';
 
 // Mesma cautela pra probabilidade de fechar upsell — sem isso, 1 aceito de 1
@@ -67,10 +67,6 @@ const QUESTION_LABEL: Record<string, string> = {
 const BUYING_LABEL: Record<string, string> = {
   ready_to_schedule: 'Pronto para agendar', asked_price_proactively: 'Perguntou preço direto',
   asked_next_steps: 'Perguntou próximos passos', requested_recommendation: 'Pediu recomendação', other: 'Outro',
-};
-const SENTIMENT_LABEL: Record<string, string> = {
-  hesitant: 'Hesitante', skeptical: 'Cético', anxious: 'Ansioso', excited: 'Animado',
-  frustrated: 'Frustrado', reassured: 'Tranquilizado', indifferent: 'Indiferente', other: 'Outro',
 };
 
 // Estágio de funil em linguagem simples — fonte única em contentFormats.ts, pra
