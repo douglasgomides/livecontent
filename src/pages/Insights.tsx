@@ -18,6 +18,9 @@ import type { ContentFormat, PatientSignal, Product } from '@/types/session';
 // vira "100% de chance" e engana o médico.
 const MIN_UPSELL_SAMPLE = 3;
 const MIN_WEEKS_FOR_FORECAST = 3;
+// Idem pra comparar a taxa de fechamento do próprio médico com o benchmark —
+// menos que isso e a comparação não diz nada de confiável.
+const MIN_MY_OFFERS_FOR_BENCHMARK = 5;
 
 const UPSELL_TIPO_LABEL: Record<string, string> = {
   plano_recorrente: 'Plano recorrente', combo_procedimentos: 'Combo de procedimentos',
@@ -136,6 +139,16 @@ export default function Insights() {
       .catch(() => { setCommercialRows([]); setProducts([]); })
       .finally(() => setPredictLoading(false));
   }, []);
+
+  // Taxa de fechamento do PRÓPRIO médico — pra comparar com o benchmark de
+  // mercado/especialidade e virar direcionador de ação, não só uma curiosidade
+  // ("isso é interessante") ao lado de um número solto do mercado.
+  const myClosingRate = useMemo(() => {
+    const resolved = commercialRows.filter(r => r.resultado === 'fechou' || r.resultado === 'nao_fechou');
+    if (resolved.length < MIN_MY_OFFERS_FOR_BENCHMARK) return null;
+    const fechou = resolved.filter(r => r.resultado === 'fechou').length;
+    return { rate: fechou / resolved.length, sample: resolved.length };
+  }, [commercialRows]);
 
   const objectionData = useMemo(() => {
     const counts = new Map<string, number>();
@@ -433,6 +446,33 @@ export default function Insights() {
                 {' '}· baseado em {benchmark.sampleSize} consulta(s) com oferta comercial de outros médicos
               </span>
             </div>
+
+            {benchmark.closingRate !== null && myClosingRate && (() => {
+              const deltaPts = Math.round((myClosingRate.rate - benchmark.closingRate!) * 100);
+              const below = deltaPts < 0;
+              return (
+                <div className={`rounded-lg p-3 border ${below ? 'border-warning/40 bg-warning/10' : 'border-success/40 bg-success/10'}`}>
+                  <div className="flex items-baseline gap-2 mb-1">
+                    <span className={`t-numeric ${below ? 'text-warning' : 'text-success'}`}>{Math.round(myClosingRate.rate * 100)}%</span>
+                    <span className="text-xs text-muted-foreground">sua taxa de fechamento · baseado em {myClosingRate.sample} consulta(s) suas</span>
+                  </div>
+                  <p className="text-sm">
+                    {deltaPts === 0
+                      ? `Igual à média ${benchmark.scope === 'specialty' ? 'da sua especialidade' : 'do mercado'} — sem gap pra fechar agora.`
+                      : below
+                        ? `${Math.abs(deltaPts)} pontos ABAIXO da média ${benchmark.scope === 'specialty' ? 'da sua especialidade' : 'do mercado'}. Veja os argumentos que mais fecham lá embaixo e teste um deles na próxima consulta.`
+                        : `${deltaPts} pontos ACIMA da média ${benchmark.scope === 'specialty' ? 'da sua especialidade' : 'do mercado'} — o que você está fazendo está funcionando.`}
+                  </p>
+                </div>
+              );
+            })()}
+            {!myClosingRate && (
+              <p className="text-xs text-muted-foreground">
+                Registre o resultado (fechou/não fechou) de mais consultas com oferta comercial pra comparar sua taxa
+                com o mercado (mínimo {MIN_MY_OFFERS_FOR_BENCHMARK} — hoje: {commercialRows.filter(r => r.resultado === 'fechou' || r.resultado === 'nao_fechou').length}).
+              </p>
+            )}
+
             {benchmark.topArguments.length > 0 && (
               <div>
                 <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
