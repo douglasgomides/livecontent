@@ -10,11 +10,9 @@ import {
   fetchLeadCaptures, updateLeadCaptureStatus, linkLeadCaptureToSession, fetchRecentSessionsForLinking,
 } from '@/lib/db';
 import { getUserId } from '@/lib/store';
+import { LEAD_ORIGIN_LABEL } from '@/lib/contentFormats';
 import type { LeadCapture, LeadOrigin, LeadStatus } from '@/types/session';
 
-const ORIGIN_LABEL: Record<LeadOrigin, string> = {
-  instagram: 'Instagram', whatsapp: 'WhatsApp', indicacao: 'Indicação', outro: 'Outro',
-};
 const STATUS_LABEL: Record<LeadStatus, string> = {
   novo: 'Novo', contatado: 'Contatado', agendado: 'Agendado', convertido: 'Convertido', perdido: 'Perdido',
 };
@@ -143,7 +141,7 @@ export default function LeadCaptures() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       <span className="text-sm font-medium">{lead.name}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">{ORIGIN_LABEL[lead.origin]}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">{LEAD_ORIGIN_LABEL[lead.origin]}</span>
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${STATUS_CLS[lead.status]}`}>{STATUS_LABEL[lead.status]}</span>
                     </div>
                     <div className="text-xs text-muted-foreground">{lead.contact}</div>

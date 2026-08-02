@@ -9,11 +9,12 @@ import { Switch } from '@/components/ui/switch';
 import { loadSessions } from '@/lib/storage';
 import { getUserId } from '@/lib/store';
 import { loadBrain, saveBrain } from '@/lib/brainStorage';
-import { fetchPatientSignals, fetchAllCommercialIntelligence, fetchProducts, type CommercialIntelligenceWithMeta } from '@/lib/db';
+import { fetchPatientSignals, fetchAllCommercialIntelligence, fetchProducts, fetchLeadCaptures, type CommercialIntelligenceWithMeta } from '@/lib/db';
 import { fetchCommercialBenchmark, type CommercialBenchmark } from '@/lib/pipeline';
-import { FORMAT_LABEL, FUNNEL_STAGE_LABEL, OBJECTION_LABEL, SENTIMENT_LABEL, MIN_TOTAL_OBJECTIONS, MIN_LEADING_CATEGORY } from '@/lib/contentFormats';
+import { FORMAT_LABEL, FUNNEL_STAGE_LABEL, OBJECTION_LABEL, SENTIMENT_LABEL, LEAD_ORIGIN_LABEL, MIN_TOTAL_OBJECTIONS, MIN_LEADING_CATEGORY } from '@/lib/contentFormats';
 import { objectionByFunnelStage, formatBySentiment, MIN_CROSSTAB_SAMPLE } from '@/lib/crossTab';
-import type { ContentFormat, PatientSignal, Product } from '@/types/session';
+import { revenueByOrigin } from '@/lib/leadRoi';
+import type { ContentFormat, PatientSignal, Product, LeadCapture } from '@/types/session';
 
 // Mesma cautela pra probabilidade de fechar upsell — sem isso, 1 aceito de 1
 // vira "100% de chance" e engana o médico.
@@ -140,6 +141,23 @@ export default function Insights() {
       .catch(() => { setCommercialRows([]); setProducts([]); })
       .finally(() => setPredictLoading(false));
   }, []);
+
+  // Fecha o loop de atribuição: origem do lead capturado -> consulta vinculada
+  // -> receita registrada (upsell aceito, preço de catálogo). Nunca projeção —
+  // só o que já foi de fato confirmado pelo médico.
+  const [leads, setLeads] = useState<LeadCapture[]>([]);
+  const [leadsLoading, setLeadsLoading] = useState(true);
+
+  useEffect(() => {
+    const uid = getUserId();
+    if (!uid) { setLeadsLoading(false); return; }
+    fetchLeadCaptures(uid)
+      .then(setLeads)
+      .catch(() => setLeads([]))
+      .finally(() => setLeadsLoading(false));
+  }, []);
+
+  const originRoiRows = useMemo(() => revenueByOrigin(leads, commercialRows, products), [leads, commercialRows, products]);
 
   // Taxa de fechamento do PRÓPRIO médico — pra comparar com o benchmark de
   // mercado/especialidade e virar direcionador de ação, não só uma curiosidade
@@ -787,6 +805,37 @@ export default function Insights() {
                 </div>
               )}
             </div>
+          </section>
+
+          <section className="border border-border/60 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <Wallet className="h-4 w-4 text-primary" />
+              <h2 className="font-serif text-xl">ROI por canal de origem</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Origem do lead capturado (Instagram, WhatsApp, indicação) até a receita já confirmada —
+              upsell que o médico marcou como aceito, com preço de catálogo. Nunca projeção: só o que
+              já fechou de verdade. Vincule leads a consultas em Captação de leads pra alimentar isso.
+            </p>
+            {leadsLoading || predictLoading ? (
+              <p className="text-sm text-muted-foreground">Carregando…</p>
+            ) : originRoiRows.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Ainda sem leads capturados. Compartilhe seu link de captação pra começar a rastrear.</p>
+            ) : (
+              <div className="space-y-2">
+                {originRoiRows.map(row => (
+                  <div key={row.origin} className="flex items-center justify-between gap-3 border border-border/60 rounded-lg p-3">
+                    <div>
+                      <div className="text-sm font-medium">{LEAD_ORIGIN_LABEL[row.origin as keyof typeof LEAD_ORIGIN_LABEL] ?? row.origin}</div>
+                      <div className="text-xs text-muted-foreground">{row.leadCount} lead(s) · {row.convertedCount} vinculado(s) a consulta</div>
+                    </div>
+                    <div className="t-numeric text-foreground">
+                      {row.revenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
           <section className="border border-border/60 rounded-xl p-5">

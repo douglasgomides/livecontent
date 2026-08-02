@@ -1,4 +1,4 @@
-import type { ContentFormat, ContentChannel, Topic, SessionSource, SessionStatus } from '@/types/session';
+import type { ContentFormat, ContentChannel, Topic, SessionSource, SessionStatus, LeadOrigin } from '@/types/session';
 import { Instagram, Linkedin, MessageSquare, Youtube, FileText, Globe, MapPin, Stethoscope, Mic, Music, Camera } from 'lucide-react';
 
 // Rótulos em linguagem simples pro estágio de funil (C0-C3 é jargão de marketing
@@ -122,6 +122,12 @@ export const SENTIMENT_LABEL: Record<string, string> = {
 // conteúdo) — amostra pequena demais vira ruído, não sinal.
 export const MIN_TOTAL_OBJECTIONS = 8;
 export const MIN_LEADING_CATEGORY = 3;
+
+// Fonte única pra origem de um lead capturado (Instagram/WhatsApp/indicação/
+// outro) — usada na tela de gestão de leads e no ROI por canal em Insights.
+export const LEAD_ORIGIN_LABEL: Record<LeadOrigin, string> = {
+  instagram: 'Instagram', whatsapp: 'WhatsApp', indicacao: 'Indicação', outro: 'Outro',
+};
 
 // Fonte única pra origem da consulta — antes cada tela tinha sua própria cópia
 // (algumas com "Voice Note"/"Science" corretos, outras vazando o valor cru do
