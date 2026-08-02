@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import type { LucideIcon } from 'lucide-react';
 import { ArrowLeft, LineChart as LineChartIcon, Target, CheckCircle2, Hash, ShieldAlert, MessageCircleQuestion, Heart, Lightbulb, Mic, TrendingUp, Wallet, Gauge } from 'lucide-react';
-import KpiCard from '@/components/app/KpiCard';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Legend } from 'recharts';
+import KpiCard, { TONE_CLASSES, type KpiTone } from '@/components/app/KpiCard';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Legend, Pie, PieChart, Cell } from 'recharts';
 import { toast } from 'sonner';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegendContent } from '@/components/ui/chart';
 import { Switch } from '@/components/ui/switch';
@@ -11,10 +12,28 @@ import { getUserId } from '@/lib/store';
 import { loadBrain, saveBrain } from '@/lib/brainStorage';
 import { fetchPatientSignals, fetchAllCommercialIntelligence, fetchProducts, fetchLeadCaptures, type CommercialIntelligenceWithMeta } from '@/lib/db';
 import { fetchCommercialBenchmark, type CommercialBenchmark } from '@/lib/pipeline';
-import { FORMAT_LABEL, FUNNEL_STAGE_LABEL, OBJECTION_LABEL, SENTIMENT_LABEL, LEAD_ORIGIN_LABEL, MIN_TOTAL_OBJECTIONS, MIN_LEADING_CATEGORY } from '@/lib/contentFormats';
+import {
+  FORMAT_LABEL, FUNNEL_STAGE_LABEL, OBJECTION_LABEL, SENTIMENT_LABEL, LEAD_ORIGIN_LABEL,
+  MIN_TOTAL_OBJECTIONS, MIN_LEADING_CATEGORY, OBJECTION_COLOR, SENTIMENT_COLOR, LEAD_ORIGIN_COLOR, FUNNEL_STAGE_COLOR,
+} from '@/lib/contentFormats';
 import { objectionByFunnelStage, formatBySentiment, MIN_CROSSTAB_SAMPLE } from '@/lib/crossTab';
 import { revenueByOrigin } from '@/lib/leadRoi';
 import type { ContentFormat, PatientSignal, Product, LeadCapture } from '@/types/session';
+
+// Cabeçalho de seção com selo de cor por assunto — dá identidade visual
+// consistente ao rolar a página (a mesma cor sempre volta pro mesmo tema:
+// funil é teal, objeção é âmbar, sentimento é violeta, dinheiro é verde),
+// em vez de todo título ter o mesmo peso visual neutro.
+function SectionHeader({ icon: Icon, tone, title }: { icon: LucideIcon; tone: KpiTone; title: string }) {
+  return (
+    <div className="flex items-center gap-2.5 mb-1">
+      <div className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 ${TONE_CLASSES[tone]}`}>
+        <Icon className="h-3.5 w-3.5" />
+      </div>
+      <h2 className="font-serif text-xl">{title}</h2>
+    </div>
+  );
+}
 
 // Mesma cautela pra probabilidade de fechar upsell — sem isso, 1 aceito de 1
 // vira "100% de chance" e engana o médico.
@@ -173,7 +192,7 @@ export default function Insights() {
     const counts = new Map<string, number>();
     signals.filter(s => s.kind === 'objection').forEach(s => counts.set(s.category, (counts.get(s.category) ?? 0) + 1));
     return Array.from(counts.entries())
-      .map(([category, quantidade]) => ({ category: OBJECTION_LABEL[category] ?? category, quantidade }))
+      .map(([id, quantidade]) => ({ id, category: OBJECTION_LABEL[id] ?? id, quantidade }))
       .sort((a, b) => b.quantidade - a.quantidade)
       .slice(0, 8);
   }, [signals]);
@@ -217,7 +236,7 @@ export default function Insights() {
     const counts = new Map<string, number>();
     signals.filter(s => s.kind === 'sentiment').forEach(s => counts.set(s.category, (counts.get(s.category) ?? 0) + 1));
     return Array.from(counts.entries())
-      .map(([category, quantidade]) => ({ category: SENTIMENT_LABEL[category] ?? category, quantidade }))
+      .map(([id, quantidade]) => ({ id, category: SENTIMENT_LABEL[id] ?? id, quantidade }))
       .sort((a, b) => b.quantidade - a.quantidade)
       .slice(0, 8);
   }, [signals]);
@@ -274,6 +293,7 @@ export default function Insights() {
       if (t.included) counts[t.funnelStage] = (counts[t.funnelStage] ?? 0) + 1;
     }));
     return (['C0', 'C1', 'C2', 'C3'] as const).map(stage => ({
+      stageId: stage,
       stage: STAGE_LABEL[stage],
       quantidade: counts[stage],
     }));
@@ -441,10 +461,7 @@ export default function Insights() {
       </div>
 
       <section className="border border-border/60 rounded-xl p-5">
-        <div className="flex items-center gap-2 mb-1">
-          <Target className="h-4 w-4 text-primary" />
-          <h2 className="font-serif text-xl">Benchmark de mercado</h2>
-        </div>
+        <SectionHeader icon={Target} tone="primary" title="Benchmark de mercado" />
         <p className="text-sm text-muted-foreground mb-4">
           Agregado anonimizado de outros médicos na Consulta Creator — nunca mostra texto,
           consulta ou identidade de ninguém, só taxas por categoria. Enquanto sua própria
@@ -589,56 +606,68 @@ export default function Insights() {
       ) : (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <KpiCard icon={Mic} label="Consultas analisadas" value={sessions.length} sublabel={`${totalTopics} temas extraídos`} />
+            <KpiCard icon={Mic} label="Consultas analisadas" value={sessions.length} sublabel={`${totalTopics} temas extraídos`} tone="primary" />
             <KpiCard
               icon={Lightbulb}
               label="Sinais comerciais"
               value={signalsLoading ? '—' : signals.length}
               sublabel="objeções, dúvidas, sinais de compra"
+              tone="violet"
             />
             <KpiCard
               icon={CheckCircle2}
               label="Aprovação de conteúdo"
               value={avgApproval !== null ? `${avgApproval}%` : '—'}
               sublabel={`${totalPieces} peças geradas`}
+              tone="success"
             />
             <KpiCard
               icon={Target}
               label="Estágio de funil predominante"
               value={topStage ?? '—'}
               sublabel="onde seu conteúdo mais fala hoje"
+              tone="teal"
             />
           </div>
 
           <section className="border border-border/60 rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-1">
-              <Target className="h-4 w-4 text-primary" />
-              <h2 className="font-serif text-xl">Em que estágio do funil você mais fala</h2>
-            </div>
+            <SectionHeader icon={Target} tone="teal" title="Em que estágio do funil você mais fala" />
             <p className="text-sm text-muted-foreground mb-4">
               Se um estágio aparece muito abaixo dos outros, seu conteúdo tem um ponto cego — ex.: gerar
               muito "não sabe do problema" e quase nada "pronto para agendar" deixa pacientes prontos sem
               o empurrão final.
             </p>
-            <ChartContainer
-              config={{ quantidade: { label: 'Temas', color: 'hsl(var(--primary))' } }}
-              className="aspect-auto h-56 w-full"
-            >
-              <BarChart data={stageData} layout="vertical" margin={{ left: 8, right: 16 }}>
-                <CartesianGrid horizontal={false} strokeDasharray="3 3" />
-                <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} />
-                <YAxis type="category" dataKey="stage" tickLine={false} axisLine={false} width={140} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="quantidade" fill="var(--color-quantidade)" radius={4} />
-              </BarChart>
-            </ChartContainer>
+            <div className="grid md:grid-cols-[180px_1fr] gap-4 items-center">
+              <ChartContainer
+                config={Object.fromEntries((['C0', 'C1', 'C2', 'C3'] as const).map(s => [s, { label: STAGE_LABEL[s], color: FUNNEL_STAGE_COLOR[s] }]))}
+                className="aspect-square h-44 w-full mx-auto"
+              >
+                <PieChart>
+                  <ChartTooltip content={<ChartTooltipContent nameKey="stage" />} />
+                  <Pie data={stageData} dataKey="quantidade" nameKey="stage" innerRadius="55%" outerRadius="90%" strokeWidth={2}>
+                    {stageData.map(row => <Cell key={row.stageId} fill={FUNNEL_STAGE_COLOR[row.stageId]} />)}
+                  </Pie>
+                </PieChart>
+              </ChartContainer>
+              <ChartContainer
+                config={Object.fromEntries((['C0', 'C1', 'C2', 'C3'] as const).map(s => [s, { label: STAGE_LABEL[s], color: FUNNEL_STAGE_COLOR[s] }]))}
+                className="aspect-auto h-56 w-full"
+              >
+                <BarChart data={stageData} layout="vertical" margin={{ left: 8, right: 16 }}>
+                  <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+                  <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} />
+                  <YAxis type="category" dataKey="stage" tickLine={false} axisLine={false} width={140} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="quantidade" radius={4}>
+                    {stageData.map(row => <Cell key={row.stageId} fill={FUNNEL_STAGE_COLOR[row.stageId]} />)}
+                  </Bar>
+                </BarChart>
+              </ChartContainer>
+            </div>
           </section>
 
           <section className="border border-border/60 rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-1">
-              <ShieldAlert className="h-4 w-4 text-primary" />
-              <h2 className="font-serif text-xl">Objeções mais frequentes dos seus pacientes</h2>
-            </div>
+            <SectionHeader icon={ShieldAlert} tone="warning" title="Objeções mais frequentes dos seus pacientes" />
             <p className="text-sm text-muted-foreground mb-4">
               Extraído automaticamente da fala do paciente durante a consulta (transcrição já anonimizada,
               nunca texto literal) — antecipar essas objeções no conteúdo ajuda a desarmá-las antes da consulta.
@@ -658,7 +687,9 @@ export default function Insights() {
                     <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} />
                     <YAxis type="category" dataKey="category" tickLine={false} axisLine={false} width={160} />
                     <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="quantidade" fill="var(--color-quantidade)" radius={4} />
+                    <Bar dataKey="quantidade" radius={4}>
+                      {objectionData.map(row => <Cell key={row.id} fill={OBJECTION_COLOR[row.id]} />)}
+                    </Bar>
                   </BarChart>
                 </ChartContainer>
                 {topObjectionExamples.length > 0 && (
@@ -669,7 +700,10 @@ export default function Insights() {
                     {topObjectionExamples.map(s => (
                       <div key={s.id} className="border border-border/60 rounded-lg p-3">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/15 text-primary font-medium">
+                          <span
+                            className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                            style={{ backgroundColor: `color-mix(in srgb, ${OBJECTION_COLOR[s.category]} 15%, transparent)`, color: OBJECTION_COLOR[s.category] }}
+                          >
                             {OBJECTION_LABEL[s.category] ?? s.category}
                           </span>
                         </div>
@@ -699,10 +733,7 @@ export default function Insights() {
           </section>
 
           <section className="border border-border/60 rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-1">
-              <Heart className="h-4 w-4 text-primary" />
-              <h2 className="font-serif text-xl">Sentimento dos seus pacientes</h2>
-            </div>
+            <SectionHeader icon={Heart} tone="violet" title="Sentimento dos seus pacientes" />
             <p className="text-sm text-muted-foreground mb-4">
               O tom com que os pacientes chegam na consulta — cada sentimento pede um jeito diferente
               de comunicar no conteúdo (quem chega cético precisa de prova, quem chega ansioso precisa
@@ -723,7 +754,9 @@ export default function Insights() {
                     <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} />
                     <YAxis type="category" dataKey="category" tickLine={false} axisLine={false} width={160} />
                     <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="quantidade" fill="var(--color-quantidade)" radius={4} />
+                    <Bar dataKey="quantidade" radius={4}>
+                      {sentimentData.map(row => <Cell key={row.id} fill={SENTIMENT_COLOR[row.id]} />)}
+                    </Bar>
                   </BarChart>
                 </ChartContainer>
                 {sentimentTips.length > 0 && (
@@ -734,7 +767,10 @@ export default function Insights() {
                     {sentimentTips.map(s => (
                       <div key={s.id} className="border border-border/60 rounded-lg p-3">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/15 text-primary font-medium">
+                          <span
+                            className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                            style={{ backgroundColor: `color-mix(in srgb, ${SENTIMENT_COLOR[s.category]} 15%, transparent)`, color: SENTIMENT_COLOR[s.category] }}
+                          >
                             {SENTIMENT_LABEL[s.category] ?? s.category}
                           </span>
                         </div>
@@ -749,10 +785,7 @@ export default function Insights() {
           </section>
 
           <section className="border border-border/60 rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-1">
-              <Gauge className="h-4 w-4 text-primary" />
-              <h2 className="font-serif text-xl">Cruzamentos</h2>
-            </div>
+            <SectionHeader icon={Gauge} tone="primary" title="Cruzamentos" />
             <p className="text-sm text-muted-foreground mb-4">
               Funil, objeção, sentimento e formato não contam a história sozinhos — juntos, mostram
               onde agir. Só aparece o que tem amostra confiável (mínimo {MIN_CROSSTAB_SAMPLE} casos por célula).
@@ -768,10 +801,17 @@ export default function Insights() {
                 <div className="space-y-2">
                   {objectionStageRows.map(row => (
                     <div key={row.stage} className="border border-border/60 rounded-lg p-3">
-                      <div className="text-sm font-medium mb-1.5">{FUNNEL_STAGE_LABEL[row.stage as keyof typeof FUNNEL_STAGE_LABEL] ?? row.stage}</div>
+                      <div className="flex items-center gap-1.5 text-sm font-medium mb-1.5">
+                        <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: FUNNEL_STAGE_COLOR[row.stage as keyof typeof FUNNEL_STAGE_COLOR] }} />
+                        {FUNNEL_STAGE_LABEL[row.stage as keyof typeof FUNNEL_STAGE_LABEL] ?? row.stage}
+                      </div>
                       <div className="flex flex-wrap gap-1.5">
                         {row.entries.slice(0, 3).map(e => (
-                          <span key={e.category} className="text-[11px] px-2 py-0.5 rounded-full bg-secondary text-foreground">
+                          <span
+                            key={e.category}
+                            className="text-[11px] px-2 py-0.5 rounded-full font-medium"
+                            style={{ backgroundColor: `color-mix(in srgb, ${OBJECTION_COLOR[e.category]} 15%, transparent)`, color: OBJECTION_COLOR[e.category] }}
+                          >
                             {OBJECTION_LABEL[e.category] ?? e.category} · {e.count}x
                           </span>
                         ))}
@@ -792,7 +832,10 @@ export default function Insights() {
                 <div className="space-y-2">
                   {sentimentFormatRows.map(row => (
                     <div key={row.sentiment} className="border border-border/60 rounded-lg p-3">
-                      <div className="text-sm font-medium mb-1.5">{SENTIMENT_LABEL[row.sentiment] ?? row.sentiment}</div>
+                      <div className="flex items-center gap-1.5 text-sm font-medium mb-1.5">
+                        <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: SENTIMENT_COLOR[row.sentiment] }} />
+                        {SENTIMENT_LABEL[row.sentiment] ?? row.sentiment}
+                      </div>
                       <div className="flex flex-wrap gap-1.5">
                         {row.entries.slice(0, 3).map(e => (
                           <span key={e.format} className="text-[11px] px-2 py-0.5 rounded-full bg-secondary text-foreground">
@@ -808,10 +851,7 @@ export default function Insights() {
           </section>
 
           <section className="border border-border/60 rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-1">
-              <Wallet className="h-4 w-4 text-primary" />
-              <h2 className="font-serif text-xl">ROI por canal de origem</h2>
-            </div>
+            <SectionHeader icon={Wallet} tone="success" title="ROI por canal de origem" />
             <p className="text-sm text-muted-foreground mb-4">
               Origem do lead capturado (Instagram, WhatsApp, indicação) até a receita já confirmada —
               upsell que o médico marcou como aceito, com preço de catálogo. Nunca projeção: só o que
@@ -822,27 +862,40 @@ export default function Insights() {
             ) : originRoiRows.length === 0 ? (
               <p className="text-sm text-muted-foreground">Ainda sem leads capturados. Compartilhe seu link de captação pra começar a rastrear.</p>
             ) : (
-              <div className="space-y-2">
-                {originRoiRows.map(row => (
-                  <div key={row.origin} className="flex items-center justify-between gap-3 border border-border/60 rounded-lg p-3">
-                    <div>
-                      <div className="text-sm font-medium">{LEAD_ORIGIN_LABEL[row.origin as keyof typeof LEAD_ORIGIN_LABEL] ?? row.origin}</div>
-                      <div className="text-xs text-muted-foreground">{row.leadCount} lead(s) · {row.convertedCount} vinculado(s) a consulta</div>
+              <div className="grid md:grid-cols-[180px_1fr] gap-4 items-center">
+                <ChartContainer
+                  config={Object.fromEntries(originRoiRows.map(r => [r.origin, { label: LEAD_ORIGIN_LABEL[r.origin as keyof typeof LEAD_ORIGIN_LABEL] ?? r.origin, color: LEAD_ORIGIN_COLOR[r.origin as keyof typeof LEAD_ORIGIN_COLOR] }]))}
+                  className="aspect-square h-44 w-full mx-auto"
+                >
+                  <PieChart>
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Pie data={originRoiRows} dataKey="revenue" nameKey="origin" innerRadius="55%" outerRadius="90%" strokeWidth={2}>
+                      {originRoiRows.map(row => <Cell key={row.origin} fill={LEAD_ORIGIN_COLOR[row.origin as keyof typeof LEAD_ORIGIN_COLOR]} />)}
+                    </Pie>
+                  </PieChart>
+                </ChartContainer>
+                <div className="space-y-2">
+                  {originRoiRows.map(row => (
+                    <div key={row.origin} className="flex items-center justify-between gap-3 border border-border/60 rounded-lg p-3">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: LEAD_ORIGIN_COLOR[row.origin as keyof typeof LEAD_ORIGIN_COLOR] }} />
+                        <div>
+                          <div className="text-sm font-medium">{LEAD_ORIGIN_LABEL[row.origin as keyof typeof LEAD_ORIGIN_LABEL] ?? row.origin}</div>
+                          <div className="text-xs text-muted-foreground">{row.leadCount} lead(s) · {row.convertedCount} vinculado(s) a consulta</div>
+                        </div>
+                      </div>
+                      <div className="t-numeric text-foreground">
+                        {row.revenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      </div>
                     </div>
-                    <div className="t-numeric text-foreground">
-                      {row.revenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </section>
 
           <section className="border border-border/60 rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-1">
-              <MessageCircleQuestion className="h-4 w-4 text-primary" />
-              <h2 className="font-serif text-xl">Perguntas e sinais de compra</h2>
-            </div>
+            <SectionHeader icon={MessageCircleQuestion} tone="teal" title="Perguntas e sinais de compra" />
             <p className="text-sm text-muted-foreground mb-4">
               O que os pacientes mais perguntam e os sinais de que estão prontos para agendar —
               use como pauta direta para conteúdo que responde antes de ser perguntado.
@@ -884,33 +937,30 @@ export default function Insights() {
           </section>
 
           <section className="border border-border/60 rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-1">
-              <CheckCircle2 className="h-4 w-4 text-primary" />
-              <h2 className="font-serif text-xl">Taxa de aprovação e conformidade por formato</h2>
-            </div>
+            <SectionHeader icon={CheckCircle2} tone="warning" title="Taxa de aprovação e conformidade por formato" />
             <p className="text-sm text-muted-foreground mb-4">
               Formatos com aprovação baixa ou CFM médio baixo são os que mais exigem edição manual sua —
               candidatos a revisar o prompt ou trocar de estrutura de referência.
             </p>
             <div className="space-y-2">
-              {formatStats.map(f => (
-                <div key={f.format} className="flex items-center gap-3">
-                  <div className="w-32 shrink-0 text-sm truncate">{f.label}</div>
-                  <div className="flex-1 h-2 rounded-full bg-secondary overflow-hidden">
-                    <div className="h-full bg-gold-gradient" style={{ width: `${f.aprovacao}%` }} />
+              {formatStats.map(f => {
+                const barTone = f.aprovacao >= 80 ? 'bg-success' : f.aprovacao >= 50 ? 'bg-warning' : 'bg-destructive';
+                return (
+                  <div key={f.format} className="flex items-center gap-3">
+                    <div className="w-32 shrink-0 text-sm truncate">{f.label}</div>
+                    <div className="flex-1 h-2 rounded-full bg-secondary overflow-hidden">
+                      <div className={`h-full ${barTone}`} style={{ width: `${f.aprovacao}%` }} />
+                    </div>
+                    <div className="w-16 shrink-0 text-xs text-muted-foreground text-right">{f.aprovacao}% aprov.</div>
+                    <div className="w-24 shrink-0 text-xs text-muted-foreground text-right">{f.cfmMedio !== null ? `CFM ${f.cfmMedio}` : 'CFM —'} · {f.total}</div>
                   </div>
-                  <div className="w-16 shrink-0 text-xs text-muted-foreground text-right">{f.aprovacao}% aprov.</div>
-                  <div className="w-24 shrink-0 text-xs text-muted-foreground text-right">{f.cfmMedio !== null ? `CFM ${f.cfmMedio}` : 'CFM —'} · {f.total}</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
 
           <section className="border border-border/60 rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-1">
-              <Hash className="h-4 w-4 text-primary" />
-              <h2 className="font-serif text-xl">Palavras mais frequentes nos seus temas</h2>
-            </div>
+            <SectionHeader icon={Hash} tone="teal" title="Palavras mais frequentes nos seus temas" />
             <p className="text-sm text-muted-foreground mb-4">
               Frequência simples de palavras nos títulos e resumos dos temas extraídos — não é
               agrupamento por significado (isso é uma evolução futura), mas já mostra o que se repete.
@@ -929,10 +979,7 @@ export default function Insights() {
           </section>
 
           <section className="border border-border/60 rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-1">
-              <Wallet className="h-4 w-4 text-primary" />
-              <h2 className="font-serif text-xl">Previsibilidade</h2>
-            </div>
+            <SectionHeader icon={Wallet} tone="success" title="Previsibilidade" />
             <p className="text-sm text-muted-foreground mb-4">
               Nada aqui é estimativa da IA — é cálculo real em cima do que você já marcou (aceito/recusado
               nas oportunidades de upsell da aba Comercial) e do valor que você cadastrou no catálogo de

@@ -129,6 +129,30 @@ export const LEAD_ORIGIN_LABEL: Record<LeadOrigin, string> = {
   instagram: 'Instagram', whatsapp: 'WhatsApp', indicacao: 'Indicação', outro: 'Outro',
 };
 
+// Paleta categórica pra gráficos/badges em Insights — 6 cores fixas (ver
+// --chart-1..6 em index.css), atribuídas por CATEGORIA, não por posição, pra
+// a mesma objeção/sentimento manter sempre a mesma cor mesmo quando a ordem
+// muda por filtro/ranking.
+export const CHART_COLORS = [
+  'hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))',
+  'hsl(var(--chart-4))', 'hsl(var(--chart-5))', 'hsl(var(--chart-6))',
+];
+
+function paletteFor<T extends string>(keys: T[]): Record<T, string> {
+  const out = {} as Record<T, string>;
+  keys.forEach((k, i) => { out[k] = CHART_COLORS[i % CHART_COLORS.length]; });
+  return out;
+}
+
+export const OBJECTION_COLOR = paletteFor(Object.keys(OBJECTION_LABEL));
+export const SENTIMENT_COLOR = paletteFor(Object.keys(SENTIMENT_LABEL));
+export const LEAD_ORIGIN_COLOR: Record<LeadOrigin, string> = {
+  instagram: CHART_COLORS[4], whatsapp: CHART_COLORS[1], indicacao: CHART_COLORS[2], outro: CHART_COLORS[5],
+};
+export const FUNNEL_STAGE_COLOR: Record<Topic['funnelStage'], string> = {
+  C0: CHART_COLORS[5], C1: CHART_COLORS[0], C2: CHART_COLORS[2], C3: CHART_COLORS[4],
+};
+
 // Fonte única pra origem da consulta — antes cada tela tinha sua própria cópia
 // (algumas com "Voice Note"/"Science" corretos, outras vazando o valor cru do
 // enum via .replace('_',' ') e mostrando "voice note"/"recording" em inglês

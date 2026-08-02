@@ -51,6 +51,16 @@
     --sidebar-accent-foreground: 221 83% 40%;
     --sidebar-border: 214 32% 89%;
     --sidebar-ring: 221 83% 53%;
+
+    /* Paleta categórica pra gráficos — cor estável por categoria (nunca por
+       posição/rank), pra objeção/sentimento/origem manterem a mesma cor em
+       qualquer gráfico da tela mesmo quando a ordem muda por filtro. */
+    --chart-1: 221 83% 53%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 262 52% 55%;
+    --chart-4: 38 92% 50%;
+    --chart-5: 340 75% 55%;
+    --chart-6: 215 16% 55%;
   }
 
   .dark {
@@ -96,6 +106,13 @@
     --sidebar-accent-foreground: 210 30% 96%;
     --sidebar-border: 222 30% 16%;
     --sidebar-ring: 217 91% 60%;
+
+    --chart-1: 217 91% 60%;
+    --chart-2: 173 55% 48%;
+    --chart-3: 262 60% 68%;
+    --chart-4: 38 92% 58%;
+    --chart-5: 340 70% 65%;
+    --chart-6: 215 16% 65%;
   }
 
   * { @apply border-border; }
