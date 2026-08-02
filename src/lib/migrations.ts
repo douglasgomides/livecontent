@@ -11,7 +11,7 @@ const VALID_STATUS: SessionStatus[] = [
   'recording', 'transcribing', 'anonymizing', 'anonymization_review',
   'extracting_topics', 'topics_review', 'generating_content', 'ready', 'failed',
 ];
-const VALID_SOURCE: SessionSource[] = ['recording', 'upload', 'voice_note', 'science', 'audio_livre', 'link'];
+const VALID_SOURCE: SessionSource[] = ['recording', 'upload', 'voice_note', 'science', 'audio_livre', 'link', 'tema_sugerido'];
 const VALID_FORMAT: ContentFormat[] = [
   'reel', 'carousel', 'caption', 'stories', 'linkedin',
   'blog', 'youtube', 'tiktok', 'podcast', 'gmb', 'doctoralia', 'website',

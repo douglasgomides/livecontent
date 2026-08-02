@@ -11,13 +11,9 @@ import { getUserId } from '@/lib/store';
 import { loadBrain, saveBrain } from '@/lib/brainStorage';
 import { fetchPatientSignals, fetchAllCommercialIntelligence, fetchProducts, type CommercialIntelligenceWithMeta } from '@/lib/db';
 import { fetchCommercialBenchmark, type CommercialBenchmark } from '@/lib/pipeline';
-import { FORMAT_LABEL, FUNNEL_STAGE_LABEL } from '@/lib/contentFormats';
+import { FORMAT_LABEL, FUNNEL_STAGE_LABEL, OBJECTION_LABEL, MIN_TOTAL_OBJECTIONS, MIN_LEADING_CATEGORY } from '@/lib/contentFormats';
 import type { ContentFormat, PatientSignal, Product } from '@/types/session';
 
-// Pisos mínimos antes de liberar o opt-in — mesma cautela de qualquer padrão
-// aprendido com poucos exemplos: amostra pequena demais vira ruído, não sinal.
-const MIN_TOTAL_OBJECTIONS = 8;
-const MIN_LEADING_CATEGORY = 3;
 // Mesma cautela pra probabilidade de fechar upsell — sem isso, 1 aceito de 1
 // vira "100% de chance" e engana o médico.
 const MIN_UPSELL_SAMPLE = 3;
@@ -63,12 +59,6 @@ const EXAMPLE_OBJECTION_DATA = [
   { category: 'Precisa pensar', quantidade: 3 },
 ];
 
-const OBJECTION_LABEL: Record<string, string> = {
-  price_cost: 'Preço/custo', fear_procedure_side_effects: 'Medo do procedimento/efeitos',
-  need_think_it_over: 'Precisa pensar', family_spouse_approval: 'Aprovação de família/cônjuge',
-  insurance_coverage: 'Cobertura de plano', previous_bad_experience: 'Experiência ruim anterior',
-  scheduling_time: 'Tempo/agenda', other: 'Outro',
-};
 const QUESTION_LABEL: Record<string, string> = {
   symptom_cause: 'Causa do sintoma', procedure_details: 'Detalhes do procedimento',
   safety_side_effects: 'Segurança/efeitos', cost_insurance: 'Custo/plano',

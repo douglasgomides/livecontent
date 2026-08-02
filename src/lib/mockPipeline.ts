@@ -398,6 +398,7 @@ export function createBlankSession(source: SessionSource, durationSec = 0, audio
     science: `Science to Content — ${new Date().toLocaleDateString('pt-BR')}`,
     audio_livre: `Áudio livre — ${new Date().toLocaleDateString('pt-BR')}`,
     link: `Link — ${new Date().toLocaleDateString('pt-BR')}`,
+    tema_sugerido: `Tema sugerido — ${new Date().toLocaleDateString('pt-BR')}`,
   };
 
   return {

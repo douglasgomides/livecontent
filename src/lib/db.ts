@@ -21,6 +21,7 @@ import type {
   ProductCategory,
   EvidenceTopicWatch,
   EvidenceTopicUpdate,
+  WeeklyContentSuggestion,
 } from '@/types/session';
 import type { Brain } from '@/types/brain';
 import { EMPTY_BRAIN } from '@/types/brain';
@@ -594,6 +595,65 @@ export async function fetchPatientSignals(userId: string): Promise<PatientSignal
     .order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []).map(mapPatientSignalRow);
+}
+
+// ─── Sugestão semanal de conteúdo (fecha o loop de objeções) ───────────────
+// Uma linha por (médico, semana) — calculada sob demanda no cliente na
+// primeira visita à Trends da semana (ver src/lib/weeklySuggestion.ts).
+
+function mapWeeklySuggestionRow(row: any): WeeklyContentSuggestion {
+  return {
+    id: row.id,
+    weekStart: row.week_start,
+    category: row.category,
+    signalCount: row.signal_count,
+    exampleLabel: row.example_label,
+    actionTip: row.action_tip,
+    status: row.status,
+    sessionId: row.session_id,
+    createdAt: row.created_at,
+  };
+}
+
+export async function fetchWeeklySuggestion(userId: string, weekStart: string): Promise<WeeklyContentSuggestion | null> {
+  const { data, error } = await supabase
+    .from('weekly_content_suggestions')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('week_start', weekStart)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapWeeklySuggestionRow(data) : null;
+}
+
+export async function createWeeklySuggestion(userId: string, input: {
+  weekStart: string; category: string; signalCount: number; exampleLabel: string; actionTip: string;
+}): Promise<WeeklyContentSuggestion> {
+  const { data, error } = await supabase
+    .from('weekly_content_suggestions')
+    .insert({
+      user_id: userId,
+      week_start: input.weekStart,
+      category: input.category,
+      signal_count: input.signalCount,
+      example_label: input.exampleLabel,
+      action_tip: input.actionTip,
+    })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return mapWeeklySuggestionRow(data);
+}
+
+export async function updateWeeklySuggestion(id: string, patch: { status?: 'generated' | 'dismissed'; sessionId?: string }): Promise<void> {
+  const { error } = await supabase
+    .from('weekly_content_suggestions')
+    .update({
+      ...(patch.status ? { status: patch.status } : {}),
+      ...(patch.sessionId ? { session_id: patch.sessionId } : {}),
+    })
+    .eq('id', id);
+  if (error) throw error;
 }
 
 // ─── Assinatura / plano ─────────────────────────────────────────────────────

@@ -30,7 +30,7 @@ const ALL_STAGES: { id: SessionStatus; label: string }[] = [
 function stagesFor(source: Session['source']): typeof ALL_STAGES {
   if (source === 'science') return ALL_STAGES.filter(s => !['anonymizing', 'anonymization_review'].includes(s.id));
   if (source === 'voice_note') return ALL_STAGES.filter(s => !['extracting_topics', 'topics_review'].includes(s.id));
-  if (source === 'audio_livre' || source === 'link') return ALL_STAGES.filter(s => !['anonymizing', 'anonymization_review'].includes(s.id));
+  if (source === 'audio_livre' || source === 'link' || source === 'tema_sugerido') return ALL_STAGES.filter(s => !['anonymizing', 'anonymization_review'].includes(s.id));
   return ALL_STAGES;
 }
 
@@ -102,7 +102,7 @@ export default function SessionDetail() {
   }
 
   const currentIdx = stages.findIndex(s => s.id === session.status);
-  const showAnon = session.source !== 'science';
+  const showAnon = session.source !== 'science' && session.source !== 'tema_sugerido';
   const showTopics = session.source !== 'voice_note';
   const showCommercial = session.source === 'recording' || session.source === 'upload';
   const contentPieces = session.content || [];

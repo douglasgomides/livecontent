@@ -9,7 +9,7 @@ export type SessionStatus =
   | 'ready'
   | 'failed';
 
-export type SessionSource = 'recording' | 'upload' | 'voice_note' | 'science' | 'audio_livre' | 'link';
+export type SessionSource = 'recording' | 'upload' | 'voice_note' | 'science' | 'audio_livre' | 'link' | 'tema_sugerido';
 
 export type ContentFormat =
   | 'reel' | 'carousel' | 'caption' | 'stories' | 'linkedin'
@@ -336,6 +336,22 @@ export interface PatientSignal {
   label: string;
   actionTip: string;
   confidence: number;
+  createdAt: string;
+}
+
+// Fecha o loop: uma sugestão de tema por semana, derivada da objeção mais
+// frequente entre os patient_signals reais do médico (só quando ele optou por
+// isso em Insights). O médico pode gerar conteúdo real a partir dela (1 clique)
+// ou dispensar — nunca aplicada/gerada sozinha.
+export interface WeeklyContentSuggestion {
+  id: string;
+  weekStart: string; // YYYY-MM-DD, segunda-feira da semana
+  category: string;
+  signalCount: number;
+  exampleLabel: string;
+  actionTip: string;
+  status: 'pending' | 'generated' | 'dismissed';
+  sessionId?: string | null;
   createdAt: string;
 }
 

@@ -31,6 +31,7 @@ const SOURCE_LABEL: Record<SessionSource, string> = {
   science: 'Science',
   audio_livre: 'Áudio livre',
   link: 'Link',
+  tema_sugerido: 'Tema sugerido',
 };
 
 

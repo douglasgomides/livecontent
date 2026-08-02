@@ -100,6 +100,23 @@ export const FORMAT_GROUPS: { label: string; formats: ContentFormat[] }[] = [
 
 export const RECOMMENDED_FORMATS: ContentFormat[] = ['reel', 'carousel', 'caption', 'blog', 'gmb'];
 
+// Rótulos de exibição pra taxonomia fixa de objeção em
+// supabase/functions/_shared/patientSignals.ts — fonte única do lado do cliente
+// (Insights.tsx e a sugestão semanal de conteúdo compartilham este dicionário;
+// o backend mantém sua própria cópia porque não importa código do frontend).
+export const OBJECTION_LABEL: Record<string, string> = {
+  price_cost: 'Preço/custo', fear_procedure_side_effects: 'Medo do procedimento/efeitos',
+  need_think_it_over: 'Precisa pensar', family_spouse_approval: 'Aprovação de família/cônjuge',
+  insurance_coverage: 'Cobertura de plano', previous_bad_experience: 'Experiência ruim anterior',
+  scheduling_time: 'Tempo/agenda', other: 'Outro',
+};
+
+// Pisos mínimos antes de confiar em qualquer padrão aprendido a partir de
+// patient_signals (opt-in de objeções em Insights, sugestão semanal de
+// conteúdo) — amostra pequena demais vira ruído, não sinal.
+export const MIN_TOTAL_OBJECTIONS = 8;
+export const MIN_LEADING_CATEGORY = 3;
+
 /** Formats that produce ready-to-copy text vs prepared publication */
 export const EXPORT_MODE: Record<ContentFormat, 'copy' | 'publish' | 'download'> = {
   reel: 'publish',

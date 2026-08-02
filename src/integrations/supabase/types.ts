@@ -31,6 +31,7 @@ export type Database = {
       }
       brains: {
         Row: {
+          brain_seeded: boolean
           brand: Json
           created_at: string
           doctor: Json
@@ -43,6 +44,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          brain_seeded?: boolean
           brand?: Json
           created_at?: string
           doctor?: Json
@@ -55,6 +57,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          brain_seeded?: boolean
           brand?: Json
           created_at?: string
           doctor?: Json
@@ -1342,6 +1345,53 @@ export type Database = {
         }
         Relationships: []
       }
+      weekly_content_suggestions: {
+        Row: {
+          action_tip: string
+          category: string
+          created_at: string
+          example_label: string
+          id: string
+          session_id: string | null
+          signal_count: number
+          status: string
+          user_id: string
+          week_start: string
+        }
+        Insert: {
+          action_tip: string
+          category: string
+          created_at?: string
+          example_label: string
+          id?: string
+          session_id?: string | null
+          signal_count: number
+          status?: string
+          user_id: string
+          week_start: string
+        }
+        Update: {
+          action_tip?: string
+          category?: string
+          created_at?: string
+          example_label?: string
+          id?: string
+          session_id?: string | null
+          signal_count?: number
+          status?: string
+          user_id?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_content_suggestions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       pages_public: {
@@ -1466,6 +1516,7 @@ export type Database = {
         | "science"
         | "audio_livre"
         | "link"
+        | "tema_sugerido"
       session_status:
         | "recording"
         | "transcribing"
@@ -1658,6 +1709,7 @@ export const Constants = {
         "science",
         "audio_livre",
         "link",
+        "tema_sugerido",
       ],
       session_status: [
         "recording",

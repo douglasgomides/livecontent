@@ -29,6 +29,7 @@ const SOURCE_LABEL: Record<SessionSource, string> = {
   science: 'Ciência',
   audio_livre: 'Áudio livre',
   link: 'Link',
+  tema_sugerido: 'Tema sugerido',
 };
 
 export default function Approvals() {

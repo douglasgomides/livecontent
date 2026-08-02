@@ -141,7 +141,7 @@ Deno.serve(async (req) => {
       await supabase.from('sessions').update({ status: 'failed', error_message: msg }).eq('id', session_id);
     }
 
-    const skipAnon = ['science', 'link', 'audio_livre'].includes(session.source);
+    const skipAnon = ['science', 'link', 'audio_livre', 'tema_sugerido'].includes(session.source);
     // 'voice_note' é a nota rápida de 1 post: sem checkpoint de revisão de tópicos,
     // gera direto uma legenda a partir do único tópico extraído.
     const isQuickNote = session.source === 'voice_note';

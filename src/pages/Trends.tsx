@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowLeft, TrendingUp, RefreshCw, Loader2, ExternalLink, Heart, MessageCircle, Bookmark, Share2 } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, TrendingUp, RefreshCw, Loader2, ExternalLink, Heart, MessageCircle, Bookmark, Share2, Lightbulb, X, Sparkles, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { fetchTrendingContentIdeas } from '@/lib/pipeline';
-import { fetchTopOwnPosts } from '@/lib/db';
+import { createBlankSession, fetchTrendingContentIdeas, runPipeline } from '@/lib/pipeline';
+import { fetchTopOwnPosts, fetchPatientSignals, updateWeeklySuggestion } from '@/lib/db';
+import { upsertSession } from '@/lib/storage';
+import { getOrCreateWeeklySuggestion, buildSyntheticTranscript } from '@/lib/weeklySuggestion';
 import { getUserId } from '@/lib/store';
-import { FORMAT_LABEL } from '@/lib/contentFormats';
-import type { ContentFormat, TrendingContentIdea, SocialPostPerformance } from '@/types/session';
+import { loadBrain } from '@/lib/brainStorage';
+import { FORMAT_LABEL, OBJECTION_LABEL, MIN_TOTAL_OBJECTIONS, MIN_LEADING_CATEGORY } from '@/lib/contentFormats';
+import type { ContentFormat, TrendingContentIdea, SocialPostPerformance, WeeklyContentSuggestion } from '@/types/session';
 
 // Dado de exemplo — só aparece pra conta sem histórico suficiente, sempre com
 // o selo "Exemplo" visível, nunca com fonte/link clicável (não é achado real).
@@ -56,6 +59,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promi
 }
 
 export default function Trends() {
+  const nav = useNavigate();
   const [ideas, setIdeas] = useState<TrendingContentIdea[]>([]);
   const [ideasLoading, setIdeasLoading] = useState(true);
   const [ideasError, setIdeasError] = useState<string | null>(null);
@@ -63,6 +67,14 @@ export default function Trends() {
 
   const [ownPosts, setOwnPosts] = useState<SocialPostPerformance[]>([]);
   const [ownPostsLoading, setOwnPostsLoading] = useState(true);
+
+  // Fecha o loop: sugestão de tema a partir da objeção mais frequente entre os
+  // patient_signals reais — só roda se o médico já ativou isso em Insights.
+  const [objectionsOptIn] = useState(() => loadBrain().objectionsOptIn);
+  const [weeklySuggestion, setWeeklySuggestion] = useState<WeeklyContentSuggestion | null>(null);
+  const [suggestionLoading, setSuggestionLoading] = useState(objectionsOptIn);
+  const [suggestionGap, setSuggestionGap] = useState<{ total: number; leadingCount: number } | null>(null);
+  const [generating, setGenerating] = useState(false);
 
   const loadIdeas = (refresh = false) => {
     (refresh ? setRefreshing : setIdeasLoading)(true);
@@ -80,12 +92,45 @@ export default function Trends() {
   useEffect(() => {
     loadIdeas(false);
     const uid = getUserId();
-    if (!uid) { setOwnPostsLoading(false); return; }
+    if (!uid) { setOwnPostsLoading(false); setSuggestionLoading(false); return; }
     fetchTopOwnPosts(uid)
       .then(setOwnPosts)
       .catch(() => setOwnPosts([]))
       .finally(() => setOwnPostsLoading(false));
+
+    if (!objectionsOptIn) { setSuggestionLoading(false); return; }
+    fetchPatientSignals(uid)
+      .then(signals => getOrCreateWeeklySuggestion(uid, signals))
+      .then(res => {
+        setWeeklySuggestion(res.suggestion);
+        setSuggestionGap(res.suggestion ? null : { total: res.total, leadingCount: res.leadingCount });
+      })
+      .catch(() => setWeeklySuggestion(null))
+      .finally(() => setSuggestionLoading(false));
   }, []);
+
+  const generateFromSuggestion = () => {
+    if (!weeklySuggestion) return;
+    setGenerating(true);
+    const s = createBlankSession('tema_sugerido');
+    s.title = `Objeção: ${OBJECTION_LABEL[weeklySuggestion.category] ?? weeklySuggestion.category}`;
+    s.rawTranscript = buildSyntheticTranscript(weeklySuggestion);
+    upsertSession(s);
+    runPipeline(s.id).catch(err => toast.error(`Falha ao gerar conteúdo: ${err?.message ?? err}`));
+    updateWeeklySuggestion(weeklySuggestion.id, { status: 'generated', sessionId: s.id }).catch(() => {});
+    setWeeklySuggestion({ ...weeklySuggestion, status: 'generated', sessionId: s.id });
+    nav(`/app/session/${s.id}`);
+  };
+
+  const dismissSuggestion = async () => {
+    if (!weeklySuggestion) return;
+    try {
+      await updateWeeklySuggestion(weeklySuggestion.id, { status: 'dismissed' });
+      setWeeklySuggestion({ ...weeklySuggestion, status: 'dismissed' });
+    } catch (err: any) {
+      toast.error(`Falha ao dispensar: ${err?.message ?? err}`);
+    }
+  };
 
   return (
     <div className="space-y-8 pb-24 md:pb-0">
@@ -102,6 +147,80 @@ export default function Trends() {
           performou de verdade nos seus próprios posts — pra repetir o que funciona.
         </p>
       </div>
+
+      {!objectionsOptIn ? (
+        <section className="border border-dashed border-border/60 rounded-xl p-5">
+          <div className="flex items-center gap-2 mb-1">
+            <Lightbulb className="h-4 w-4 text-muted-foreground" />
+            <h2 className="font-serif text-xl">Sugestão da semana</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Ative "Objeções aprendidas" em <Link to="/app/insights" className="text-primary hover:underline">Insights</Link> pra
+            receber, toda semana, uma sugestão de tema baseada na objeção real mais frequente dos seus pacientes.
+          </p>
+        </section>
+      ) : suggestionLoading ? (
+        <section className="border border-border/60 rounded-xl p-5">
+          <p className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Calculando a sugestão da semana…</p>
+        </section>
+      ) : suggestionGap ? (
+        <section className="border border-dashed border-border/60 rounded-xl p-5">
+          <div className="flex items-center gap-2 mb-1">
+            <Lightbulb className="h-4 w-4 text-muted-foreground" />
+            <h2 className="font-serif text-xl">Sugestão da semana</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Ainda sem dado suficiente pra uma sugestão confiável essa semana — hoje: {suggestionGap.total} de {MIN_TOTAL_OBJECTIONS} objeções
+            no total, {suggestionGap.leadingCount} de {MIN_LEADING_CATEGORY} na categoria líder. Volta a aparecer assim que a amostra crescer.
+          </p>
+        </section>
+      ) : weeklySuggestion?.status === 'dismissed' ? (
+        <section className="border border-border/60 rounded-xl p-5">
+          <p className="text-sm text-muted-foreground">Você dispensou a sugestão dessa semana. Uma nova aparece na próxima semana.</p>
+        </section>
+      ) : weeklySuggestion?.status === 'generated' ? (
+        <section className="border border-success/30 bg-success/5 rounded-xl p-5">
+          <div className="flex items-center gap-2 mb-1">
+            <CheckCircle2 className="h-4 w-4 text-success" />
+            <h2 className="font-serif text-xl">Sugestão da semana</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Você já gerou conteúdo pra objeção "{OBJECTION_LABEL[weeklySuggestion.category] ?? weeklySuggestion.category}" essa semana.
+            {weeklySuggestion.sessionId && (
+              <> <Link to={`/app/session/${weeklySuggestion.sessionId}`} className="text-primary hover:underline">Ver consulta</Link></>
+            )}
+          </p>
+        </section>
+      ) : weeklySuggestion ? (
+        <section className="border border-primary/30 bg-primary/5 rounded-xl p-5">
+          <div className="flex items-center justify-between gap-3 flex-wrap mb-1">
+            <div className="flex items-center gap-2">
+              <Lightbulb className="h-4 w-4 text-primary" />
+              <h2 className="font-serif text-xl">Sugestão da semana</h2>
+            </div>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/15 text-primary font-medium uppercase tracking-wide">
+              {weeklySuggestion.signalCount}x essa objeção
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground mb-3">
+            Baseado numa objeção real e recorrente dos seus pacientes — antecipar isso no conteúdo ajuda a desarmá-la antes da consulta.
+          </p>
+          <div className="border border-border/60 rounded-lg p-3 bg-background/60 space-y-1.5 mb-4">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{OBJECTION_LABEL[weeklySuggestion.category] ?? weeklySuggestion.category}</div>
+            <div className="text-sm italic">"{weeklySuggestion.exampleLabel}"</div>
+            <div className="text-sm"><span className="text-muted-foreground">Argumento sugerido: </span>{weeklySuggestion.actionTip}</div>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={generateFromSuggestion} disabled={generating} className="bg-gold-gradient text-primary-foreground">
+              {generating ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}
+              Gerar conteúdo
+            </Button>
+            <Button size="sm" variant="ghost" onClick={dismissSuggestion} disabled={generating}>
+              <X className="h-3.5 w-3.5 mr-1.5" /> Dispensar
+            </Button>
+          </div>
+        </section>
+      ) : null}
 
       <section className="border border-border/60 rounded-xl p-5">
         <div className="flex items-center justify-between gap-3 mb-1">
