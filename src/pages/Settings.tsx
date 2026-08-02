@@ -49,11 +49,13 @@ export default function Settings() {
   const initialSettings = getSettings();
   const [webhooks, setWebhooks] = useState<Record<string, string>>(initialSettings.webhooks as Record<string, string>);
   const [preferredFormats, setPreferredFormats] = useState<ContentFormat[]>(initialSettings.preferredFormats as ContentFormat[]);
+  const [schedulingLink, setSchedulingLink] = useState(initialSettings.schedulingLink ?? '');
 
   useEffect(() => {
     const s = getSettings();
     setWebhooks(s.webhooks as Record<string, string>);
     setPreferredFormats(s.preferredFormats as ContentFormat[]);
+    setSchedulingLink(s.schedulingLink ?? '');
   }, [user?.id]);
 
   const [subscription, setSubscription] = useState<Subscription | null>(null);
@@ -110,6 +112,11 @@ export default function Settings() {
   const saveWebhooks = async () => {
     await saveSettings({ ...getSettings(), webhooks });
     toast.success('Webhooks salvos');
+  };
+
+  const saveSchedulingLink = async () => {
+    await saveSettings({ ...getSettings(), schedulingLink: schedulingLink.trim() || null });
+    toast.success('Link de agendamento salvo');
   };
 
   const saveFormats = async () => {
@@ -275,6 +282,23 @@ export default function Settings() {
           ))}
         </div>
         <Button onClick={saveWebhooks} variant="outline" size="sm">Salvar webhooks</Button>
+      </div>
+
+      <div className="border-t border-border pt-8 space-y-4">
+        <div className="flex items-center gap-2">
+          <ExternalLink className="h-4 w-4 text-primary" />
+          <h2 className="font-serif text-2xl">Link de agendamento</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Pra onde a captação de leads manda quem clica em "Agendar" — seu WhatsApp
+          (ex: https://wa.me/5511999999999), Doctoralia, ou onde você já marca consulta hoje.
+        </p>
+        <Input
+          value={schedulingLink}
+          onChange={e => setSchedulingLink(e.target.value)}
+          placeholder="https://wa.me/55..."
+        />
+        <Button onClick={saveSchedulingLink} variant="outline" size="sm">Salvar link de agendamento</Button>
       </div>
 
       <div className="border-t border-border pt-8 space-y-4">

@@ -8,6 +8,8 @@ import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import PreConsultationForm from "./pages/PreConsultationForm";
 import PreConsultation from "./pages/PreConsultation";
+import LeadCaptureForm from "./pages/LeadCaptureForm";
+import LeadCaptures from "./pages/LeadCaptures";
 import Onboarding from "./pages/Onboarding";
 import AppShell from "./components/app/AppShell";
 import Dashboard from "./pages/Dashboard";
@@ -76,6 +78,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/pre-consulta/:doctorId" element={<PreConsultationForm />} />
+            <Route path="/captar/:doctorId" element={<LeadCaptureForm />} />
             <Route path="/termos" element={<Terms />} />
             <Route path="/privacidade" element={<Privacy />} />
             <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
@@ -107,6 +110,7 @@ const App = () => (
               <Route path="reference-styles" element={<ReferenceStyles />} />
               <Route path="brand-photos" element={<BrandPhotos />} />
               <Route path="pre-consulta" element={<PreConsultation />} />
+              <Route path="leads" element={<LeadCaptures />} />
               <Route path="products" element={<Products />} />
               <Route path="brain" element={<BrainPage />} />
               <Route path="settings" element={<Settings />} />

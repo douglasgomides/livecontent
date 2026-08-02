@@ -26,6 +26,7 @@ import {
   ChevronDown,
   LogOut,
   User,
+  UserPlus,
 } from 'lucide-react';
 
 import {
@@ -78,6 +79,7 @@ const workItems = [
   { title: 'Biblioteca', url: '/app/library', icon: Library },
   { title: 'Inteligência de conversão', url: '/app/insights', icon: LineChart },
   { title: 'Pré-consulta', url: '/app/pre-consulta', icon: ClipboardList },
+  { title: 'Captação de leads', url: '/app/leads', icon: UserPlus },
 ];
 
 // Separado de "Trabalho" — eram os itens que ficavam enterrados no fim de uma

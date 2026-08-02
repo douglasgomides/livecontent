@@ -22,6 +22,9 @@ import type {
   EvidenceTopicWatch,
   EvidenceTopicUpdate,
   WeeklyContentSuggestion,
+  LeadCapture,
+  LeadOrigin,
+  LeadStatus,
 } from '@/types/session';
 import type { Brain } from '@/types/brain';
 import { EMPTY_BRAIN } from '@/types/brain';
@@ -291,10 +294,14 @@ export async function deleteJobDb(id: string): Promise<void> {
 export interface DoctorSettings {
   webhooks: Partial<Record<string, string>>;
   preferredFormats: string[];
+  // Onde o CTA "Agendar" da captação de leads manda o lead (WhatsApp,
+  // Doctoralia, o que o médico já usa hoje) — null até ele configurar.
+  // Coluna pendente de aplicação, ver migration 20260802170000_lead_captures.sql.
+  schedulingLink: string | null;
 }
 
 export async function fetchSettings(userId: string): Promise<DoctorSettings> {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('doctor_settings')
     .select('*')
     .eq('user_id', userId)
@@ -303,14 +310,16 @@ export async function fetchSettings(userId: string): Promise<DoctorSettings> {
   return {
     webhooks: (data?.webhooks as any) ?? {},
     preferredFormats: (data?.preferred_formats as any) ?? ['caption', 'carousel', 'reel', 'linkedin'],
+    schedulingLink: data?.scheduling_link ?? null,
   };
 }
 
 export async function saveSettingsDb(userId: string, s: DoctorSettings): Promise<void> {
-  const { error } = await supabase.from('doctor_settings').upsert({
+  const { error } = await (supabase as any).from('doctor_settings').upsert({
     user_id: userId,
     webhooks: s.webhooks as any,
     preferred_formats: s.preferredFormats as any,
+    scheduling_link: s.schedulingLink,
   }, { onConflict: 'user_id' });
   if (error) throw error;
 }
@@ -874,6 +883,75 @@ export async function fetchRecentSessionsForLinking(userId: string, limit = 20):
     .limit(limit);
   if (error) throw error;
   return (data ?? []).map((r: any) => ({ id: r.id, title: r.title, createdAt: r.created_at }));
+}
+
+// ─── Captação de lead (link público avulso, pra quem ainda não é paciente) ──
+// (supabase as any): tabela lead_captures pendente de aplicação — ver migration
+// 20260802170000_lead_captures.sql. Trocar por tipagem real assim que aplicada
+// e os tipos gerados (types.ts) forem atualizados.
+
+function mapLeadCaptureRow(row: any): LeadCapture {
+  return {
+    id: row.id,
+    name: row.name,
+    contact: row.contact,
+    reason: row.reason ?? null,
+    origin: row.origin,
+    status: row.status,
+    linkedSessionId: row.linked_session_id ?? null,
+    createdAt: row.created_at,
+  };
+}
+
+// Chamado da tela pública /captar/:doctorId — sem sessão autenticada, funciona
+// porque a policy de insert é aberta pro papel anon.
+export async function submitLeadCapture(
+  doctorUserId: string,
+  name: string,
+  contact: string,
+  reason: string,
+  origin: LeadOrigin,
+): Promise<void> {
+  const { error } = await (supabase as any).from('lead_captures').insert({
+    user_id: doctorUserId,
+    name,
+    contact,
+    reason: reason || null,
+    origin,
+  });
+  if (error) throw error;
+}
+
+export async function fetchLeadCaptures(userId: string): Promise<LeadCapture[]> {
+  const { data, error } = await (supabase as any)
+    .from('lead_captures')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(mapLeadCaptureRow);
+}
+
+export async function updateLeadCaptureStatus(id: string, status: LeadStatus): Promise<void> {
+  const { error } = await (supabase as any).from('lead_captures').update({ status }).eq('id', id);
+  if (error) throw error;
+}
+
+export async function linkLeadCaptureToSession(id: string, sessionId: string): Promise<void> {
+  const { error } = await (supabase as any)
+    .from('lead_captures')
+    .update({ linked_session_id: sessionId, status: 'convertido' })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+// Chamado da tela pública /captar/:doctorId — RPC estreita (só devolve o link
+// de agendamento, nunca a linha inteira de doctor_settings, que também guarda
+// URLs de webhook) porque a tabela não tem select público.
+export async function fetchSchedulingLinkPublic(doctorId: string): Promise<string | null> {
+  const { data, error } = await (supabase as any).rpc('get_scheduling_link', { doctor_id: doctorId });
+  if (error) { console.warn('[fetchSchedulingLinkPublic] failed', error); return null; }
+  return data ?? null;
 }
 
 // ─── Catálogo de produtos/procedimentos ────────────────────────────────────

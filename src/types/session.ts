@@ -256,6 +256,23 @@ export interface PreConsultationResponse {
   linkedSessionId: string | null;
 }
 
+// Captação de lead: quem AINDA NÃO é paciente, veio de um link avulso (bio do
+// Instagram, envio direto por WhatsApp, indicação) — alimenta o funil com
+// dado de origem real, diferente da pré-consulta (que já pressupõe consulta marcada).
+export type LeadOrigin = 'instagram' | 'whatsapp' | 'indicacao' | 'outro';
+export type LeadStatus = 'novo' | 'contatado' | 'agendado' | 'convertido' | 'perdido';
+
+export interface LeadCapture {
+  id: string;
+  name: string;
+  contact: string;
+  reason: string | null;
+  origin: LeadOrigin;
+  status: LeadStatus;
+  linkedSessionId: string | null;
+  createdAt: string;
+}
+
 // Assinatura de tema pra monitoramento automático de novidades (evidência
 // científica) — pesquisado periodicamente, nunca inventado.
 export interface EvidenceTopicWatch {
