@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { submitLeadCapture, fetchSchedulingLinkPublic, fetchPublicCustomFormFields } from '@/lib/db';
 import CustomFieldInputs from '@/components/forms/CustomFieldInputs';
+import HoneypotField from '@/components/forms/HoneypotField';
 import type { LeadOrigin, CustomFormField } from '@/types/session';
 
 const VALID_ORIGINS: LeadOrigin[] = ['instagram', 'whatsapp', 'indicacao', 'outro'];
@@ -34,6 +35,7 @@ export default function LeadCaptureForm() {
   const [schedulingLink, setSchedulingLink] = useState<string | null>(null);
   const [customFields, setCustomFields] = useState<CustomFormField[]>([]);
   const [customValues, setCustomValues] = useState<Record<string, string | string[]>>({});
+  const [honeypot, setHoneypot] = useState('');
 
   useEffect(() => {
     if (!doctorId) return;
@@ -47,6 +49,8 @@ export default function LeadCaptureForm() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!doctorId) return;
+    // Preenchido só por bot — finge sucesso sem gravar nada, não dá pista.
+    if (honeypot.trim()) { setDone(true); return; }
     if (!name.trim() || !contact.trim()) {
       toast.error('Preencha nome e um jeito de te chamar (telefone ou e-mail).');
       return;
@@ -97,6 +101,7 @@ export default function LeadCaptureForm() {
           </p>
         </div>
         <form onSubmit={submit} className="space-y-5">
+          <HoneypotField value={honeypot} onChange={setHoneypot} />
           <div className="space-y-2">
             <Label>Seu nome</Label>
             <Input required value={name} onChange={e => setName(e.target.value)} autoComplete="name" />

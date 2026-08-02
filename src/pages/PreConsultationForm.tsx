@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { submitPreConsultationForm, fetchPublicCustomFormFields } from '@/lib/db';
 import CustomFieldInputs from '@/components/forms/CustomFieldInputs';
+import HoneypotField from '@/components/forms/HoneypotField';
 import { PRE_CONSULT_QUESTIONS } from '@/lib/preConsultQuestions';
 import type { CustomFormField } from '@/types/session';
 
@@ -23,6 +24,7 @@ export default function PreConsultationForm() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [customFields, setCustomFields] = useState<CustomFormField[]>([]);
+  const [honeypot, setHoneypot] = useState('');
 
   useEffect(() => {
     if (!doctorId) return;
@@ -34,6 +36,8 @@ export default function PreConsultationForm() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!doctorId) return;
+    // Preenchido só por bot — finge sucesso sem gravar nada, não dá pista.
+    if (honeypot.trim()) { setDone(true); return; }
     if (!name.trim()) {
       toast.error('Informe seu nome.');
       return;
@@ -84,6 +88,7 @@ export default function PreConsultationForm() {
           </p>
         </div>
         <form onSubmit={submit} className="space-y-5">
+          <HoneypotField value={honeypot} onChange={setHoneypot} />
           <div className="space-y-2">
             <Label>Seu nome</Label>
             <Input required value={name} onChange={e => setName(e.target.value)} autoComplete="name" />
