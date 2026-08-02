@@ -904,8 +904,9 @@ export async function linkPreConsultationResponse(responseId: string, sessionId:
 function mapWhatsappFollowupRow(row: any): WhatsappFollowup {
   return {
     id: row.id,
-    sessionId: row.session_id,
-    preconsultResponseId: row.preconsult_response_id,
+    sessionId: row.session_id ?? null,
+    preconsultResponseId: row.preconsult_response_id ?? null,
+    leadId: row.lead_id ?? null,
     phone: row.phone,
     message: row.message,
     status: row.status,
@@ -930,6 +931,29 @@ export async function createWhatsappFollowup(
   const { data, error } = await (supabase as any)
     .from('whatsapp_followups')
     .insert({ user_id: userId, session_id: sessionId, preconsult_response_id: preconsultResponseId, phone, message })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return mapWhatsappFollowupRow(data);
+}
+
+// Idem, pra um lead (ainda não-paciente) — sem sessão/pré-consulta vinculada.
+export async function fetchWhatsappFollowupForLead(leadId: string): Promise<WhatsappFollowup | null> {
+  const { data, error } = await (supabase as any)
+    .from('whatsapp_followups')
+    .select('*')
+    .eq('lead_id', leadId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapWhatsappFollowupRow(data) : null;
+}
+
+export async function createWhatsappFollowupForLead(
+  userId: string, leadId: string, phone: string, message: string,
+): Promise<WhatsappFollowup> {
+  const { data, error } = await (supabase as any)
+    .from('whatsapp_followups')
+    .insert({ user_id: userId, lead_id: leadId, phone, message })
     .select('*')
     .single();
   if (error) throw error;
@@ -977,6 +1001,9 @@ function mapLeadCaptureRow(row: any): LeadCapture {
     status: row.status,
     linkedSessionId: row.linked_session_id ?? null,
     createdAt: row.created_at,
+    notes: row.notes ?? null,
+    nextFollowUpAt: row.next_follow_up_at ?? null,
+    whatsappConsent: !!row.whatsapp_consent,
   };
 }
 
@@ -988,6 +1015,7 @@ export async function submitLeadCapture(
   contact: string,
   reason: string,
   origin: LeadOrigin,
+  whatsappConsent: boolean = false,
 ): Promise<void> {
   const { error } = await (supabase as any).from('lead_captures').insert({
     user_id: doctorUserId,
@@ -995,6 +1023,7 @@ export async function submitLeadCapture(
     contact,
     reason: reason || null,
     origin,
+    whatsapp_consent: whatsappConsent,
   });
   if (error) throw error;
 }
@@ -1011,6 +1040,18 @@ export async function fetchLeadCaptures(userId: string): Promise<LeadCapture[]> 
 
 export async function updateLeadCaptureStatus(id: string, status: LeadStatus): Promise<void> {
   const { error } = await (supabase as any).from('lead_captures').update({ status }).eq('id', id);
+  if (error) throw error;
+}
+
+// Nota livre e data de retorno — mini-CRM, nenhum dos dois dispara nada
+// sozinho, é só estado do acompanhamento manual do médico.
+export async function updateLeadCaptureNotes(id: string, notes: string): Promise<void> {
+  const { error } = await (supabase as any).from('lead_captures').update({ notes: notes || null }).eq('id', id);
+  if (error) throw error;
+}
+
+export async function updateLeadCaptureFollowUp(id: string, date: string | null): Promise<void> {
+  const { error } = await (supabase as any).from('lead_captures').update({ next_follow_up_at: date }).eq('id', id);
   if (error) throw error;
 }
 

@@ -264,11 +264,14 @@ export type WhatsappFollowupStatus = 'draft' | 'approved' | 'sent' | 'failed';
 
 // Mensagem de acompanhamento por paciente específico — gerada a partir da
 // objeção/sentimento/produto já extraídos da consulta, sempre revisável e
-// só sai depois de aprovação explícita do médico (nunca automático).
+// só sai depois de aprovação explícita do médico (nunca automático). Também
+// reaproveitado pra lead (ainda não-paciente) — nesse caso sessionId e
+// preconsultResponseId ficam null e leadId é quem identifica o destinatário.
 export interface WhatsappFollowup {
   id: string;
-  sessionId: string;
-  preconsultResponseId: string;
+  sessionId: string | null;
+  preconsultResponseId: string | null;
+  leadId: string | null;
   phone: string;
   message: string;
   status: WhatsappFollowupStatus;
@@ -291,6 +294,14 @@ export interface LeadCapture {
   status: LeadStatus;
   linkedSessionId: string | null;
   createdAt: string;
+  // Nota livre do médico (mini-CRM) — histórico de contato, não estruturado.
+  notes: string | null;
+  // Data do próximo retorno combinado — só um lembrete visual no kanban,
+  // nunca dispara nada sozinho (sem automação de lembrete nesta versão).
+  nextFollowUpAt: string | null;
+  // Consentimento explícito pra WhatsApp, coletado no próprio formulário de
+  // captação — sem isso, nunca gera nem envia follow-up pra esse lead.
+  whatsappConsent: boolean;
 }
 
 // Assinatura de tema pra monitoramento automático de novidades (evidência

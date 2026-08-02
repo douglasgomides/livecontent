@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { submitLeadCapture, fetchSchedulingLinkPublic } from '@/lib/db';
 import type { LeadOrigin } from '@/types/session';
@@ -24,6 +25,7 @@ export default function LeadCaptureForm() {
   const [name, setName] = useState('');
   const [contact, setContact] = useState('');
   const [reason, setReason] = useState('');
+  const [whatsappConsent, setWhatsappConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [schedulingLink, setSchedulingLink] = useState<string | null>(null);
@@ -42,7 +44,7 @@ export default function LeadCaptureForm() {
     }
     setBusy(true);
     try {
-      await submitLeadCapture(doctorId, name.trim(), contact.trim(), reason.trim(), origin);
+      await submitLeadCapture(doctorId, name.trim(), contact.trim(), reason.trim(), origin, whatsappConsent);
       setDone(true);
     } catch {
       toast.error('Não deu pra enviar agora. Tente de novo em instantes.');
@@ -93,6 +95,14 @@ export default function LeadCaptureForm() {
             <Label>O que te trouxe até aqui? (opcional)</Label>
             <Textarea value={reason} onChange={e => setReason(e.target.value)} rows={3} placeholder="Ex: dor no joelho há 2 semanas" />
           </div>
+          {contact.trim() && (
+            <div className="flex items-start gap-2.5 border border-border rounded-lg p-3">
+              <Checkbox checked={whatsappConsent} onCheckedChange={v => setWhatsappConsent(!!v)} className="mt-0.5" />
+              <Label className="font-normal cursor-pointer text-sm" onClick={() => setWhatsappConsent(v => !v)}>
+                Aceito receber mensagem de acompanhamento por WhatsApp.
+              </Label>
+            </div>
+          )}
           <Button type="submit" disabled={busy} className="w-full bg-gold-gradient text-primary-foreground gold-shadow">
             {busy ? 'Enviando...' : 'Enviar'}
           </Button>

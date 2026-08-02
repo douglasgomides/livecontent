@@ -1,7 +1,8 @@
 // dispatch-whatsapp-followup — dispara um POST pra webhook de WhatsApp
 // configurado pelo médico (mesmo modelo dos webhooks de canal já existentes:
 // Zapier/Make/n8n apontando pra automação própria dele) com telefone+mensagem
-// de UM paciente específico, e grava o resultado em whatsapp_followups.
+// de UM destinatário específico (paciente OU lead ainda não-paciente), e
+// grava o resultado em whatsapp_followups.
 // Nunca envia sem aprovação explícita do médico — esta função só roda quando
 // ele já clicou em "Aprovar e enviar" no follow-up revisado.
 import { corsHeaders } from '../_shared/cors.ts';
@@ -31,15 +32,17 @@ Deno.serve(async (req) => {
     if (followup.user_id !== userId) return json({ error: 'Forbidden' }, 403);
 
     // Consentimento é checado de novo aqui (não só no cliente) — a fonte de
-    // verdade é o registro da pré-consulta, nunca confiamos só no que o
-    // frontend mandou pra decidir se pode enviar.
-    const { data: preconsult } = await supabase
-      .from('preconsultation_responses').select('whatsapp_consent').eq('id', followup.preconsult_response_id).maybeSingle();
-    if (!preconsult?.whatsapp_consent) {
+    // verdade é o registro de origem (pré-consulta ou lead), nunca confiamos
+    // só no que o frontend mandou pra decidir se pode enviar.
+    const consentTable = followup.lead_id ? 'lead_captures' : 'preconsultation_responses';
+    const consentId = followup.lead_id ?? followup.preconsult_response_id;
+    const { data: consentRow } = await supabase
+      .from(consentTable).select('whatsapp_consent').eq('id', consentId).maybeSingle();
+    if (!consentRow?.whatsapp_consent) {
       await supabase.from('whatsapp_followups').update({
         status: 'failed',
       }).eq('id', followup_id);
-      return json({ ok: false, error: 'Paciente não deu consentimento pra WhatsApp' }, 403);
+      return json({ ok: false, error: 'Consentimento pra WhatsApp não encontrado' }, 403);
     }
 
     const { data: settings } = await supabase
@@ -54,7 +57,7 @@ Deno.serve(async (req) => {
       const r = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: followup.phone, message: followup.message, session_id: followup.session_id }),
+        body: JSON.stringify({ phone: followup.phone, message: followup.message, session_id: followup.session_id, lead_id: followup.lead_id }),
       });
       const ok = r.ok;
       const text = await r.text();

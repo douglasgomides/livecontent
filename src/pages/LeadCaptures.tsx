@@ -1,16 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, UserPlus, Copy, Check, Link2, Instagram, MessageCircle, Users } from 'lucide-react';
+import { ArrowLeft, UserPlus, Copy, Check, Link2, Instagram, MessageCircle, Users, ChevronRight, X, CalendarClock, StickyNote } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
-import {
-  fetchLeadCaptures, updateLeadCaptureStatus, linkLeadCaptureToSession, fetchRecentSessionsForLinking,
+  fetchLeadCaptures, updateLeadCaptureStatus, fetchRecentSessionsForLinking,
 } from '@/lib/db';
 import { getUserId } from '@/lib/store';
 import { LEAD_ORIGIN_LABEL } from '@/lib/contentFormats';
+import LeadDetailDialog from '@/components/leads/LeadDetailDialog';
 import type { LeadCapture, LeadOrigin, LeadStatus } from '@/types/session';
 
 const STATUS_LABEL: Record<LeadStatus, string> = {
@@ -23,6 +21,10 @@ const STATUS_CLS: Record<LeadStatus, string> = {
   convertido: 'bg-success/15 text-success',
   perdido: 'bg-destructive/15 text-destructive',
 };
+// Kanban simples, sem drag-and-drop — o card avança pra próxima etapa nessa
+// ordem (botão "Mover"); "perdido" é sempre alcançável de qualquer coluna
+// (menos convertido/perdido) porque um lead pode esfriar em qualquer estágio.
+const COLUMN_ORDER: LeadStatus[] = ['novo', 'contatado', 'agendado', 'convertido', 'perdido'];
 
 const LINK_VARIANTS: { origin: LeadOrigin; label: string; icon: typeof Instagram }[] = [
   { origin: 'instagram', label: 'Pra bio do Instagram', icon: Instagram },
@@ -30,12 +32,18 @@ const LINK_VARIANTS: { origin: LeadOrigin; label: string; icon: typeof Instagram
   { origin: 'indicacao', label: 'Pra pedir indicação', icon: Users },
 ];
 
+function isOverdue(dateStr: string | null): boolean {
+  if (!dateStr) return false;
+  return new Date(dateStr + 'T23:59:59') < new Date();
+}
+
 export default function LeadCaptures() {
   const [leads, setLeads] = useState<LeadCapture[]>([]);
   const [loading, setLoading] = useState(true);
   const [sessions, setSessions] = useState<{ id: string; title: string; createdAt: string }[]>([]);
   const [copiedOrigin, setCopiedOrigin] = useState<LeadOrigin | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
 
   const uid = getUserId();
   const baseLink = uid ? `${window.location.origin}/captar/${uid}` : '';
@@ -66,30 +74,34 @@ export default function LeadCaptures() {
     setTimeout(() => setCopiedOrigin(null), 2000);
   };
 
-  const handleStatus = async (lead: LeadCapture, status: LeadStatus) => {
+  const moveNext = async (lead: LeadCapture) => {
+    const idx = COLUMN_ORDER.indexOf(lead.status);
+    const next = COLUMN_ORDER[idx + 1];
+    if (!next || next === 'perdido') return;
     setBusyId(lead.id);
     try {
-      await updateLeadCaptureStatus(lead.id, status);
+      await updateLeadCaptureStatus(lead.id, next);
       await refresh();
     } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao atualizar status');
+      toast.error(err?.message ?? 'Falha ao mover etapa');
     } finally {
       setBusyId(null);
     }
   };
 
-  const handleLink = async (lead: LeadCapture, sessionId: string) => {
+  const markLost = async (lead: LeadCapture) => {
     setBusyId(lead.id);
     try {
-      await linkLeadCaptureToSession(lead.id, sessionId);
+      await updateLeadCaptureStatus(lead.id, 'perdido');
       await refresh();
-      toast.success('Vinculado à consulta — marcado como convertido.');
     } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao vincular');
+      toast.error(err?.message ?? 'Falha ao marcar como perdido');
     } finally {
       setBusyId(null);
     }
   };
+
+  const detailLead = leads.find(l => l.id === detailId) ?? null;
 
   return (
     <div className="space-y-8 pb-24 md:pb-0">
@@ -103,8 +115,8 @@ export default function LeadCaptures() {
         <h1 className="font-serif text-4xl mb-2">Quem ainda não é paciente</h1>
         <p className="text-muted-foreground">
           Link avulso pra quem só viu você nas redes ou por indicação — coleta o motivo de interesse e
-          a origem, e já direciona pra agendar. Quando um lead virar consulta de verdade, vincule abaixo
-          pra fechar o loop de receita por canal.
+          a origem, e já direciona pra agendar. Acompanhe o funil no kanban abaixo; quando um lead virar
+          consulta de verdade, vincule pra fechar o loop de receita por canal.
         </p>
       </div>
 
@@ -127,61 +139,81 @@ export default function LeadCaptures() {
         </p>
       </section>
 
-      <section className="border border-border/60 rounded-xl p-5">
-        <h2 className="font-serif text-lg mb-4">Leads recebidos</h2>
+      <section>
+        <h2 className="font-serif text-lg mb-4">Funil de leads</h2>
         {loading ? (
           <p className="text-sm text-muted-foreground">Carregando…</p>
         ) : leads.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhum lead ainda. Compartilhe um dos links acima.</p>
         ) : (
-          <div className="space-y-3">
-            {leads.map(lead => (
-              <div key={lead.id} className="border border-border/60 rounded-lg p-4">
-                <div className="flex items-start justify-between gap-3 flex-wrap">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className="text-sm font-medium">{lead.name}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">{LEAD_ORIGIN_LABEL[lead.origin]}</span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${STATUS_CLS[lead.status]}`}>{STATUS_LABEL[lead.status]}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground">{lead.contact}</div>
-                    <div className="text-xs text-muted-foreground">{new Date(lead.createdAt).toLocaleString('pt-BR')}</div>
-                    {lead.reason && <div className="text-sm mt-2">{lead.reason}</div>}
+          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
+            {COLUMN_ORDER.map(status => {
+              const columnLeads = leads.filter(l => l.status === status);
+              return (
+                <div key={status} className="space-y-2 min-w-0">
+                  <div className="flex items-center gap-2 px-1">
+                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${STATUS_CLS[status]}`}>{STATUS_LABEL[status]}</span>
+                    <span className="text-xs text-muted-foreground">{columnLeads.length}</span>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {lead.linkedSessionId ? (
-                      <span className="text-[11px] px-2 py-1 rounded-full bg-primary/15 text-primary font-medium inline-flex items-center gap-1">
-                        <Link2 className="h-3 w-3" /> Vinculado
-                      </span>
-                    ) : (
-                      <Select onValueChange={v => handleLink(lead, v)} disabled={busyId === lead.id}>
-                        <SelectTrigger className="w-[200px] h-8 text-xs">
-                          <SelectValue placeholder="Vincular a uma consulta" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {sessions.map(s => (
-                            <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                    <Select value={lead.status} onValueChange={v => handleStatus(lead, v as LeadStatus)} disabled={busyId === lead.id}>
-                      <SelectTrigger className="w-[130px] h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(Object.keys(STATUS_LABEL) as LeadStatus[]).map(s => (
-                          <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="space-y-2">
+                    {columnLeads.map(lead => (
+                      <div
+                        key={lead.id}
+                        className="border border-border/60 rounded-lg p-3 bg-card hover:border-primary/40 transition cursor-pointer"
+                        onClick={() => setDetailId(lead.id)}
+                      >
+                        <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                          <span className="text-sm font-medium truncate">{lead.name}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground">{LEAD_ORIGIN_LABEL[lead.origin]}</span>
+                          {lead.linkedSessionId && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary inline-flex items-center gap-0.5"><Link2 className="h-2.5 w-2.5" /></span>
+                          )}
+                        </div>
+                        {lead.reason && <p className="text-xs text-muted-foreground line-clamp-2 mb-1.5">{lead.reason}</p>}
+                        {lead.notes && (
+                          <p className="text-xs text-muted-foreground italic line-clamp-1 mb-1.5 flex items-center gap-1">
+                            <StickyNote className="h-3 w-3 shrink-0" /> {lead.notes}
+                          </p>
+                        )}
+                        {lead.nextFollowUpAt && (
+                          <div className={`text-[10px] px-1.5 py-0.5 rounded-full inline-flex items-center gap-1 mb-1.5 ${isOverdue(lead.nextFollowUpAt) ? 'bg-destructive/15 text-destructive' : 'bg-secondary text-muted-foreground'}`}>
+                            <CalendarClock className="h-2.5 w-2.5" /> {new Date(lead.nextFollowUpAt + 'T00:00:00').toLocaleDateString('pt-BR')}
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between gap-1 pt-1" onClick={e => e.stopPropagation()}>
+                          <span className="text-[10px] text-muted-foreground">{new Date(lead.createdAt).toLocaleDateString('pt-BR')}</span>
+                          <div className="flex items-center gap-1">
+                            {status !== 'convertido' && status !== 'perdido' && (
+                              <Button size="sm" variant="ghost" className="h-6 px-1.5 text-[11px]" disabled={busyId === lead.id} onClick={() => moveNext(lead)} title="Mover pra próxima etapa">
+                                <ChevronRight className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                            {status !== 'convertido' && status !== 'perdido' && (
+                              <Button size="sm" variant="ghost" className="h-6 px-1.5 text-[11px] text-destructive" disabled={busyId === lead.id} onClick={() => markLost(lead)} title="Marcar como perdido">
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
+
+      <LeadDetailDialog
+        lead={detailLead}
+        sessions={sessions}
+        open={!!detailId}
+        onOpenChange={o => { if (!o) setDetailId(null); }}
+        onChanged={refresh}
+      />
     </div>
   );
 }

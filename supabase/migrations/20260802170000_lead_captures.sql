@@ -15,7 +15,15 @@ create table if not exists public.lead_captures (
   origin text not null default 'outro' check (origin in ('instagram', 'whatsapp', 'indicacao', 'outro')),
   status text not null default 'novo' check (status in ('novo', 'contatado', 'agendado', 'convertido', 'perdido')),
   linked_session_id uuid references public.sessions(id) on delete set null,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- Mini-CRM (kanban de leads): nota livre do médico e data do próximo
+  -- retorno combinado — nenhum dos dois dispara nada sozinho, é só o estado
+  -- do acompanhamento manual.
+  notes text,
+  next_follow_up_at date,
+  -- Consentimento explícito pra WhatsApp, coletado no próprio formulário
+  -- público de captação — sem isso, nunca gera nem envia follow-up.
+  whatsapp_consent boolean not null default false
 );
 
 alter table public.lead_captures enable row level security;
