@@ -48,6 +48,21 @@ const TREND_COLOR_BY_RANK = ['hsl(var(--primary))', 'hsl(var(--warning))', 'hsl(
 
 // Rótulos de exibição pra taxonomia fixa de supabase/functions/_shared/patientSignals.ts —
 // duplicado de propósito (é só apresentação, a fonte de verdade é o extrator no backend).
+// Dado de exemplo — só aparece pra conta sem consulta gravada ainda, sempre
+// com selo "Exemplo" visível. Mostra a FORMA do valor (os mesmos dois
+// gráficos mais diferenciados do painel) antes do médico ter dado real.
+const EXAMPLE_STAGE_DATA = [
+  { stage: 'Não sabe do problema', quantidade: 2 },
+  { stage: 'Sabe do problema', quantidade: 5 },
+  { stage: 'Compara soluções', quantidade: 3 },
+  { stage: 'Pronto para agendar', quantidade: 1 },
+];
+const EXAMPLE_OBJECTION_DATA = [
+  { category: 'Medo do procedimento/efeitos', quantidade: 6 },
+  { category: 'Preço/custo', quantidade: 4 },
+  { category: 'Precisa pensar', quantidade: 3 },
+];
+
 const OBJECTION_LABEL: Record<string, string> = {
   price_cost: 'Preço/custo', fear_procedure_side_effects: 'Medo do procedimento/efeitos',
   need_think_it_over: 'Precisa pensar', family_spouse_approval: 'Aprovação de família/cônjuge',
@@ -467,8 +482,58 @@ export default function Insights() {
       </section>
 
       {empty ? (
-        <div className="border border-dashed border-border rounded-xl p-12 text-center text-muted-foreground">
-          Ainda sem dado suficiente. Grave algumas consultas e volte aqui.
+        <div className="space-y-6">
+          <div className="border border-dashed border-border rounded-xl p-5 text-center text-muted-foreground text-sm">
+            Ainda sem dado suficiente. Grave algumas consultas e volte aqui — enquanto isso, veja um
+            exemplo de como este painel fica com uso real:
+          </div>
+          <section className="border border-dashed border-border/60 rounded-xl p-5 opacity-90">
+            <div className="flex items-center gap-2 mb-1">
+              <Target className="h-4 w-4 text-muted-foreground" />
+              <h2 className="font-serif text-xl">Em que estágio do funil você mais fala</h2>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-semibold uppercase tracking-wide">Exemplo</span>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Se um estágio aparece muito abaixo dos outros, seu conteúdo tem um ponto cego — ex.: gerar
+              muito "não sabe do problema" e quase nada "pronto para agendar" deixa pacientes prontos sem
+              o empurrão final.
+            </p>
+            <ChartContainer
+              config={{ quantidade: { label: 'Temas', color: 'hsl(var(--muted-foreground))' } }}
+              className="aspect-auto h-56 w-full"
+            >
+              <BarChart data={EXAMPLE_STAGE_DATA} layout="vertical" margin={{ left: 8, right: 16 }}>
+                <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+                <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} />
+                <YAxis type="category" dataKey="stage" tickLine={false} axisLine={false} width={140} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="quantidade" fill="var(--color-quantidade)" radius={4} />
+              </BarChart>
+            </ChartContainer>
+          </section>
+          <section className="border border-dashed border-border/60 rounded-xl p-5 opacity-90">
+            <div className="flex items-center gap-2 mb-1">
+              <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+              <h2 className="font-serif text-xl">Objeções mais frequentes dos seus pacientes</h2>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-semibold uppercase tracking-wide">Exemplo</span>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Extraído automaticamente da fala do paciente durante a consulta (transcrição já anonimizada,
+              nunca texto literal) — antecipar essas objeções no conteúdo ajuda a desarmá-las antes da consulta.
+            </p>
+            <ChartContainer
+              config={{ quantidade: { label: 'Ocorrências', color: 'hsl(var(--muted-foreground))' } }}
+              className="aspect-auto h-56 w-full"
+            >
+              <BarChart data={EXAMPLE_OBJECTION_DATA} layout="vertical" margin={{ left: 8, right: 16 }}>
+                <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+                <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} />
+                <YAxis type="category" dataKey="category" tickLine={false} axisLine={false} width={160} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="quantidade" fill="var(--color-quantidade)" radius={4} />
+              </BarChart>
+            </ChartContainer>
+          </section>
         </div>
       ) : (
         <>
