@@ -1,6 +1,8 @@
-import { Target, Heart, Package, Lightbulb } from 'lucide-react';
+import { Target, Heart, Package, Lightbulb, Gauge } from 'lucide-react';
 import { OBJECTION_LABEL, SENTIMENT_LABEL } from '@/lib/contentFormats';
+import { predictCloseProbability, MIN_SAMPLE_CLOSE_PROBABILITY } from '@/lib/closeProbability';
 import type { PatientSignal, SessionCommercialIntelligence, Product } from '@/types/session';
+import type { CommercialIntelligenceWithMeta } from '@/lib/db';
 
 // Resumo pra usar AINDA NA SALA com o paciente — não é a mesma coisa que a aba
 // "Comercial" completa (que fica lá embaixo, com todo o detalhe pós-consulta).
@@ -17,11 +19,16 @@ function fmtPrice(product: Product | undefined): string | null {
 }
 
 export default function ClosingSummaryCard({
-  signals, commercial, products,
+  signals, commercial, products, history = [], allSignals = [],
 }: {
   signals: PatientSignal[];
   commercial: SessionCommercialIntelligence | null;
   products: Product[];
+  // Histórico completo do médico (todas as consultas) — só pra alimentar a
+  // previsão de fechamento abaixo. Opcionais: sem eles, o card funciona igual,
+  // só sem a previsão (nunca quebra por causa de um dado a mais que faltou).
+  history?: CommercialIntelligenceWithMeta[];
+  allSignals?: PatientSignal[];
 }) {
   const topObjection = [...signals].filter(s => s.kind === 'objection').sort((a, b) => b.confidence - a.confidence)[0];
   const topSentiment = [...signals].filter(s => s.kind === 'sentiment').sort((a, b) => b.confidence - a.confidence)[0];
@@ -29,6 +36,8 @@ export default function ClosingSummaryCard({
   const bestProduct = bestUpsell?.produtoCatalogoId ? products.find(p => p.id === bestUpsell.produtoCatalogoId) : undefined;
   const price = fmtPrice(bestProduct);
   const pitch = commercial?.argumentoRecomendadoProximoContato || topSentiment?.actionTip || topObjection?.actionTip;
+  const prediction = predictCloseProbability(history, allSignals, topObjection?.category, topSentiment?.category);
+  const showPredictionGap = !!((topObjection || topSentiment) && !prediction);
 
   const hasAnything = !!(topObjection || topSentiment || bestUpsell || pitch);
   if (!hasAnything) return null;
@@ -77,11 +86,28 @@ export default function ClosingSummaryCard({
       </div>
 
       {pitch && (
-        <div className="border border-primary/40 bg-primary/10 rounded-lg p-3">
+        <div className="border border-primary/40 bg-primary/10 rounded-lg p-3 mb-3">
           <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-primary mb-1">
             <Lightbulb className="h-3 w-3" /> Argumento pra usar agora
           </div>
           <p className="text-sm">{pitch}</p>
+        </div>
+      )}
+
+      {prediction && (
+        <div className="border border-border/60 rounded-lg p-3 flex items-center gap-3">
+          <Gauge className="h-4 w-4 text-muted-foreground shrink-0" />
+          <p className="text-xs text-muted-foreground">
+            Histórico com esse mesmo padrão (objeção + sentimento): <span className="font-medium text-foreground">{prediction.probability}% fecharam</span> em {prediction.sample} casos parecidos.
+          </p>
+        </div>
+      )}
+      {showPredictionGap && (
+        <div className="border border-dashed border-border/60 rounded-lg p-3 flex items-center gap-3">
+          <Gauge className="h-4 w-4 text-muted-foreground shrink-0" />
+          <p className="text-xs text-muted-foreground">
+            Ainda sem dado suficiente pra prever a chance de fechar com esse padrão específico (precisa de pelo menos {MIN_SAMPLE_CLOSE_PROBABILITY} casos parecidos no histórico).
+          </p>
         </div>
       )}
     </div>

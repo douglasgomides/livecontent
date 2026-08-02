@@ -3,7 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import type { Session, SessionStatus, SessionCommercialIntelligence, PatientSignal, Product } from '@/types/session';
 import { getSession, upsertSession } from '@/lib/storage';
 import { retryPipeline } from '@/lib/pipeline';
-import { fetchCommercialIntelligenceForSession, updateUpsellOpportunityStatus, fetchPatientSignalsForSession, fetchProducts } from '@/lib/db';
+import { fetchCommercialIntelligenceForSession, updateUpsellOpportunityStatus, fetchPatientSignalsForSession, fetchProducts, fetchAllCommercialIntelligence, fetchPatientSignals, type CommercialIntelligenceWithMeta } from '@/lib/db';
 import { loadBrain } from '@/lib/brainStorage';
 import { useStoreVersion, getUserId } from '@/lib/store';
 import { toast } from 'sonner';
@@ -57,6 +57,8 @@ export default function SessionDetail() {
   const [commercialLoading, setCommercialLoading] = useState(true);
   const [signals, setSignals] = useState<PatientSignal[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [history, setHistory] = useState<CommercialIntelligenceWithMeta[]>([]);
+  const [allSignals, setAllSignals] = useState<PatientSignal[]>([]);
 
   const stages = useMemo(() => session ? stagesFor(session.source) : ALL_STAGES, [session?.source]);
   const setSession = (s: Session | null) => { if (s) upsertSession(s); };
@@ -85,6 +87,17 @@ export default function SessionDetail() {
     fetchPatientSignalsForSession(session.id).then(setSignals).catch(() => setSignals([]));
     const uid = getUserId();
     if (uid) fetchProducts(uid).then(setProducts).catch(() => setProducts([]));
+  }, [session?.id, session?.status]);
+
+  // Histórico completo do médico (todas as consultas) só pra alimentar a
+  // previsão de probabilidade de fechamento — best-effort, nunca bloqueia.
+  useEffect(() => {
+    if (!session || session.status !== 'ready') return;
+    if (session.source !== 'recording' && session.source !== 'upload') return;
+    const uid = getUserId();
+    if (!uid) return;
+    fetchAllCommercialIntelligence(uid).then(setHistory).catch(() => setHistory([]));
+    fetchPatientSignals(uid).then(setAllSignals).catch(() => setAllSignals([]));
   }, [session?.id, session?.status]);
 
   const markUpsellStatus = async (index: number, status: 'aceito' | 'recusado') => {
@@ -151,7 +164,7 @@ export default function SessionDetail() {
       </div>
 
       {showCommercial && session.status === 'ready' && (
-        <ClosingSummaryCard signals={signals} commercial={commercial} products={products} />
+        <ClosingSummaryCard signals={signals} commercial={commercial} products={products} history={history} allSignals={allSignals} />
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
