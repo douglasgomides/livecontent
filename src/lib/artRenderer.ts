@@ -93,10 +93,10 @@ function ensureFonts(): Promise<void> {
       const anyDoc = document as any;
       if (anyDoc.fonts?.load) {
         await Promise.all([
-          anyDoc.fonts.load('700 96px "Syne"'),
-          anyDoc.fonts.load('800 96px "Syne"'),
-          anyDoc.fonts.load('400 32px "Plus Jakarta Sans"'),
-          anyDoc.fonts.load('600 28px "Plus Jakarta Sans"'),
+          anyDoc.fonts.load('600 96px "Source Serif 4"'),
+          anyDoc.fonts.load('700 96px "Source Serif 4"'),
+          anyDoc.fonts.load('400 32px "Public Sans"'),
+          anyDoc.fonts.load('600 28px "Public Sans"'),
         ]);
       }
     } catch { /* noop */ }
@@ -130,8 +130,8 @@ export function renderSlideToPng(slide: ArtworkSlide, artwork: Artwork, brain?: 
   const bg = brand?.colorBackground || '#0A0A0A';
   const primary = brand?.colorPrimary || '#C9A84C';
   const text = brand?.colorText || '#F5F0E8';
-  const serif = '"Syne", "Plus Jakarta Sans", system-ui, sans-serif';
-  const sans = '"Plus Jakarta Sans", Inter, system-ui, sans-serif';
+  const serif = '"Source Serif 4", Georgia, serif';
+  const sans = '"Public Sans", Inter, system-ui, sans-serif';
 
   const W = artwork.width;
   const H = artwork.height;

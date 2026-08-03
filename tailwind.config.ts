@@ -70,9 +70,9 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
-        serif: ['Syne', '"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
-        display: ['Syne', '"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        sans: ['"Public Sans"', 'Inter', 'system-ui', 'sans-serif'],
+        serif: ['"Source Serif 4"', 'Georgia', 'serif'],
+        display: ['"Source Serif 4"', 'Georgia', 'serif'],
         mono: ['ui-monospace', 'SF Mono', 'Menlo', 'monospace'],
       },
       backgroundImage: {

@@ -29,7 +29,7 @@ Read `references/design-tokens.md` once if you haven't already in this session �
 
 **Status pills**: `text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground uppercase` for neutral state labels; swap `bg-secondary`/`text-muted-foreground` for `bg-primary/5` + `text-primary` (or `border-primary/40 bg-primary/5`) when the state deserves attention (an AI suggestion, a pending action).
 
-**Primary action button**: `className="bg-gold-gradient text-primary-foreground"`. Despite the name, this is the primary blue gradient, not gold — it's a legacy class name from an earlier palette. Don't rename it without flagging it to the user first; it's used everywhere.
+**Primary action button**: `className="bg-gold-gradient text-primary-foreground"`. Despite the name, this is the primary indigo gradient, not gold — it's a legacy class name from an even earlier palette (predating even the blue one this app had before). Deliberately NOT renamed during the indigo rebrand either — it's used in 30+ places (`bg-gold-gradient`, plus `.text-gold`/`.bg-gold`/`.border-gold`/`.gold-shadow`/`.gold-hairline` utilities in `src/index.css`), all already resolve through `hsl(var(--primary))` so they picked up the new color automatically. Don't rename any of them without flagging it to the user first — it'd touch every primary button in the codebase for a purely cosmetic reason.
 
 **Numeric stat tile**: label in `text-xs text-muted-foreground uppercase tracking-wide`, value in `text-xl font-serif` (or `text-2xl`/`text-4xl` for a hero number). Any column of numbers that need to line up — tables, side-by-side stat tiles — gets `tabular-nums` on the value.
 
@@ -42,10 +42,10 @@ Before assuming a pattern for something new (a modal, a wizard step, an empty st
 ## Typography
 
 Two typefaces, used with intent, not interchangeably:
-- **Syne** (`font-serif` / `font-display` in Tailwind config — same font, both names point to it) — page titles, section headers, hero numbers, anything that should feel like a confident headline.
-- **Plus Jakarta Sans** (`font-sans`, the default body font — no class needed) — everything else: body copy, form labels, table cells, buttons.
+- **Source Serif 4** (`font-serif` / `font-display` in Tailwind config — same font, both names point to it) — page titles, section headers, hero numbers, anything that should feel like a confident, editorial headline. This is what carries the "Autoridade Discreta" register — don't let it get crowded out by bold sans-serif everywhere.
+- **Public Sans** (`font-sans`, the default body font — no class needed) — everything else: body copy, form labels, table cells, buttons.
 
-Don't reach for a third typeface or a heavier/lighter weight than what's already in use for a given role — the Google Fonts `<link>` in `index.html` only loads specific weights (Syne 500–800, Plus Jakarta Sans 400–800); an unlisted weight silently falls back to the nearest loaded one or the system font, which is a real visual bug, not a stylistic choice.
+Don't reach for a third typeface or a heavier/lighter weight than what's already in use for a given role — the Google Fonts `<link>` in `index.html` only loads specific weights (Source Serif 4 400–700 with optical sizing, Public Sans 400–800); an unlisted weight silently falls back to the nearest loaded one or the system font, which is a real visual bug, not a stylistic choice.
 
 ## Color
 
@@ -74,7 +74,8 @@ Specifically watch for these, since they're easy to reach for by default and the
 - A purple-to-blue gradient hero, or any gradient beyond the existing `bg-gold-gradient` primary button
 - Centering everything — this app's layouts are left-aligned and grid/flex-based
 - Emoji as section markers or bullets (lucide icons only, see above)
-- Introducing a new accent color for "visual interest" — the accent is the one blue `--primary`; secondary emphasis comes from `--success`/`--warning`/`--destructive` used *semantically* (a real success/warning/error state), never decoratively
+- Introducing a new accent color for "visual interest" — the accent is the one indigo `--primary`; secondary emphasis comes from `--success`/`--warning`/`--destructive` used *semantically* (a real success/warning/error state), never decoratively
+- Sliding back toward the generic bright-blue "default SaaS" look this palette was deliberately moved away from — the whole point of `--primary` at `230 43% 32%` (indigo, muted, deliberately more grave than a bright link-blue) is to read as a precision clinical instrument, not an unstyled dashboard. If a mockup looks like it could be any B2B SaaS product, that's a sign to pull back toward the muted, editorial register, not push further into saturation.
 
 ## Verify visually before calling it done
 
