@@ -6,6 +6,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { toFriendlyMessage } from '@/lib/friendlyError';
 import type { BrandPhoto, BrandPhotoCategory } from '@/types/session';
 import { fetchBrandPhotos, uploadBrandPhoto, deleteBrandPhoto, getBrandPhotoSignedUrl } from '@/lib/db';
 import { getUserId } from '@/lib/store';
@@ -38,7 +39,7 @@ export default function BrandPhotos() {
       const entries = await Promise.all(list.map(async p => [p.id, await getBrandPhotoSignedUrl(p.storagePath)] as const));
       setUrls(Object.fromEntries(entries));
     } catch (err: any) {
-      toast.error(`Falha ao carregar fotos: ${err?.message ?? err}`);
+      toast.error(toFriendlyMessage(err, 'Não foi possível carregar as fotos agora.'));
     } finally {
       setLoading(false);
     }
@@ -63,7 +64,7 @@ export default function BrandPhotos() {
       toast.success('Foto adicionada');
       refresh();
     } catch (err: any) {
-      toast.error(`Falha ao subir: ${err?.message ?? err}`);
+      toast.error(toFriendlyMessage(err, 'Não foi possível enviar a foto agora.'));
     } finally {
       setUploading(false);
     }
@@ -75,7 +76,7 @@ export default function BrandPhotos() {
       setPhotos(p => p.filter(x => x.id !== photo.id));
       toast.success('Removida');
     } catch (err: any) {
-      toast.error(`Falha ao remover: ${err?.message ?? err}`);
+      toast.error(toFriendlyMessage(err, 'Não foi possível remover a foto agora.'));
     }
   };
 

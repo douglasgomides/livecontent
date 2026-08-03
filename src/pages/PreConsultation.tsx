@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, ClipboardList, Copy, Check, Link2, Scissors } from 'lucide-react';
 import { toast } from 'sonner';
+import { toFriendlyMessage } from '@/lib/friendlyError';
 import { Button } from '@/components/ui/button';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -41,7 +42,7 @@ export default function PreConsultation() {
       setSessions(sessList);
       setCustomFields(fields);
     } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao carregar respostas');
+      toast.error(toFriendlyMessage(err, 'Não foi possível carregar as respostas agora.'));
     } finally {
       setLoading(false);
     }
@@ -63,7 +64,7 @@ export default function PreConsultation() {
       const s = await createOrGetShortLink(uid, link);
       setShortUrl(`${window.location.origin}/s/${s.slug}`);
     } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao encurtar link');
+      toast.error(toFriendlyMessage(err, 'Não foi possível encurtar o link agora.'));
     } finally {
       setShortening(false);
     }
@@ -84,7 +85,7 @@ export default function PreConsultation() {
       await refresh();
       toast.success('Vinculado à consulta');
     } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao vincular');
+      toast.error(toFriendlyMessage(err, 'Não foi possível vincular à consulta agora.'));
     } finally {
       setLinking(null);
     }

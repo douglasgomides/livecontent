@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Download, ImageOff, Film, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { toFriendlyMessage } from '@/lib/friendlyError';
 
 export default function PieceArtwork({ piece, brain, onChange }: {
   piece: ContentPiece;
@@ -59,7 +60,7 @@ export default function PieceArtwork({ piece, brain, onChange }: {
         toast.success('Arte gerada');
       }
     } catch (err: any) {
-      toast.error(`Falha ao gerar arte: ${err?.message ?? err}`);
+      toast.error(toFriendlyMessage(err, 'Não foi possível gerar a arte agora. Tente de novo em instantes.'));
     } finally {
       setGenerating(false);
     }

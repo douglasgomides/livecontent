@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, ListPlus, Trash2, ArrowUp, ArrowDown, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { toFriendlyMessage } from '@/lib/friendlyError';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -42,7 +43,7 @@ function FormBuilder({ formType, baseFieldsNote }: { formType: CustomFormType; b
     try {
       setFields(await fetchCustomFormFields(uid, formType));
     } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao carregar campos');
+      toast.error(toFriendlyMessage(err, 'Não foi possível carregar os campos agora.'));
     } finally {
       setLoading(false);
     }
@@ -64,7 +65,7 @@ function FormBuilder({ formType, baseFieldsNote }: { formType: CustomFormType; b
       await refresh();
       toast.success('Campo adicionado');
     } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao adicionar campo');
+      toast.error(toFriendlyMessage(err, 'Não foi possível adicionar o campo agora.'));
     } finally {
       setAdding(false);
     }
@@ -82,7 +83,7 @@ function FormBuilder({ formType, baseFieldsNote }: { formType: CustomFormType; b
       ]);
       await refresh();
     } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao reordenar');
+      toast.error(toFriendlyMessage(err, 'Não foi possível reordenar os campos agora.'));
     } finally {
       setBusyId(null);
     }
@@ -95,7 +96,7 @@ function FormBuilder({ formType, baseFieldsNote }: { formType: CustomFormType; b
       await refresh();
       toast.success('Campo removido');
     } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao remover');
+      toast.error(toFriendlyMessage(err, 'Não foi possível remover o campo agora.'));
     } finally {
       setBusyId(null);
     }

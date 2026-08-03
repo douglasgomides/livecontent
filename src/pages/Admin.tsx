@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ShieldAlert, Loader2, Users, FileText, Sparkles, Crown, TrendingUp } from 'lucide-react';
 import { fetchAdminOverview, fetchCommercialIntelligenceReport, type AdminOverview, type CommercialIntelligenceReport } from '@/lib/pipeline';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toFriendlyMessage } from '@/lib/friendlyError';
 
 const ARG_CATEGORY_LABEL: Record<string, string> = {
   autoridade: 'Autoridade', prova_social: 'Prova social', urgencia: 'Urgência',
@@ -35,13 +36,13 @@ export default function Admin() {
       .catch((err: any) => {
         const msg = err?.message ?? String(err);
         if (msg.includes('Forbidden') || msg.includes('403') || msg.includes('não é admin')) setForbidden(true);
-        else setError(msg);
+        else setError(toFriendlyMessage(err, 'Não foi possível carregar o painel administrativo agora.'));
       })
       .finally(() => setLoading(false));
 
     fetchCommercialIntelligenceReport()
       .then(setCommercial)
-      .catch((err: any) => setCommercialError(err?.message ?? String(err)))
+      .catch((err: any) => setCommercialError(toFriendlyMessage(err, 'Não foi possível carregar a inteligência comercial agora.')))
       .finally(() => setCommercialLoading(false));
   }, []);
 

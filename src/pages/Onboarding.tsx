@@ -98,7 +98,7 @@ export default function Onboarding() {
               <div>
                 <p className="text-primary text-xs tracking-[0.3em] uppercase mb-3">Passo 4 de 4</p>
                 <h2 className="font-serif text-4xl mb-3">Tom de voz</h2>
-                <p className="text-muted-foreground">A gente usa isso em toda geração.</p>
+                <p className="text-muted-foreground">Usado em toda geração de conteúdo.</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {TONES.map(t => (

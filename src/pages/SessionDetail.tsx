@@ -7,6 +7,7 @@ import { fetchCommercialIntelligenceForSession, updateUpsellOpportunityStatus, f
 import { loadBrain } from '@/lib/brainStorage';
 import { useStoreVersion, getUserId } from '@/lib/store';
 import { toast } from 'sonner';
+import { toFriendlyMessage } from '@/lib/friendlyError';
 
 import AnonymizationReview from '@/components/session/AnonymizationReview';
 import TopicsReview from '@/components/session/TopicsReview';
@@ -110,7 +111,7 @@ export default function SessionDetail() {
         oportunidadesUpsell: prev.oportunidadesUpsell.map((u, i) => i === index ? { ...u, status } : u),
       });
     } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao marcar oportunidade');
+      toast.error(toFriendlyMessage(err, 'Não foi possível marcar a oportunidade agora.'));
     }
   };
 
@@ -256,7 +257,7 @@ export default function SessionDetail() {
                             await retryPipeline(session.id);
                             toast.success('Pipeline reiniciado');
                           } catch (err: any) {
-                            toast.error(`Falhou ao reiniciar: ${err?.message ?? err}`);
+                            toast.error(toFriendlyMessage(err, 'Não foi possível reiniciar o pipeline agora.'));
                           } finally {
                             setRetrying(false);
                           }

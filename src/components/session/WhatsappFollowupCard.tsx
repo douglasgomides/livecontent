@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { deriveClosingSummary } from '@/lib/closingSummary';
+import { toFriendlyMessage } from '@/lib/friendlyError';
 import {
   fetchPreConsultationForSession, fetchWhatsappFollowupForSession, createWhatsappFollowup,
   updateWhatsappFollowupMessage, approveAndSendWhatsappFollowup,
@@ -97,7 +98,7 @@ export default function WhatsappFollowupCard({
       await persistDraft();
       toast.success('Rascunho salvo');
     } catch (err: any) {
-      toast.error(err?.message ?? 'Não deu pra salvar o rascunho');
+      toast.error(toFriendlyMessage(err, 'Não deu pra salvar o rascunho agora. Tente de novo em instantes.'));
     } finally {
       setBusy(false);
     }
@@ -116,7 +117,7 @@ export default function WhatsappFollowupCard({
         setFollowup(prev => prev && { ...prev, status: 'sent' });
       }
     } catch (err: any) {
-      toast.error(err?.message ?? 'Não deu pra enviar agora');
+      toast.error(toFriendlyMessage(err, 'Não deu pra enviar agora. Tente de novo em instantes.'));
     } finally {
       setBusy(false);
     }

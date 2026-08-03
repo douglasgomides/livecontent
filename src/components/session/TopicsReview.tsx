@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import FormatPicker from './FormatPicker';
 import ViralityBadge from '@/components/ViralityBadge';
 import { FUNNEL_STAGE_LABEL } from '@/lib/contentFormats';
+import { toFriendlyMessage } from '@/lib/friendlyError';
 
 const STAGES: Topic['funnelStage'][] = ['C0', 'C1', 'C2', 'C3'];
 
@@ -40,7 +41,7 @@ export default function TopicsReview({ session, onConfirm }: { session: Session;
       const virality = await scoreViralityRemote({ title: t.title, text: t.summary, contentType: 'tema' });
       update(t.id, { virality });
     } catch (err: any) {
-      toast.error(`Falha ao reavaliar potencial: ${err?.message ?? err}`);
+      toast.error(toFriendlyMessage(err, 'Não foi possível reavaliar o potencial agora.'));
     } finally {
       setRescoringId(null);
     }
@@ -72,9 +73,9 @@ export default function TopicsReview({ session, onConfirm }: { session: Session;
       // segundos) — o status da sessão já mudou, a tela de processamento
       // acompanha o resto.
       const referenceStyleId = styleId !== 'none' ? styleId : undefined;
-      runPipeline(session.id, formats, referenceStyleId).catch(err => toast.error(`Falha ao gerar conteúdo: ${err?.message ?? err}`));
+      runPipeline(session.id, formats, referenceStyleId).catch(err => toast.error(toFriendlyMessage(err, 'Não foi possível gerar o conteúdo agora.')));
     } catch (err: any) {
-      toast.error(`Falha ao salvar os temas: ${err?.message ?? err}`);
+      toast.error(toFriendlyMessage(err, 'Não foi possível salvar os temas agora.'));
     } finally {
       setSaving(false);
     }

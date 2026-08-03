@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, UserPlus, Copy, Check, Link2, Instagram, MessageCircle, Users, ChevronRight, X, CalendarClock, StickyNote, Sparkles, Scissors } from 'lucide-react';
 import { toast } from 'sonner';
+import { toFriendlyMessage } from '@/lib/friendlyError';
 import { Button } from '@/components/ui/button';
 import {
   fetchLeadCaptures, updateLeadCaptureStatus, fetchRecentSessionsForLinking, createOrGetShortLink,
@@ -29,7 +30,7 @@ const COLUMN_ORDER: LeadStatus[] = ['novo', 'contatado', 'agendado', 'convertido
 
 const LINK_VARIANTS: { origin: LeadOrigin; label: string; icon: typeof Instagram }[] = [
   { origin: 'instagram', label: 'Pra bio do Instagram', icon: Instagram },
-  { origin: 'whatsapp', label: 'Pra mandar direto por WhatsApp', icon: MessageCircle },
+  { origin: 'whatsapp', label: 'Pra enviar direto por WhatsApp', icon: MessageCircle },
   { origin: 'indicacao', label: 'Pra pedir indicação', icon: Users },
 ];
 
@@ -68,7 +69,7 @@ export default function LeadCaptures() {
       setSessions(sessList);
       setPendingDraftIds(draftIds);
     } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao carregar leads');
+      toast.error(toFriendlyMessage(err, 'Não foi possível carregar os leads agora.'));
     } finally {
       setLoading(false);
     }
@@ -90,7 +91,7 @@ export default function LeadCaptures() {
       const s = await createOrGetShortLink(uid, `${baseLink}?origem=${origin}`);
       setShortUrls(prev => ({ ...prev, [origin]: `${window.location.origin}/s/${s.slug}` }));
     } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao encurtar link');
+      toast.error(toFriendlyMessage(err, 'Não foi possível encurtar o link agora.'));
     } finally {
       setShorteningOrigin(null);
     }
@@ -114,7 +115,7 @@ export default function LeadCaptures() {
       await updateLeadCaptureStatus(lead.id, next);
       await refresh();
     } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao mover etapa');
+      toast.error(toFriendlyMessage(err, 'Não foi possível mover para a próxima etapa agora.'));
     } finally {
       setBusyId(null);
     }
@@ -126,7 +127,7 @@ export default function LeadCaptures() {
       await updateLeadCaptureStatus(lead.id, 'perdido');
       await refresh();
     } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao marcar como perdido');
+      toast.error(toFriendlyMessage(err, 'Não foi possível marcar como perdido agora.'));
     } finally {
       setBusyId(null);
     }

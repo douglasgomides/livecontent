@@ -100,7 +100,7 @@ export default function Auth() {
             {mode === 'signin' ? 'Entrar' : 'Criar conta'}
           </h1>
           <p className="text-muted-foreground mt-2 text-sm">
-            {mode === 'signin' ? 'Acesse sua máquina de conteúdo.' : 'Sua máquina de conteúdo médico começa aqui.'}
+            {mode === 'signin' ? 'Acesse sua conta.' : 'Sua produção de conteúdo médico começa aqui.'}
           </p>
         </div>
 

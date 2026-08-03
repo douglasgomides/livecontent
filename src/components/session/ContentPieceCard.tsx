@@ -9,6 +9,7 @@ import { rescoreContent } from '@/lib/pipeline';
 import { FORMAT_LABEL, FORMAT_ICON, EXPORT_MODE } from '@/lib/contentFormats';
 import { Copy, CheckCircle2, AlertTriangle, ShieldAlert, RefreshCw, Download, Loader2, Share2, Pencil, Eye } from 'lucide-react';
 import { toast } from 'sonner';
+import { toFriendlyMessage } from '@/lib/friendlyError';
 import PieceArtwork from './PieceArtwork';
 import PieceAvatarVideo from './PieceAvatarVideo';
 import PiecePrompts from './PiecePrompts';
@@ -44,7 +45,7 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, unver
       onChange(updated);
       toast.success('Conformidade e potencial de viralização reavaliados');
     } catch (err: any) {
-      toast.error(`Falha ao reavaliar: ${err?.message ?? err}`);
+      toast.error(toFriendlyMessage(err, 'Não foi possível reavaliar a conformidade e o potencial agora.'));
     } finally {
       setRescoring(false);
     }

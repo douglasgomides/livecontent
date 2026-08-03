@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/popover';
 import { ChevronLeft, ChevronRight, Plus, Sparkles, Send, X, ArrowRight, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { toFriendlyMessage } from '@/lib/friendlyError';
 
 const WEBHOOK_CHANNELS = new Set<ContentChannel>(['instagram', 'linkedin', 'youtube', 'tiktok', 'podcast']);
 
@@ -388,7 +389,7 @@ function ScheduledRow({ item, onChange }: { item: ScheduledPost; onChange: () =>
           toast.error(`Falhou: ${(data as any)?.message || 'erro'}`);
         }
       } catch (err: any) {
-        toast.error(`Erro: ${err?.message ?? err}`);
+        toast.error(toFriendlyMessage(err, 'Não foi possível publicar agora. Tente de novo em instantes.'));
       } finally {
         setBusy(false);
         onChange();

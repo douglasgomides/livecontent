@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Megaphone, Sparkles, Check, X, Instagram, Facebook, Wand2, Download, Copy, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { toFriendlyMessage } from '@/lib/friendlyError';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -50,7 +51,7 @@ export default function Ads() {
       const urls = await Promise.all(creativesRes.map(c => getAdCreativeSignedUrl(c.imagePath).catch(() => '')));
       setCreativeUrls(Object.fromEntries(creativesRes.map((c, i) => [c.id, urls[i]])));
     } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao carregar anúncios');
+      toast.error(toFriendlyMessage(err, 'Não foi possível carregar os anúncios agora.'));
     } finally {
       setLoading(false);
     }
@@ -75,7 +76,7 @@ export default function Ads() {
       setCreativePrompt('');
       toast.success('Criativo gerado');
     } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao gerar criativo');
+      toast.error(toFriendlyMessage(err, 'Não foi possível gerar o criativo agora.'));
     } finally {
       setGeneratingCreative(false);
     }
@@ -99,7 +100,7 @@ export default function Ads() {
       setCreatives(prev => prev.filter(x => x.id !== c.id));
       toast.success('Criativo removido');
     } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao remover');
+      toast.error(toFriendlyMessage(err, 'Não foi possível remover o criativo agora.'));
     }
   };
 
@@ -113,7 +114,7 @@ export default function Ads() {
       await refresh();
       toast.success(status === 'aceita' ? 'Marcado como aceito' : 'Sugestão descartada');
     } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao atualizar sugestão');
+      toast.error(toFriendlyMessage(err, 'Não foi possível atualizar a sugestão agora.'));
     } finally {
       setBusyId(null);
     }
@@ -145,7 +146,7 @@ export default function Ads() {
         <p className="text-xs text-muted-foreground">
           Descreva o que quer anunciar — a IA gera a imagem (fundo decorativo, sem texto embutido)
           e o texto do anúncio (headline, texto principal, descrição). Você baixa a imagem e cola o
-          texto direto no Gerenciador de Anúncios; a gente não cria nem publica campanha nenhuma.
+          texto direto no Gerenciador de Anúncios; o Consulta Creator não cria nem publica campanha nenhuma.
         </p>
         <div className="flex flex-col md:flex-row gap-2">
           <Textarea

@@ -8,6 +8,7 @@ import { upsertSession } from '@/lib/storage';
 import { createBlankSession, uploadAudioForSession, runPipeline } from '@/lib/pipeline';
 import { useAudioRecorder, extFromMimeType } from '@/hooks/useAudioRecorder';
 import { toast } from 'sonner';
+import { toFriendlyMessage } from '@/lib/friendlyError';
 
 // Sessões de consulta raramente passam de 1h — limite evita arquivos gigantes
 // e serve de rede de segurança mesmo com o bitrate já controlado no hook.
@@ -31,11 +32,11 @@ export default function Recording() {
       // fire-and-forget: Realtime updates UI stepwise
       runPipeline(session.id).catch(err => {
         console.error('[pipeline]', err);
-        toast.error(`Falha ao iniciar pipeline: ${err?.message ?? err}`);
+        toast.error(toFriendlyMessage(err, 'Não foi possível iniciar o pipeline agora.'));
       });
       nav(`/app/session/${session.id}`);
     } catch (err: any) {
-      toast.error(`Falha no upload: ${err?.message ?? err}`);
+      toast.error(toFriendlyMessage(err, 'Não foi possível enviar a gravação agora. Tente de novo em instantes.'));
       setUploading(false);
     }
   };

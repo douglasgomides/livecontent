@@ -46,7 +46,7 @@ const steps = [
 ];
 
 const benefits = [
-  { icon: Zap, title: 'Ela trabalha enquanto você atende', text: 'Enquanto você está com o próximo paciente, a máquina já está extraindo temas, gerando peças e atualizando sua biblioteca de tendências.' },
+  { icon: Zap, title: 'Enquanto você atende, o conteúdo já está sendo produzido', text: 'No tempo entre uma consulta e outra, os temas já foram extraídos, as peças geradas e a biblioteca de tendências atualizada — pronto pra você revisar quando parar.' },
   { icon: ShieldCheck, title: 'Conformidade CFM verificada em cada peça', text: 'Score automático contra as Resoluções 1.974/2011, 2.126/2015 e 2.336/2023 antes de aprovar.' },
   { icon: TrendingUp, title: 'Cada consulta vira inteligência comercial', text: 'Objeções, dúvidas e sinais de compra reais dos pacientes viram argumento pro próximo contato — e oportunidade de aumentar o ticket.' },
   { icon: Wand2, title: 'No seu tom, não genérico', text: 'A Brain aprende seu perfil, seu paciente ideal e o estilo das suas peças anteriores.' },
@@ -104,13 +104,13 @@ export default function Landing() {
           </span>
         </div>
         <h1 className="t-display">
-          Inteligência artificial na produção de<br className="hidden sm:block" />{' '}
-          <span className="text-primary">conteúdo médico assertivo</span>
+          Grave a consulta.<br className="hidden sm:block" />{' '}
+          <span className="text-primary">Ela vira conteúdo médico com sua autoridade.</span>
         </h1>
         <p className="mt-5 t-lead max-w-xl mx-auto">
-          Grave a consulta, uma palestra ou cole um link — o resto é com a máquina. Ela anonimiza,
-          extrai os temas, gera conteúdo pra cada canal, lê os sinais reais dos pacientes e mantém
-          sua biblioteca de tendências sempre atualizada. Você só aprova.
+          Também funciona com palestra, áudio de WhatsApp ou um link — anonimização, extração de
+          temas, conteúdo pra cada canal e leitura dos sinais reais dos pacientes, tudo automático.
+          Você só aprova.
         </p>
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -127,7 +127,6 @@ export default function Landing() {
         </div>
 
         <div className="mt-5 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 t-micro text-muted-foreground">
-          <span className="flex items-center gap-1.5"><Sparkles className="h-3 w-3 text-primary" /> Fácil de começar</span>
           <span className="flex items-center gap-1.5"><ListChecks className="h-3 w-3 text-primary" /> Plano grátis, sem cartão</span>
           <span className="flex items-center gap-1.5"><ShieldCheck className="h-3 w-3 text-primary" /> Seus dados, sua conta</span>
         </div>
@@ -325,7 +324,7 @@ export default function Landing() {
       <section className="relative z-10 max-w-5xl mx-auto px-6 py-20">
         <div className="text-center mb-12">
           <p className="t-eyebrow mb-3">Entradas</p>
-          <h2 className="t-h2">Enquanto você respira, ela produz.</h2>
+          <h2 className="t-h2">Grave, fale ou cole um link — tudo vira conteúdo.</h2>
           <p className="mt-3 t-body text-muted-foreground max-w-xl mx-auto">
             A consulta é a estrela, mas tudo que sai da sua voz vira conteúdo — inclusive links.
           </p>

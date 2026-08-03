@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Shield, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { toFriendlyMessage } from '@/lib/friendlyError';
 
 const TYPE_LABEL = { name: 'Nome', id: 'Identificador', plan: 'Plano', address: 'Endereço', contact: 'Contato', profession: 'Profissão', other: 'Outro' } as const;
 
@@ -53,9 +54,9 @@ export default function AnonymizationReview({ session, onConfirm }: { session: S
       // O pipeline em si continua fire-and-forget (pode levar dezenas de
       // segundos) — o status da sessão já mudou, e a tela de processamento
       // (renderizada a partir dele) acompanha o resto.
-      runPipeline(session.id).catch(err => toast.error(`Falha ao extrair temas: ${err?.message ?? err}`));
+      runPipeline(session.id).catch(err => toast.error(toFriendlyMessage(err, 'Não foi possível extrair os temas agora.')));
     } catch (err: any) {
-      toast.error(`Falha ao salvar a revisão: ${err?.message ?? err}`);
+      toast.error(toFriendlyMessage(err, 'Não foi possível salvar a revisão agora.'));
     } finally {
       setSaving(false);
     }

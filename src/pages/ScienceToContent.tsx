@@ -9,6 +9,7 @@ import { upsertSession } from '@/lib/storage';
 import { createBlankSession, runPipeline, fetchTrendingTopics, type TrendingItem } from '@/lib/pipeline';
 import { loadBrain } from '@/lib/brainStorage';
 import { toast } from 'sonner';
+import { toFriendlyMessage } from '@/lib/friendlyError';
 
 type Kind = 'abstract' | 'news' | 'guideline' | 'other';
 
@@ -52,7 +53,7 @@ export default function ScienceToContent() {
       setTrendingQuery(usedQuery);
       setTrendingLoaded(true);
     } catch (err: any) {
-      toast.error(`Falha ao buscar temas em alta: ${err?.message ?? err}`);
+      toast.error(toFriendlyMessage(err, 'Não foi possível buscar temas em alta agora.'));
     } finally {
       setLoadingTrending(false);
     }
@@ -77,7 +78,7 @@ export default function ScienceToContent() {
     s.science = { reference: reference.trim(), kind, originalText: text.trim() };
     upsertSession(s);
     // Extração de tópicos e geração de conteúdo reais rodam no servidor a partir daqui.
-    runPipeline(s.id).catch(err => toast.error(`Pipeline: ${err?.message ?? err}`));
+    runPipeline(s.id).catch(err => toast.error(toFriendlyMessage(err, 'Não foi possível gerar o conteúdo agora.')));
     nav(`/app/session/${s.id}`);
   };
 

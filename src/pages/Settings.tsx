@@ -16,6 +16,7 @@ import FormatPicker from '@/components/session/FormatPicker';
 import type { Brain } from '@/types/brain';
 import type { ContentFormat } from '@/types/session';
 import { toast } from 'sonner';
+import { toFriendlyMessage } from '@/lib/friendlyError';
 
 const TONES: { id: Brain['doctor']['tone']; label: string }[] = [
   { id: 'didactic', label: 'Didático' },
@@ -102,7 +103,7 @@ export default function Settings() {
       const url = await startCheckout();
       window.location.href = url;
     } catch (err: any) {
-      toast.error(`Falha ao abrir checkout: ${err?.message ?? err}`);
+      toast.error(toFriendlyMessage(err, 'Não foi possível abrir o checkout agora.'));
       setBillingBusy(false);
     }
   };
@@ -113,7 +114,7 @@ export default function Settings() {
       const url = await openCustomerPortal();
       window.location.href = url;
     } catch (err: any) {
-      toast.error(`Falha ao abrir portal: ${err?.message ?? err}`);
+      toast.error(toFriendlyMessage(err, 'Não foi possível abrir o portal de cobrança agora.'));
       setBillingBusy(false);
     }
   };
@@ -224,7 +225,7 @@ export default function Settings() {
       localStorage.removeItem('cc_profile');
       toast.success(`Importado. ${imported} sessão(ões) enviadas para sua conta.`);
     } catch (err: any) {
-      toast.error(`Falha ao importar: ${err?.message ?? err}`);
+      toast.error(toFriendlyMessage(err, 'Não foi possível importar os dados agora.'));
     }
   };
 
@@ -349,7 +350,7 @@ export default function Settings() {
           <h2 className="font-serif text-2xl">Link de agendamento</h2>
         </div>
         <p className="text-sm text-muted-foreground">
-          Pra onde a captação de leads manda quem clica em "Agendar" — seu WhatsApp
+          Pra onde a captação de leads encaminha quem clica em "Agendar" — seu WhatsApp
           (ex: https://wa.me/5511999999999), Doctoralia, ou onde você já marca consulta hoje.
         </p>
         <Input

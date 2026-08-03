@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Send, Inbox, CheckCircle2, AlertCircle, Trash2, ArrowRight, Copy, XCircle, Clock, Loader2 } from 'lucide-react';
 import type { PublishJob, PublishStatus, ContentPiece } from '@/types/session';
 import { toast } from 'sonner';
+import { toFriendlyMessage } from '@/lib/friendlyError';
 import PublishCopyModal from '@/components/session/PublishCopyModal';
 import { stripMarkdown } from '@/components/MarkdownPreview';
 
@@ -73,7 +74,7 @@ export default function PublishQueue() {
         toast.error(`Falhou: ${(data as any)?.message || 'erro desconhecido'}`);
       }
     } catch (err: any) {
-      toast.error(`Erro ao publicar: ${err?.message ?? err}`);
+      toast.error(toFriendlyMessage(err, 'Não foi possível publicar agora. Tente de novo em instantes.'));
     } finally {
       setPublishing(p => ({ ...p, [j.id]: false }));
     }
@@ -112,7 +113,7 @@ export default function PublishQueue() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="t-h1 mb-1">Fila de publicação</h1>
-          <p className="text-muted-foreground">Tudo que já foi aprovado e mandado pra sair. Um clique por canal.</p>
+          <p className="text-muted-foreground">Tudo que já foi aprovado e está pronto pra sair. Um clique por canal.</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={copyAllVisible}><Copy className="h-3.5 w-3.5 mr-1.5" /> Copiar tudo visível</Button>

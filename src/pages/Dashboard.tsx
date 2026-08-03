@@ -123,7 +123,7 @@ export default function Dashboard() {
                 Relatório da semana de {new Date(weeklyReport.weekStart + 'T00:00:00').toLocaleDateString('pt-BR')}
               </div>
               <div className="text-xs text-muted-foreground">
-                {weeklyReport.sent ? 'Mandado pro seu WhatsApp.' : 'Ainda não mandado (configure seu WhatsApp em Ajustes).'}
+                {weeklyReport.sent ? 'Enviado pro seu WhatsApp.' : 'Ainda não enviado (configure seu WhatsApp em Ajustes).'}
               </div>
             </div>
             <button

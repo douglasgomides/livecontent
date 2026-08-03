@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { CheckCircle2, ArrowRight, ShieldAlert, Inbox, XCircle, Pencil, Eye, CalendarPlus, Send, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
+import { toFriendlyMessage } from '@/lib/friendlyError';
 import { rescoreContent } from '@/lib/pipeline';
 import { schedulePiece, SUGGESTED_TIME, buildDate } from '@/lib/scheduleStorage';
 import { enqueueJobs, recommendedChannelsForPiece } from '@/lib/publishQueue';
@@ -152,7 +153,7 @@ export default function Approvals() {
       toast.success(stillBlocked ? 'Editada — ainda com bloqueio CFM' : 'Editada — CFM liberado');
       setEditRow(null);
     } catch (err: any) {
-      toast.error(`Falha ao avaliar CFM: ${err?.message ?? err}`);
+      toast.error(toFriendlyMessage(err, 'Não foi possível avaliar a conformidade agora. Tente de novo em instantes.'));
     } finally {
       setSavingEdit(false);
     }

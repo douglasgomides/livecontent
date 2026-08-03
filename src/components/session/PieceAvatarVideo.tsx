@@ -5,6 +5,7 @@ import { fetchAvatarVideoForPiece, createAvatarVideoJob, checkAvatarVideoStatus 
 import { Button } from '@/components/ui/button';
 import { UserCircle2, Loader2, Download, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { toFriendlyMessage } from '@/lib/friendlyError';
 
 const POLL_MS = 5000;
 
@@ -52,7 +53,7 @@ export default function PieceAvatarVideo({ piece }: { piece: ContentPiece }) {
       if (created.status === 'processing') startPolling(created.id);
       toast.success('Geração iniciada — pode levar alguns minutos.');
     } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao iniciar geração do vídeo');
+      toast.error(toFriendlyMessage(err, 'Não foi possível iniciar a geração do vídeo agora.'));
     } finally {
       setGenerating(false);
     }

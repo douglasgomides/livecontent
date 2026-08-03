@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, TrendingUp, RefreshCw, Loader2, ExternalLink, Heart, MessageCircle, Bookmark, Share2, Lightbulb, X, Sparkles, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { toFriendlyMessage } from '@/lib/friendlyError';
 import { Button } from '@/components/ui/button';
 import { createBlankSession, fetchTrendingContentIdeas, runPipeline } from '@/lib/pipeline';
 import { fetchTopOwnPosts, fetchPatientSignals, updateWeeklySuggestion } from '@/lib/db';
@@ -50,6 +51,7 @@ const EXAMPLE_OWN_POSTS: SocialPostPerformance[] = [
 // resposta nenhuma. Sem isso, a tela ficava presa em "Buscando…" pra sempre,
 // sem erro e sem jeito de tentar de novo além de recarregar a página inteira.
 const SEARCH_TIMEOUT_MS = 30000;
+const SEARCH_TIMEOUT_MESSAGE = 'A busca demorou demais e foi cancelada. Tente novamente.';
 function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
   let timer: ReturnType<typeof setTimeout>;
   const timeout = new Promise<never>((_, reject) => {
@@ -79,10 +81,15 @@ export default function Trends() {
   const loadIdeas = (refresh = false) => {
     (refresh ? setRefreshing : setIdeasLoading)(true);
     setIdeasError(null);
-    withTimeout(fetchTrendingContentIdeas(refresh), SEARCH_TIMEOUT_MS, 'A busca demorou demais e foi cancelada. Tente novamente.')
+    withTimeout(fetchTrendingContentIdeas(refresh), SEARCH_TIMEOUT_MS, SEARCH_TIMEOUT_MESSAGE)
       .then(setIdeas)
       .catch(err => {
-        const msg = err?.message ?? 'Falha ao buscar tendências';
+        // O timeout já lança com uma mensagem amigável própria — só nesse caso
+        // repassamos err.message direto; qualquer outro erro passa por
+        // toFriendlyMessage pra nunca vazar detalhe técnico na tela.
+        const msg = err?.message === SEARCH_TIMEOUT_MESSAGE
+          ? SEARCH_TIMEOUT_MESSAGE
+          : toFriendlyMessage(err, 'Não foi possível buscar tendências agora.');
         setIdeasError(msg);
         toast.error(msg);
       })
@@ -116,7 +123,7 @@ export default function Trends() {
     s.title = `Objeção: ${OBJECTION_LABEL[weeklySuggestion.category] ?? weeklySuggestion.category}`;
     s.rawTranscript = buildSyntheticTranscript(weeklySuggestion);
     upsertSession(s);
-    runPipeline(s.id).catch(err => toast.error(`Falha ao gerar conteúdo: ${err?.message ?? err}`));
+    runPipeline(s.id).catch(err => toast.error(toFriendlyMessage(err, 'Não foi possível gerar o conteúdo agora.')));
     updateWeeklySuggestion(weeklySuggestion.id, { status: 'generated', sessionId: s.id }).catch(() => {});
     setWeeklySuggestion({ ...weeklySuggestion, status: 'generated', sessionId: s.id });
     nav(`/app/session/${s.id}`);
@@ -128,7 +135,7 @@ export default function Trends() {
       await updateWeeklySuggestion(weeklySuggestion.id, { status: 'dismissed' });
       setWeeklySuggestion({ ...weeklySuggestion, status: 'dismissed' });
     } catch (err: any) {
-      toast.error(`Falha ao dispensar: ${err?.message ?? err}`);
+      toast.error(toFriendlyMessage(err, 'Não foi possível dispensar a sugestão agora.'));
     }
   };
 

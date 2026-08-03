@@ -9,6 +9,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { toFriendlyMessage } from '@/lib/friendlyError';
 import type { ContentFormat, ReferenceStyle } from '@/types/session';
 import { FORMAT_LABEL, FORMAT_GROUPS } from '@/lib/contentFormats';
 import { fetchReferenceStyles, addReferenceStyle, deleteReferenceStyle, uploadReferenceImage, setDefaultReferenceStyle, unsetDefaultReferenceStyle } from '@/lib/db';
@@ -40,7 +41,7 @@ export default function ReferenceStyles() {
     try {
       setStyles(await fetchReferenceStyles(uid));
     } catch (err: any) {
-      toast.error(`Falha ao carregar biblioteca: ${err?.message ?? err}`);
+      toast.error(toFriendlyMessage(err, 'Não foi possível carregar a biblioteca agora.'));
     } finally {
       setLoading(false);
     }
@@ -92,7 +93,7 @@ export default function ReferenceStyles() {
       reset();
       refresh();
     } catch (err: any) {
-      toast.error(`Falha ao analisar: ${err?.message ?? err}`);
+      toast.error(toFriendlyMessage(err, 'Não foi possível analisar a referência agora.'));
     } finally {
       setAnalyzing(false);
     }
@@ -104,7 +105,7 @@ export default function ReferenceStyles() {
       setStyles(s => s.filter(x => x.id !== id));
       toast.success('Removido');
     } catch (err: any) {
-      toast.error(`Falha ao remover: ${err?.message ?? err}`);
+      toast.error(toFriendlyMessage(err, 'Não foi possível remover agora.'));
     }
   };
 
@@ -121,7 +122,7 @@ export default function ReferenceStyles() {
       }
       refresh();
     } catch (err: any) {
-      toast.error(`Falha ao marcar padrão: ${err?.message ?? err}`);
+      toast.error(toFriendlyMessage(err, 'Não foi possível marcar como padrão agora.'));
     }
   };
 

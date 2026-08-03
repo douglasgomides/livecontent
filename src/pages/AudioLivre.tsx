@@ -6,6 +6,7 @@ import { useAudioRecorder, extFromMimeType, MAX_AUDIO_UPLOAD_MB } from '@/hooks/
 import { upsertSession } from '@/lib/storage';
 import { createBlankSession, uploadAudioForSession, runPipeline } from '@/lib/pipeline';
 import { toast } from 'sonner';
+import { toFriendlyMessage } from '@/lib/friendlyError';
 
 type Mode = 'record' | 'upload';
 
@@ -57,10 +58,10 @@ function RecordMode({ nav }: { nav: ReturnType<typeof useNavigate> }) {
       s.audioUrl = path;
       s.status = 'transcribing';
       upsertSession(s);
-      runPipeline(s.id).catch(err => toast.error(`Pipeline: ${err?.message ?? err}`));
+      runPipeline(s.id).catch(err => toast.error(toFriendlyMessage(err, 'Não foi possível gerar o conteúdo agora.')));
       nav(`/app/session/${s.id}`);
     } catch (err: any) {
-      toast.error(`Falha: ${err?.message ?? err}`);
+      toast.error(toFriendlyMessage(err, 'Não foi possível processar o áudio agora. Tente de novo em instantes.'));
     }
   };
   const rec = useAudioRecorder({ maxSec: 60 * 60, onAutoStop: finish });
@@ -119,10 +120,10 @@ function UploadMode({ nav }: { nav: ReturnType<typeof useNavigate> }) {
         s.audioUrl = path;
         s.status = 'transcribing';
         upsertSession(s);
-        runPipeline(s.id).catch(err => toast.error(`Pipeline: ${err?.message ?? err}`));
+        runPipeline(s.id).catch(err => toast.error(toFriendlyMessage(err, 'Não foi possível gerar o conteúdo agora.')));
         nav(`/app/session/${s.id}`);
       } catch (err: any) {
-        toast.error(`Falha no upload: ${err?.message ?? err}`);
+        toast.error(toFriendlyMessage(err, 'Não foi possível enviar o áudio agora. Tente de novo em instantes.'));
       }
     };
   };

@@ -9,6 +9,7 @@ import { upsertSession } from '@/lib/storage';
 import { createBlankSession, uploadAudioForSession, runPipeline } from '@/lib/pipeline';
 import { MAX_AUDIO_UPLOAD_MB } from '@/hooks/useAudioRecorder';
 import { toast } from 'sonner';
+import { toFriendlyMessage } from '@/lib/friendlyError';
 
 const ACCEPTED = [
   'audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/m4a', 'audio/x-m4a', 'audio/wav', 'audio/wave', 'audio/webm', 'audio/ogg',
@@ -61,11 +62,11 @@ export default function UploadAudio() {
       upsertSession(session);
       runPipeline(session.id).catch(err => {
         console.error('[pipeline]', err);
-        toast.error(`Falha ao iniciar pipeline: ${err?.message ?? err}`);
+        toast.error(toFriendlyMessage(err, 'Não foi possível iniciar o pipeline agora.'));
       });
       nav(`/app/session/${session.id}`);
     } catch (err: any) {
-      toast.error(`Falha no upload: ${err?.message ?? err}`);
+      toast.error(toFriendlyMessage(err, 'Não foi possível enviar o áudio agora. Tente de novo em instantes.'));
       setUploading(false);
     }
   };
@@ -82,11 +83,11 @@ export default function UploadAudio() {
       // já existe rawTranscript e vai direto pra anonimização/revisão.
       runPipeline(session.id).catch(err => {
         console.error('[pipeline]', err);
-        toast.error(`Falha ao iniciar pipeline: ${err?.message ?? err}`);
+        toast.error(toFriendlyMessage(err, 'Não foi possível iniciar o pipeline agora.'));
       });
       nav(`/app/session/${session.id}`);
     } catch (err: any) {
-      toast.error(`Falha ao processar: ${err?.message ?? err}`);
+      toast.error(toFriendlyMessage(err, 'Não foi possível processar o texto agora.'));
       setPasting(false);
     }
   };

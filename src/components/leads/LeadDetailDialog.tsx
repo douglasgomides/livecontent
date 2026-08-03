@@ -16,6 +16,7 @@ import {
 import { getUserId } from '@/lib/store';
 import { loadBrain } from '@/lib/brainStorage';
 import { LEAD_ORIGIN_LABEL } from '@/lib/contentFormats';
+import { toFriendlyMessage } from '@/lib/friendlyError';
 import type { LeadCapture, LeadStatus, WhatsappFollowup, LeadMessage, CustomFormField } from '@/types/session';
 
 const STATUS_LABEL: Record<LeadStatus, string> = {
@@ -89,7 +90,7 @@ export default function LeadDetailDialog({
       toast.success('Nota salva');
       onChanged();
     } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao salvar nota');
+      toast.error(toFriendlyMessage(err, 'Não foi possível salvar a nota agora. Tente de novo em instantes.'));
     } finally {
       setBusy(false);
     }
@@ -101,7 +102,7 @@ export default function LeadDetailDialog({
       await updateLeadCaptureFollowUp(lead.id, value || null);
       onChanged();
     } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao salvar data');
+      toast.error(toFriendlyMessage(err, 'Não foi possível salvar a data de retorno agora.'));
     }
   };
 
@@ -112,7 +113,7 @@ export default function LeadDetailDialog({
       toast.success('Etapa atualizada');
       onChanged();
     } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao atualizar etapa');
+      toast.error(toFriendlyMessage(err, 'Não foi possível atualizar a etapa agora.'));
     } finally {
       setBusy(false);
     }
@@ -129,7 +130,7 @@ export default function LeadDetailDialog({
       await dismissLeadSuggestion(lead.id);
       onChanged();
     } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao descartar sugestão');
+      toast.error(toFriendlyMessage(err, 'Não foi possível descartar a sugestão agora.'));
     } finally {
       setBusy(false);
     }
@@ -142,7 +143,7 @@ export default function LeadDetailDialog({
       toast.success('Vinculado à consulta — marcado como convertido.');
       onChanged();
     } catch (err: any) {
-      toast.error(err?.message ?? 'Falha ao vincular');
+      toast.error(toFriendlyMessage(err, 'Não foi possível vincular à consulta agora.'));
     } finally {
       setBusy(false);
     }
@@ -168,7 +169,7 @@ export default function LeadDetailDialog({
       await persistDraft();
       toast.success('Rascunho salvo');
     } catch (err: any) {
-      toast.error(err?.message ?? 'Não deu pra salvar o rascunho');
+      toast.error(toFriendlyMessage(err, 'Não deu pra salvar o rascunho agora. Tente de novo em instantes.'));
     } finally {
       setBusy(false);
     }
@@ -187,7 +188,7 @@ export default function LeadDetailDialog({
         setFollowup(prev => prev && { ...prev, status: 'sent' });
       }
     } catch (err: any) {
-      toast.error(err?.message ?? 'Não deu pra enviar agora');
+      toast.error(toFriendlyMessage(err, 'Não deu pra enviar agora. Tente de novo em instantes.'));
     } finally {
       setBusy(false);
     }
