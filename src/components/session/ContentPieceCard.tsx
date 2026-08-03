@@ -55,6 +55,16 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, unver
     toast.success('Copiado');
   };
 
+  // "Aprovar" sozinho só marcava a flag e não entregava o texto — o médico
+  // saía sem saber que ainda faltava copiar pra usar de verdade. Agora aprovar
+  // já copia junto, numa ação só (o botão "Copiar" continua ali pra copiar de
+  // novo depois, sem precisar reabrir a peça).
+  const approveAndCopy = () => {
+    navigator.clipboard.writeText(body);
+    onApprove();
+    toast.success('Aprovada e copiada — cole no canal.');
+  };
+
   // Compartilhar direto pro app que o médico já usa (WhatsApp, Instagram...) em vez
   // de forçar copiar e trocar de app manualmente — só aparece onde o navegador suporta.
   const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
@@ -220,11 +230,11 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, unver
         <Button
           size="sm"
           disabled={(blocked && !piece.approved && !cfmOverrideConfirmed) || (!!unverifiedDraft && !piece.approved && !draftConfirmed)}
-          onClick={onApprove}
+          onClick={approveAndCopy}
           className={piece.approved ? '' : 'bg-gold-gradient text-primary-foreground'}
           variant={piece.approved ? 'outline' : 'default'}
         >
-          {piece.approved ? <><CheckCircle2 className="h-4 w-4 mr-2" /> Aprovado</> : 'Aprovar peça'}
+          {piece.approved ? <><CheckCircle2 className="h-4 w-4 mr-2" /> Aprovado</> : <><Copy className="h-4 w-4 mr-2" /> Aprovar e copiar</>}
         </Button>
       </div>
     </div>

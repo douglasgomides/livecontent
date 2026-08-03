@@ -89,9 +89,14 @@ export default function Approvals() {
     refresh();
   };
 
+  // Aprovar sozinho só marcava a flag — o médico saía sem o texto na mão e sem
+  // saber que ainda faltava copiar pra usar de verdade. Agora entrega o texto
+  // junto, na mesma ação (Agendar/Fila continuam como escolhas à parte, pra
+  // quem quer especificamente agendar ou automatizar via webhook).
   const approve = (row: Row) => {
     patchPiece(row, { approved: true, rejected: false });
-    toast.success('Peça aprovada');
+    navigator.clipboard.writeText(row.piece.body);
+    toast.success('Aprovada e copiada — cole no canal.');
   };
 
   const approveAndSchedule = (row: Row) => {
@@ -379,7 +384,7 @@ function PendingCard({
           <Send className="h-3.5 w-3.5 mr-1" /> Fila
         </Button>
         <Button size="sm" onClick={onApprove} className="bg-gold-gradient text-primary-foreground">
-          <CheckCircle2 className="h-4 w-4 mr-1" /> Aprovar
+          <CheckCircle2 className="h-4 w-4 mr-1" /> Aprovar e copiar
         </Button>
       </div>
       <div className="pt-1">
