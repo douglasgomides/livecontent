@@ -4,6 +4,7 @@
 // quando o médico realmente quer baixar a imagem/vídeo daquele piece.
 import { corsHeaders } from '../_shared/cors.ts';
 import { ARTWORK_DIMS, generateArtworkSlides } from '../_shared/artwork.ts';
+import { generateImageBase64, base64ToUint8Array } from '../_shared/gptImage.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 Deno.serve(async (req) => {
@@ -23,7 +24,7 @@ Deno.serve(async (req) => {
     if (authErr || !claims?.claims) return json({ error: 'Unauthorized' }, 401);
     const userId = claims.claims.sub;
 
-    const { piece_id } = await req.json();
+    const { piece_id, background_prompt } = await req.json();
     if (!piece_id) return json({ error: 'Missing piece_id' }, 400);
 
     const { data: piece, error: pErr } = await supabase.from('content_pieces').select('*').eq('id', piece_id).maybeSingle();
@@ -57,13 +58,33 @@ Deno.serve(async (req) => {
       referenceStructure = refRow?.structure_description ?? null;
     }
 
+    // Fundo gerado por IA é opcional (o médico digita um prompt antes de gerar);
+    // se falhar, a arte em texto ainda sai — só avisamos que o fundo não veio,
+    // nunca fingimos que deu certo.
+    let backgroundImagePath: string | null = null;
+    let backgroundGenerationFailed = false;
+    if (typeof background_prompt === 'string' && background_prompt.trim()) {
+      const openaiKey = Deno.env.get('OPENAI_API_KEY');
+      const imageB64 = openaiKey ? await generateImageBase64(openaiKey, background_prompt, dims.width, dims.height) : null;
+      if (imageB64) {
+        const bgPath = `${userId}/${crypto.randomUUID()}.png`;
+        const { error: bgErr } = await supabase.storage
+          .from('ai-backgrounds')
+          .upload(bgPath, base64ToUint8Array(imageB64), { contentType: 'image/png' });
+        if (!bgErr) backgroundImagePath = bgPath;
+        else backgroundGenerationFailed = true;
+      } else {
+        backgroundGenerationFailed = true;
+      }
+    }
+
     const slides = await generateArtworkSlides(anthropicKey, piece.format, topic, transcript, brain, evidenceRows ?? [], referenceStructure);
-    const artwork = { ...dims, slides };
+    const artwork = { ...dims, slides, backgroundImagePath };
 
     const { error: updErr } = await supabase.from('content_pieces').update({ artwork }).eq('id', piece_id);
     if (updErr) return json({ error: updErr.message }, 500);
 
-    return json({ artwork });
+    return json({ artwork, backgroundGenerationFailed });
   } catch (e) {
     return json({ error: String((e as Error)?.message ?? e) }, 500);
   }

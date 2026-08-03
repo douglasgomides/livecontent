@@ -75,6 +75,31 @@ export interface Artwork {
   width: number;
   height: number;
   slides: ArtworkSlide[];
+  // Caminho (bucket ai-backgrounds) do fundo gerado por IA a partir de um
+  // prompt do médico, se ele pediu um ao gerar — sobrepõe a foto de marca por
+  // categoria quando presente. Null se não pediu ou se a geração falhou.
+  backgroundImagePath?: string | null;
+}
+
+export type AdDimension = 'quadrado' | 'vertical' | 'story';
+
+export const AD_DIMENSION_LABEL: Record<AdDimension, string> = {
+  quadrado: 'Feed quadrado (1:1)',
+  vertical: 'Feed vertical (4:5)',
+  story: 'Stories/Reels (9:16)',
+};
+
+// Criativo de anúncio pago gerado por IA (imagem + copy) — o médico baixa a
+// imagem e cola o texto no Gerenciador de Anúncios; a gente não cria campanha.
+export interface AdCreative {
+  id: string;
+  prompt: string;
+  dimension: AdDimension;
+  headline: string;
+  primaryText: string;
+  description: string;
+  imagePath: string;
+  createdAt: string;
 }
 
 export type ExternalPromptTool = 'sora' | 'runway' | 'notebook_lm' | 'midjourney' | 'heygen' | 'elevenlabs';

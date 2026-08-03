@@ -8,6 +8,15 @@ export const ARTWORK_DIMS: Record<string, { width: number; height: number }> = {
   stories: { width: 1080, height: 1920 },
 };
 
+// Dimensões mais usadas em anúncio no Meta hoje — quadrado e vertical 4:5 pro
+// feed, 9:16 pra Stories/Reels. Paisagem 1.91:1 caiu em desuso e não é mais o
+// formato recomendado pela própria Meta, por isso fica de fora.
+export const AD_DIMENSIONS: Record<string, { width: number; height: number; label: string }> = {
+  quadrado: { width: 1080, height: 1080, label: 'Feed quadrado (1:1)' },
+  vertical: { width: 1080, height: 1350, label: 'Feed vertical (4:5)' },
+  story: { width: 1080, height: 1920, label: 'Stories/Reels (9:16)' },
+};
+
 const BASE_RULES = `## Regras universais
 - NUNCA hashtags em nenhum formato (nem LinkedIn). NUNCA travessão (—). NUNCA "não é X, é Y".
 - NUNCA clichês de IA. Tom direto. Frases curtas. CTA específico.

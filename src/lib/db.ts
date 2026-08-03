@@ -35,6 +35,7 @@ import type {
   AdCampaignSuggestion,
   AdSuggestionStatus,
   WeeklyReport,
+  AdCreative,
 } from '@/types/session';
 import type { Brain } from '@/types/brain';
 import { EMPTY_BRAIN } from '@/types/brain';
@@ -618,6 +619,16 @@ export async function deleteBrandPhoto(id: string, storagePath: string): Promise
 export async function getBrandPhotoSignedUrl(path: string, ttlSec = 3600): Promise<string> {
   const { data, error } = await supabase.storage
     .from('brand-photos')
+    .createSignedUrl(path, ttlSec);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
+// Fundo de arte orgânica gerado por IA (bucket separado de brand-photos —
+// nunca finge ser foto real do médico/equipe/clínica, é sempre decorativo).
+export async function getAiBackgroundSignedUrl(path: string, ttlSec = 3600): Promise<string> {
+  const { data, error } = await supabase.storage
+    .from('ai-backgrounds')
     .createSignedUrl(path, ttlSec);
   if (error) throw error;
   return data.signedUrl;
@@ -1511,6 +1522,46 @@ export async function resolveAdCampaignSuggestion(id: string, status: AdSuggesti
     .from('ad_campaign_suggestions')
     .update({ status, resolved_at: new Date().toISOString() })
     .eq('id', id);
+  if (error) throw error;
+}
+
+// ─── Criativos de anúncio gerados por IA (imagem gpt-image-1 + copy) ───────
+// TODO: remove (supabase as any) casts below after types.ts regenerated (migration 20260803120000 pending)
+
+function mapAdCreativeRow(row: any): AdCreative {
+  return {
+    id: row.id,
+    prompt: row.prompt,
+    dimension: row.dimension,
+    headline: row.headline,
+    primaryText: row.primary_text,
+    description: row.description,
+    imagePath: row.image_path,
+    createdAt: row.created_at,
+  };
+}
+
+export async function fetchAdCreatives(userId: string): Promise<AdCreative[]> {
+  const { data, error } = await (supabase as any)
+    .from('ad_creatives')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(mapAdCreativeRow);
+}
+
+export async function getAdCreativeSignedUrl(path: string, ttlSec = 3600): Promise<string> {
+  const { data, error } = await supabase.storage
+    .from('ad-creatives')
+    .createSignedUrl(path, ttlSec);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
+export async function deleteAdCreative(id: string, imagePath: string): Promise<void> {
+  await supabase.storage.from('ad-creatives').remove([imagePath]);
+  const { error } = await (supabase as any).from('ad_creatives').delete().eq('id', id);
   if (error) throw error;
 }
 

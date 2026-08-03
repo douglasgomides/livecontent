@@ -187,14 +187,30 @@ export async function analyzeReferenceStyle(args: { imagePath?: string; text?: s
 // Separada do run-pipeline de propósito: a geração de conteúdo fica rápida,
 // e só paga o custo extra de IA pra arte quando o médico realmente pede.
 
-export async function generateArtwork(pieceId: string): Promise<any> {
+export async function generateArtwork(pieceId: string, backgroundPrompt?: string): Promise<any> {
   const { data, error } = await supabase.functions.invoke('generate-artwork', {
-    body: { piece_id: pieceId },
+    body: { piece_id: pieceId, background_prompt: backgroundPrompt || undefined },
   });
   if (error || !data?.artwork) {
     throw new Error(await describeFunctionError(error, 'Falha ao gerar arte'));
   }
-  return data.artwork;
+  if (data.backgroundGenerationFailed) {
+    // eslint-disable-next-line no-console
+    console.warn('Fundo de IA não pôde ser gerado; arte de texto seguiu normalmente.');
+  }
+  return { artwork: data.artwork, backgroundFailed: !!data.backgroundGenerationFailed };
+}
+
+// ─── Criativo de anúncio pago (imagem + copy via gpt-image-1) ──────────────
+
+export async function generateAdCreative(prompt: string, dimension: string): Promise<any> {
+  const { data, error } = await supabase.functions.invoke('generate-ad-creative', {
+    body: { prompt, dimension },
+  });
+  if (error || !data?.creative) {
+    throw new Error(await describeFunctionError(error, 'Falha ao gerar o criativo'));
+  }
+  return data.creative;
 }
 
 // ─── Billing (Stripe) ────────────────────────────────────────────────────────

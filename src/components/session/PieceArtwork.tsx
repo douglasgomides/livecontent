@@ -4,9 +4,10 @@ import type { Brain } from '@/types/brain';
 import { renderSlideToPngAsync, downloadPng } from '@/lib/artRenderer';
 import { renderSlidesToWebm, downloadBlob } from '@/lib/videoRenderer';
 import { generateArtwork } from '@/lib/pipeline';
-import { fetchBrandPhotos, getBrandPhotoSignedUrl } from '@/lib/db';
+import { fetchBrandPhotos, getBrandPhotoSignedUrl, getAiBackgroundSignedUrl } from '@/lib/db';
 import { getUserId } from '@/lib/store';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Download, ImageOff, Film, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -21,6 +22,10 @@ export default function PieceArtwork({ piece, brain, onChange }: {
   const [rendering, setRendering] = useState(false);
   const [makingVideo, setMakingVideo] = useState(false);
   const [generating, setGenerating] = useState(false);
+  // Prompt opcional de fundo gerado por IA — só aparece antes da primeira
+  // geração (depois disso o fundo já fica salvo em piece.artwork).
+  const [backgroundPrompt, setBackgroundPrompt] = useState('');
+  const [aiBackgroundUrl, setAiBackgroundUrl] = useState<string | undefined>();
   // Fotos de marca do médico, agrupadas por categoria (URLs assinadas, já que o
   // bucket é privado) — a IA sugere uma categoria por slide (photoCategory);
   // aqui só resolvemos qual foto real usar, sorteada dentro da categoria certa.
@@ -46,9 +51,13 @@ export default function PieceArtwork({ piece, brain, onChange }: {
   const generate = async () => {
     setGenerating(true);
     try {
-      const artwork = await generateArtwork(piece.id);
+      const { artwork, backgroundFailed } = await generateArtwork(piece.id, backgroundPrompt.trim() || undefined);
       onChange?.({ ...piece, artwork });
-      toast.success('Arte gerada');
+      if (backgroundFailed && backgroundPrompt.trim()) {
+        toast.warning('Arte gerada, mas o fundo por IA falhou — usando fundo padrão.');
+      } else {
+        toast.success('Arte gerada');
+      }
     } catch (err: any) {
       toast.error(`Falha ao gerar arte: ${err?.message ?? err}`);
     } finally {
@@ -58,13 +67,25 @@ export default function PieceArtwork({ piece, brain, onChange }: {
 
   useEffect(() => {
     let cancelled = false;
+    if (!art?.backgroundImagePath) { setAiBackgroundUrl(undefined); return; }
+    getAiBackgroundSignedUrl(art.backgroundImagePath)
+      .then(url => { if (!cancelled) setAiBackgroundUrl(url); })
+      .catch(() => { if (!cancelled) setAiBackgroundUrl(undefined); });
+    return () => { cancelled = true; };
+  }, [art?.backgroundImagePath]);
+
+  useEffect(() => {
+    let cancelled = false;
     if (!art) return;
     setRendering(true);
     (async () => {
       const out: string[] = [];
       for (const s of art.slides) {
+        // Fundo gerado por IA (se pedido) tem prioridade sobre foto de marca
+        // por categoria — o médico escolheu explicitamente aquele visual.
         const candidates = s.photoCategory ? photosByCategory[s.photoCategory] : undefined;
-        const photoUrl = candidates?.length ? candidates[Math.floor(Math.random() * candidates.length)] : undefined;
+        const photoUrl = aiBackgroundUrl
+          ?? (candidates?.length ? candidates[Math.floor(Math.random() * candidates.length)] : undefined);
         // eslint-disable-next-line no-await-in-loop
         const url = await renderSlideToPngAsync(s, art, brain, photoUrl);
         out.push(url);
@@ -76,7 +97,7 @@ export default function PieceArtwork({ piece, brain, onChange }: {
       }
     })();
     return () => { cancelled = true; };
-  }, [art, brain, piece.id, photosByCategory]);
+  }, [art, brain, piece.id, photosByCategory, aiBackgroundUrl]);
 
   const isVideoFormat = useMemo(
     () => piece.format === 'reel' || piece.format === 'tiktok' || piece.format === 'youtube' || piece.format === 'stories' || piece.format === 'carousel',
@@ -92,6 +113,17 @@ export default function PieceArtwork({ piece, brain, onChange }: {
           <>
             <Sparkles className="h-6 w-6 mx-auto mb-3 opacity-50" />
             <p className="mb-4">Ainda não gerada — a arte fica sob demanda pra manter a geração de conteúdo rápida.</p>
+            <div className="max-w-sm mx-auto mb-3 text-left">
+              <Input
+                value={backgroundPrompt}
+                onChange={e => setBackgroundPrompt(e.target.value)}
+                placeholder="Fundo por IA (opcional) — ex.: consultório moderno e claro, tons azuis"
+                className="text-xs"
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Deixe em branco pra usar suas fotos de marca. O fundo por IA é sempre decorativo — nunca finge ser foto real.
+              </p>
+            </div>
             <Button onClick={generate} disabled={generating} className="bg-gold-gradient text-primary-foreground">
               {generating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
               {generating ? 'Gerando…' : 'Gerar arte'}
