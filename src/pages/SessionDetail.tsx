@@ -391,11 +391,15 @@ export default function SessionDetail() {
                                         const content = session.content!.map(c => c.id === updated.id ? updated : c);
                                         const s = { ...session, content }; upsertSession(s); setSession(s);
                                       }}
-                                      onApprove={() => {
+                                      onApprove={(body) => {
                                         // Aprovar o post junto com a legenda anexada — são publicados
                                         // como uma unidade só, não faz sentido aprovar em separado.
+                                        // O texto editado (se houve edição) vem junto pra não salvar a
+                                        // versão original da IA por baixo do que foi de fato aprovado.
                                         const idsToApprove = new Set([p.id, ...(pairedCaption ? [pairedCaption.id] : [])]);
-                                        const content = session.content!.map(c => idsToApprove.has(c.id) ? { ...c, approved: true } : c);
+                                        const content = session.content!.map(c =>
+                                          idsToApprove.has(c.id) ? { ...c, approved: true, ...(c.id === p.id ? { body } : {}) } : c
+                                        );
                                         const s = { ...session, content }; upsertSession(s); setSession(s);
                                       }}
                                     />

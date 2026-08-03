@@ -220,7 +220,7 @@ export default function Dashboard() {
             <FlowCard to="/app/approvals" icon={Inbox} label="Pendentes" value={pendingApproval} tone="warning" />
             <FlowCard to="/app/approvals" icon={Shield} label="Sinalizadas CFM" value={blockedCfm} tone="danger" />
             <FlowCard to="/app/calendar" icon={CalendarDays} label="Agendadas 7d" value={scheduledThisWeek} tone="primary" />
-            <FlowCard to="/app/queue" icon={Send} label="Na fila" value={queueOpen} tone="primary" />
+            <FlowCard to="/app/publish-queue" icon={Send} label="Na fila" value={queueOpen} tone="primary" />
           </div>
         </section>
       )}

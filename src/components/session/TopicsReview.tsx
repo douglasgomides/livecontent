@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
 import type { Session, Topic, ReferenceStyle, ContentFormat } from '@/types/session';
-import { upsertSession } from '@/lib/storage';
+// Direto de lib/store (não lib/storage) e com await: storage.ts é fire-and-forget
+// de propósito pra UI otimista, mas aqui o próximo passo (runPipeline) lê a
+// mesma sessão direto do banco no servidor — sem esperar a escrita terminar,
+// existe uma corrida real onde o pipeline gera conteúdo a partir dos temas
+// antigos, ignorando o que o médico acabou de incluir/excluir/editar.
+import { upsertSession, getUserId } from '@/lib/store';
 import { runPipeline, scoreViralityRemote } from '@/lib/pipeline';
 import { fetchReferenceStyles, fetchSettings } from '@/lib/db';
-import { getUserId } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -27,6 +31,7 @@ export default function TopicsReview({ session, onConfirm }: { session: Session;
   const [formats, setFormats] = useState<ContentFormat[]>([]);
   const [sortByVirality, setSortByVirality] = useState(false);
   const [rescoringId, setRescoringId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const update = (id: string, patch: Partial<Topic>) => setTopics(t => t.map(x => x.id === id ? { ...x, ...patch } : x));
 
   const rescoreTopic = async (t: Topic) => {
@@ -54,12 +59,25 @@ export default function TopicsReview({ session, onConfirm }: { session: Session;
     fetchSettings(uid).then(s => setFormats(s.preferredFormats as ContentFormat[])).catch(() => {});
   }, []);
 
-  const save = () => {
-    upsertSession({ ...session, topics, status: 'generating_content' });
-    onConfirm();
-    // Retoma o pipeline real no servidor: gera conteúdo para os tópicos confirmados/editados.
-    const referenceStyleId = styleId !== 'none' ? styleId : undefined;
-    runPipeline(session.id, formats, referenceStyleId).catch(err => toast.error(`Falha ao gerar conteúdo: ${err?.message ?? err}`));
+  const save = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      // Espera a escrita terminar antes de chamar o pipeline (ver nota no
+      // import acima) — a atualização otimista local já reflete na tela antes
+      // desse await resolver, então isso não trava a resposta visual.
+      await upsertSession({ ...session, topics, status: 'generating_content' });
+      onConfirm();
+      // Gerar conteúdo continua fire-and-forget (pode levar dezenas de
+      // segundos) — o status da sessão já mudou, a tela de processamento
+      // acompanha o resto.
+      const referenceStyleId = styleId !== 'none' ? styleId : undefined;
+      runPipeline(session.id, formats, referenceStyleId).catch(err => toast.error(`Falha ao gerar conteúdo: ${err?.message ?? err}`));
+    } catch (err: any) {
+      toast.error(`Falha ao salvar os temas: ${err?.message ?? err}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const includedCount = topics.filter(t => t.included).length;
@@ -141,8 +159,8 @@ export default function TopicsReview({ session, onConfirm }: { session: Session;
 
       <div className="flex justify-end">
         <span title={!includedCount ? 'Selecione ao menos 1 tema pra gerar conteúdo' : !formats.length ? 'Escolha ao menos 1 formato pra gerar conteúdo' : undefined} className="inline-block">
-        <Button onClick={save} disabled={!includedCount || !formats.length} className="bg-gold-gradient text-primary-foreground gold-shadow">
-          Gerar conteúdo ({includedCount} {includedCount === 1 ? 'tema' : 'temas'} · {formats.length} {formats.length === 1 ? 'formato' : 'formatos'})
+        <Button onClick={save} disabled={saving || !includedCount || !formats.length} className="bg-gold-gradient text-primary-foreground gold-shadow">
+          {saving ? 'Salvando…' : `Gerar conteúdo (${includedCount} ${includedCount === 1 ? 'tema' : 'temas'} · ${formats.length} ${formats.length === 1 ? 'formato' : 'formatos'})`}
         </Button>
         </span>
       </div>

@@ -24,7 +24,7 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, unver
   unverifiedDraft?: boolean;
   companionCaption?: ContentPiece;
   onChange: (p: ContentPiece) => void;
-  onApprove: () => void;
+  onApprove: (body: string) => void;
 }) {
   const [body, setBody] = useState(piece.body);
   const [rescoring, setRescoring] = useState(false);
@@ -61,7 +61,12 @@ export default function ContentPieceCard({ piece, topic, brain, sessionId, unver
   // novo depois, sem precisar reabrir a peça).
   const approveAndCopy = () => {
     navigator.clipboard.writeText(body);
-    onApprove();
+    // Passa o texto editado localmente pra quem chama persistir junto com
+    // approved:true — sem isso, editar aqui e aprovar direto (o caminho mais
+    // natural, sem passar por "Reavaliar") aprovava/copiava a versão editada
+    // mas salvava a original no banco, e Biblioteca/Fila mostravam a peça
+    // errada depois.
+    onApprove(body);
     toast.success('Aprovada e copiada — cole no canal.');
   };
 

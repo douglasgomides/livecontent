@@ -69,9 +69,11 @@ export default function PieceDetail() {
           const content = session.content!.map(c => c.id === updated.id ? updated : c);
           upsertSession({ ...session, content });
         }}
-        onApprove={() => {
+        onApprove={(body) => {
           const idsToApprove = new Set([piece.id, ...(companionCaption ? [companionCaption.id] : [])]);
-          const content = session.content!.map(c => idsToApprove.has(c.id) ? { ...c, approved: true } : c);
+          const content = session.content!.map(c =>
+            idsToApprove.has(c.id) ? { ...c, approved: true, ...(c.id === piece.id ? { body } : {}) } : c
+          );
           upsertSession({ ...session, content });
         }}
       />

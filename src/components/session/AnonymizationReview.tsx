@@ -1,6 +1,11 @@
 import { useMemo, useState } from 'react';
 import type { Session } from '@/types/session';
-import { upsertSession } from '@/lib/storage';
+// Direto de lib/store (não lib/storage) e com await: storage.ts é fire-and-forget
+// de propósito pra UI otimista, mas aqui o próximo passo (runPipeline) lê a
+// mesma sessão direto do banco no servidor — sem esperar a escrita terminar,
+// existe uma corrida real onde o pipeline retoma com a transcrição anterior,
+// ignorando a edição de PII que o médico acabou de confirmar.
+import { upsertSession } from '@/lib/store';
 import { runPipeline } from '@/lib/pipeline';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,6 +16,7 @@ const TYPE_LABEL = { name: 'Nome', id: 'Identificador', plan: 'Plano', address: 
 
 export default function AnonymizationReview({ session, onConfirm }: { session: Session; onConfirm: () => void }) {
   const [text, setText] = useState(session.anonymizedTranscript || '');
+  const [saving, setSaving] = useState(false);
 
   const rawHighlighted = useMemo(() => {
     const raw = session.rawTranscript || '';
@@ -32,11 +38,27 @@ export default function AnonymizationReview({ session, onConfirm }: { session: S
     return parts;
   }, [session]);
 
-  const save = () => {
-    upsertSession({ ...session, anonymizedTranscript: text, status: 'extracting_topics' });
-    onConfirm();
-    // Retoma o pipeline real no servidor a partir da transcrição (possivelmente editada).
-    runPipeline(session.id).catch(err => toast.error(`Falha ao extrair temas: ${err?.message ?? err}`));
+  const save = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      // Espera a escrita terminar antes de chamar o pipeline — ele lê a
+      // transcrição direto do banco no servidor, então disparar a chamada antes
+      // da escrita completar arrisca retomar com a versão anterior à edição do
+      // médico. A atualização otimista local (feita dentro de upsertSession)
+      // já reflete na tela antes desse await resolver, então isso não trava a
+      // resposta visual — só serializa a chamada ao servidor.
+      await upsertSession({ ...session, anonymizedTranscript: text, status: 'extracting_topics' });
+      onConfirm();
+      // O pipeline em si continua fire-and-forget (pode levar dezenas de
+      // segundos) — o status da sessão já mudou, e a tela de processamento
+      // (renderizada a partir dele) acompanha o resto.
+      runPipeline(session.id).catch(err => toast.error(`Falha ao extrair temas: ${err?.message ?? err}`));
+    } catch (err: any) {
+      toast.error(`Falha ao salvar a revisão: ${err?.message ?? err}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -90,8 +112,8 @@ export default function AnonymizationReview({ session, onConfirm }: { session: S
       )}
 
       <div className="flex justify-end">
-        <Button onClick={save} className="bg-gold-gradient text-primary-foreground gold-shadow">
-          Confirmar e extrair temas
+        <Button onClick={save} disabled={saving} className="bg-gold-gradient text-primary-foreground gold-shadow">
+          {saving ? 'Salvando…' : 'Confirmar e extrair temas'}
         </Button>
       </div>
     </div>
