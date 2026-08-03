@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Brain as BrainIcon, ArrowRight, Database, RefreshCw, Download, Trash2, Webhook, LogOut, Upload as UploadIcon, Crown, Loader2, ExternalLink, Radio, MessageCircle, Copy, Check, UserCircle2, Megaphone } from 'lucide-react';
+import { Brain as BrainIcon, ArrowRight, Database, RefreshCw, Download, Trash2, Webhook, LogOut, Upload as UploadIcon, Crown, Loader2, ExternalLink, Radio, MessageCircle, Copy, Check, UserCircle2, Megaphone, CalendarClock } from 'lucide-react';
 import { useSessions, loadSessions } from '@/lib/storage';
 import { loadBrain, saveBrain, useBrain } from '@/lib/brainStorage';
 import { getSettings, saveSettings, upsertSession } from '@/lib/store';
@@ -62,6 +62,7 @@ export default function Settings() {
   const [heygenVoiceId, setHeygenVoiceId] = useState(initialSettings.heygenVoiceId ?? '');
   const [metaAdsAccountId, setMetaAdsAccountId] = useState(initialSettings.metaAdsAccountId ?? '');
   const [googleAdsAccountId, setGoogleAdsAccountId] = useState(initialSettings.googleAdsAccountId ?? '');
+  const [ownWhatsappNumber, setOwnWhatsappNumber] = useState(initialSettings.ownWhatsappNumber ?? '');
 
   useEffect(() => {
     const s = getSettings();
@@ -75,6 +76,7 @@ export default function Settings() {
     setHeygenVoiceId(s.heygenVoiceId ?? '');
     setMetaAdsAccountId(s.metaAdsAccountId ?? '');
     setGoogleAdsAccountId(s.googleAdsAccountId ?? '');
+    setOwnWhatsappNumber(s.ownWhatsappNumber ?? '');
   }, [user?.id]);
 
   const inboundUrl = whatsappInboundToken ? `${FUNCTIONS_BASE}/receive-whatsapp-reply?token=${whatsappInboundToken}` : '';
@@ -150,6 +152,11 @@ export default function Settings() {
   const saveWhatsappWebhook = async () => {
     await saveSettings({ ...getSettings(), whatsappWebhookUrl: whatsappWebhookUrl.trim() || null });
     toast.success('Webhook do WhatsApp salvo');
+  };
+
+  const saveOwnWhatsappNumber = async () => {
+    await saveSettings({ ...getSettings(), ownWhatsappNumber: ownWhatsappNumber.trim() || null });
+    toast.success('Seu WhatsApp salvo');
   };
 
   const saveHeygenSettings = async () => {
@@ -369,6 +376,24 @@ export default function Settings() {
           placeholder="https://hooks.zapier.com/... ou webhook do Make/n8n/Z-API"
         />
         <Button onClick={saveWhatsappWebhook} variant="outline" size="sm">Salvar webhook do WhatsApp</Button>
+      </div>
+
+      <div className="border-t border-border pt-8 space-y-4">
+        <div className="flex items-center gap-2">
+          <CalendarClock className="h-4 w-4 text-primary" />
+          <h2 className="font-serif text-2xl">Relatório semanal por WhatsApp</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Toda segunda-feira, um resumo automático da semana anterior (conteúdo publicado, leads,
+          consultas agendadas, sugestão de tema) chega no seu WhatsApp — sem precisar abrir o app.
+          Usa o mesmo webhook de WhatsApp configurado acima; aqui é só o número que recebe.
+        </p>
+        <Input
+          value={ownWhatsappNumber}
+          onChange={e => setOwnWhatsappNumber(e.target.value)}
+          placeholder="Ex: 5511999999999"
+        />
+        <Button onClick={saveOwnWhatsappNumber} variant="outline" size="sm">Salvar meu WhatsApp</Button>
       </div>
 
       <div className="border-t border-border pt-8 space-y-4">

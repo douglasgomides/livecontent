@@ -17,3 +17,9 @@ verify_jwt = false
 
 [functions.check-evidence-topic-watches]
 verify_jwt = false
+
+[functions.send-weekly-report]
+verify_jwt = false
+
+[functions.suggest-lead-nurturing]
+verify_jwt = false

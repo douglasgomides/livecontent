@@ -34,6 +34,7 @@ import type {
   AdCampaign,
   AdCampaignSuggestion,
   AdSuggestionStatus,
+  WeeklyReport,
 } from '@/types/session';
 import type { Brain } from '@/types/brain';
 import { EMPTY_BRAIN } from '@/types/brain';
@@ -323,6 +324,9 @@ export interface DoctorSettings {
   // qual conta, dentre as conectadas, é a dele.
   metaAdsAccountId: string | null;
   googleAdsAccountId: string | null;
+  // Número do PRÓPRIO médico (não de paciente/lead) — pra onde vai o relatório
+  // semanal automático. Reaproveita o mesmo whatsappWebhookUrl como transporte.
+  ownWhatsappNumber: string | null;
 }
 
 export async function fetchSettings(userId: string): Promise<DoctorSettings> {
@@ -343,6 +347,7 @@ export async function fetchSettings(userId: string): Promise<DoctorSettings> {
     heygenVoiceId: data?.heygen_voice_id ?? null,
     metaAdsAccountId: data?.meta_ads_account_id ?? null,
     googleAdsAccountId: data?.google_ads_account_id ?? null,
+    ownWhatsappNumber: (data as any)?.own_whatsapp_number ?? null, // TODO: remove cast after types.ts regenerated (migration 20260803100000 pending)
   };
 }
 
@@ -358,7 +363,8 @@ export async function saveSettingsDb(userId: string, s: DoctorSettings): Promise
     heygen_voice_id: s.heygenVoiceId,
     meta_ads_account_id: s.metaAdsAccountId,
     google_ads_account_id: s.googleAdsAccountId,
-  }, { onConflict: 'user_id' });
+    own_whatsapp_number: s.ownWhatsappNumber, // TODO: remove cast below after types.ts regenerated
+  } as any, { onConflict: 'user_id' });
   if (error) throw error;
 }
 
@@ -1121,13 +1127,29 @@ export async function fetchLeadCaptures(userId: string): Promise<LeadCapture[]> 
   return (data ?? []).map(mapLeadCaptureRow);
 }
 
+// IDs de lead com um rascunho de WhatsApp esperando aprovação — pra mostrar um
+// aviso no card do kanban sem precisar abrir cada lead um por um (nurturing
+// proativo por temperatura cria esses rascunhos sozinho, sem o médico pedir).
+export async function fetchLeadIdsWithPendingDraft(userId: string): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from('whatsapp_followups')
+    .select('lead_id')
+    .eq('user_id', userId)
+    .eq('status', 'draft')
+    .not('lead_id', 'is', null);
+  if (error) throw error;
+  return new Set((data ?? []).map((r: any) => r.lead_id as string));
+}
+
 // Qualquer mudança manual de etapa invalida uma sugestão da IA pendente
 // (ela já cumpriu o papel, seja porque o médico seguiu ou porque decidiu
 // diferente) — sempre limpa junto, nunca deixa uma sugestão velha na tela.
 export async function updateLeadCaptureStatus(id: string, status: LeadStatus): Promise<void> {
   const { error } = await supabase
     .from('lead_captures')
-    .update({ status, suggested_status: null, suggested_status_reason: null })
+    // Reseta o relógio do nurturing proativo — a cadência conta os dias a
+    // partir de QUANDO entrou nesta etapa, não de quando o lead foi criado.
+    .update({ status, suggested_status: null, suggested_status_reason: null, status_changed_at: new Date().toISOString(), last_nurture_day: 0 } as any) // TODO: remove cast after types.ts regenerated
     .eq('id', id);
   if (error) throw error;
 }
@@ -1490,4 +1512,28 @@ export async function resolveAdCampaignSuggestion(id: string, status: AdSuggesti
     .update({ status, resolved_at: new Date().toISOString() })
     .eq('id', id);
   if (error) throw error;
+}
+
+// ─── Relatório semanal (gerado por cron + WhatsApp, aqui só leitura) ───────
+
+// TODO: remove (supabase as any) casts below after types.ts regenerated (migration 20260803100000 pending)
+export async function fetchLatestWeeklyReport(userId: string): Promise<WeeklyReport | null> {
+  const { data, error } = await (supabase as any)
+    .from('weekly_reports')
+    .select('*')
+    .eq('user_id', userId)
+    .order('week_start', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return {
+    id: data.id,
+    weekStart: data.week_start,
+    content: data.content as WeeklyReport['content'],
+    message: data.message,
+    sent: data.sent,
+    sentAt: data.sent_at ?? null,
+    createdAt: data.created_at,
+  };
 }

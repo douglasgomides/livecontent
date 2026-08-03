@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
   fetchLeadCaptures, updateLeadCaptureStatus, fetchRecentSessionsForLinking, createOrGetShortLink,
+  fetchLeadIdsWithPendingDraft,
 } from '@/lib/db';
 import { getUserId } from '@/lib/store';
 import { LEAD_ORIGIN_LABEL } from '@/lib/contentFormats';
@@ -47,6 +48,9 @@ export default function LeadCaptures() {
   const [shortUrls, setShortUrls] = useState<Partial<Record<LeadOrigin, string>>>({});
   const [shorteningOrigin, setShorteningOrigin] = useState<LeadOrigin | null>(null);
   const [copiedShortOrigin, setCopiedShortOrigin] = useState<LeadOrigin | null>(null);
+  // Leads com rascunho de WhatsApp esperando aprovação (nurturing proativo cria
+  // isso sozinho, sem o médico pedir) — mostrado como aviso no card do kanban.
+  const [pendingDraftIds, setPendingDraftIds] = useState<Set<string>>(new Set());
 
   const uid = getUserId();
   const baseLink = uid ? `${window.location.origin}/captar/${uid}` : '';
@@ -55,12 +59,14 @@ export default function LeadCaptures() {
     if (!uid) { setLoading(false); return; }
     setLoading(true);
     try {
-      const [leadList, sessList] = await Promise.all([
+      const [leadList, sessList, draftIds] = await Promise.all([
         fetchLeadCaptures(uid),
         fetchRecentSessionsForLinking(uid),
+        fetchLeadIdsWithPendingDraft(uid),
       ]);
       setLeads(leadList);
       setSessions(sessList);
+      setPendingDraftIds(draftIds);
     } catch (err: any) {
       toast.error(err?.message ?? 'Falha ao carregar leads');
     } finally {
@@ -214,6 +220,11 @@ export default function LeadCaptures() {
                           {lead.suggestedStatus && lead.suggestedStatus !== lead.status && (
                             <span title={`IA sugere: ${STATUS_LABEL[lead.suggestedStatus]}`} className="h-4 w-4 rounded-full bg-primary/15 text-primary flex items-center justify-center shrink-0">
                               <Sparkles className="h-2.5 w-2.5" />
+                            </span>
+                          )}
+                          {pendingDraftIds.has(lead.id) && (
+                            <span title="Tem uma mensagem sugerida esperando aprovação" className="h-4 w-4 rounded-full bg-warning/15 text-warning flex items-center justify-center shrink-0">
+                              <MessageCircle className="h-2.5 w-2.5" />
                             </span>
                           )}
                         </div>

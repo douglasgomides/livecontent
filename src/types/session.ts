@@ -550,3 +550,26 @@ export interface AdCampaignSuggestion {
   createdAt: string;
   resolvedAt: string | null;
 }
+
+// Relatório semanal automático por WhatsApp (toda segunda) — valor sem
+// precisar abrir o app. `content` guarda os números crus (pra eventual outra
+// exibição), `message` é o texto exato que foi/seria mandado.
+export interface WeeklyReport {
+  id: string;
+  weekStart: string;
+  content: {
+    piecesApproved: number;
+    piecesByChannel: Record<string, number>;
+    leadsTotal: number;
+    leadsByOrigin: Record<string, number>;
+    leadsScheduled: number;
+    leadsConverted: number;
+    sessionsRecorded: number;
+    bestPiece: { title: string; channel: string; score: number } | null;
+    suggestedTheme: { category: string; actionTip: string } | null;
+  };
+  message: string;
+  sent: boolean;
+  sentAt: string | null;
+  createdAt: string;
+}

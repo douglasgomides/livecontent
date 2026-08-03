@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mic, Upload, MessageCircle, FlaskConical, Radio, ArrowRight, Clock, FileCheck2, Shield, Brain as BrainIcon, CalendarDays, Link2, Inbox, Send, CheckCircle2, ChevronDown, LineChart } from 'lucide-react';
+import { Mic, Upload, MessageCircle, FlaskConical, Radio, ArrowRight, Clock, FileCheck2, Shield, Brain as BrainIcon, CalendarDays, Link2, Inbox, Send, CheckCircle2, ChevronDown, LineChart, CalendarClock } from 'lucide-react';
 import { loadSessions, loadProfile } from '@/lib/storage';
 import { loadBrain, getCompleteness } from '@/lib/brainStorage';
 import { loadSchedule, upcoming } from '@/lib/scheduleStorage';
 import { loadJobs } from '@/lib/publishQueue';
 import { CHANNEL_LABEL, SOURCE_LABEL } from '@/lib/contentFormats';
-import type { SessionStatus } from '@/types/session';
+import { fetchLatestWeeklyReport } from '@/lib/db';
+import { getUserId } from '@/lib/store';
+import type { SessionStatus, WeeklyReport } from '@/types/session';
 
 
 
@@ -40,6 +42,15 @@ const fmtDur = (s: number) => `${Math.floor(s / 60)}min ${(s % 60).toString().pa
 
 export default function Dashboard() {
   const [showMore, setShowMore] = useState(false);
+  const [weeklyReport, setWeeklyReport] = useState<WeeklyReport | null>(null);
+  const [showReportMessage, setShowReportMessage] = useState(false);
+
+  useEffect(() => {
+    const uid = getUserId();
+    if (!uid) return;
+    fetchLatestWeeklyReport(uid).then(setWeeklyReport).catch(() => setWeeklyReport(null));
+  }, []);
+
   const sessions = loadSessions();
   const profile = loadProfile();
   const firstName = profile?.name?.split(' ')[0] || 'Doutor(a)';
@@ -101,6 +112,49 @@ export default function Dashboard() {
           </div>
           <ArrowRight className="h-4 w-4 text-primary shrink-0" />
         </Link>
+      )}
+
+      {weeklyReport && (
+        <div className="border border-border/60 rounded-lg p-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <CalendarClock className="h-5 w-5 text-primary shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-sm">
+                Relatório da semana de {new Date(weeklyReport.weekStart + 'T00:00:00').toLocaleDateString('pt-BR')}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {weeklyReport.sent ? 'Mandado pro seu WhatsApp.' : 'Ainda não mandado (configure seu WhatsApp em Ajustes).'}
+              </div>
+            </div>
+            <button
+              onClick={() => setShowReportMessage(v => !v)}
+              className="text-xs text-primary hover:underline shrink-0"
+            >
+              {showReportMessage ? 'Esconder' : 'Ver mensagem'}
+            </button>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+            <div>
+              <div className="t-numeric text-lg">{weeklyReport.content.piecesApproved}</div>
+              <div className="t-eyebrow text-muted-foreground">Aprovadas</div>
+            </div>
+            <div>
+              <div className="t-numeric text-lg">{weeklyReport.content.leadsTotal}</div>
+              <div className="t-eyebrow text-muted-foreground">Leads</div>
+            </div>
+            <div>
+              <div className="t-numeric text-lg">{weeklyReport.content.leadsScheduled}</div>
+              <div className="t-eyebrow text-muted-foreground">Agendados</div>
+            </div>
+            <div>
+              <div className="t-numeric text-lg">{weeklyReport.content.sessionsRecorded}</div>
+              <div className="t-eyebrow text-muted-foreground">Consultas</div>
+            </div>
+          </div>
+          {showReportMessage && (
+            <pre className="text-xs whitespace-pre-wrap bg-secondary/40 rounded-md p-3 font-sans">{weeklyReport.message}</pre>
+          )}
+        </div>
       )}
 
 
