@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.suggest-lead-nurturing]
 verify_jwt = false
+
+[functions.purge-expired-session-media]
+verify_jwt = false

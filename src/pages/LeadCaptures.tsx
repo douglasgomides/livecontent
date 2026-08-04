@@ -213,8 +213,11 @@ export default function LeadCaptures() {
                     {columnLeads.map(lead => (
                       <div
                         key={lead.id}
-                        className="border border-border/60 rounded-lg p-3 bg-card hover:border-primary/40 transition cursor-pointer"
+                        role="button"
+                        tabIndex={0}
+                        className="border border-border/60 rounded-lg p-3 bg-card hover:border-primary/40 transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         onClick={() => setDetailId(lead.id)}
+                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetailId(lead.id); } }}
                       >
                         <div className="flex items-center gap-1.5 flex-wrap mb-1">
                           <span className="text-sm font-medium truncate">{lead.name}</span>

@@ -138,8 +138,11 @@ function UploadMode({ nav }: { nav: ReturnType<typeof useNavigate> }) {
         onChange={e => setFile(e.target.files?.[0] || null)}
       />
       <div
+        role="button"
+        tabIndex={0}
         onClick={() => inputRef.current?.click()}
-        className="border-2 border-dashed border-border rounded-xl p-10 text-center cursor-pointer hover:border-primary/50 transition"
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inputRef.current?.click(); } }}
+        className="border-2 border-dashed border-border rounded-xl p-10 text-center cursor-pointer hover:border-primary/50 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
         <FileAudio className="h-10 w-10 text-primary mx-auto mb-3" />
         <p className="font-medium mb-1">{file ? file.name : 'Clique para escolher um áudio'}</p>

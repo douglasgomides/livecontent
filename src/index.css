@@ -29,13 +29,18 @@
     --accent: 230 45% 95%;
     --accent-foreground: 230 45% 35%;
 
-    --destructive: 0 65% 50%;
+    /* Luminosidade calibrada pra passar WCAG AA (4.5:1) no padrão "pílula de
+       status" (texto sólido desta cor sobre fundo /10 ou /15 translúcido da
+       mesma cor, composto sobre --background) — não só no par sólido texto/
+       fundo, que já passava. Sem isso o texto de pílula fica 2.9–4.3:1 no
+       tema claro. Recalcular se qualquer um destes tons mudar. */
+    --destructive: 0 65% 41%;
     --destructive-foreground: 0 0% 100%;
 
     /* Success reaproveita o verde-petróleo da paleta (chart-3), não um verde genérico */
-    --success: 168 40% 32%;
+    --success: 168 40% 28%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 60% 42%;
+    --warning: 38 60% 29%;
     --warning-foreground: 0 0% 100%;
 
     --border: 226 22% 89%;

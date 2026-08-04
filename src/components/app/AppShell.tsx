@@ -8,6 +8,12 @@ import { isRecordingActive, LEAVE_RECORDING_WARNING } from '@/lib/recordingGuard
 export default function AppShell() {
   return (
     <SidebarProvider>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2 focus:rounded-md focus:bg-primary focus:text-primary-foreground"
+      >
+        Pular para o conteúdo
+      </a>
       <div className="min-h-screen flex w-full premium-bg">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
@@ -27,7 +33,7 @@ export default function AppShell() {
               </Button>
             </Link>
           </header>
-          <main className="flex-1 p-6 md:p-10 max-w-6xl w-full">
+          <main id="main-content" className="flex-1 p-6 md:p-10 max-w-6xl w-full">
             <Outlet />
           </main>
         </div>
