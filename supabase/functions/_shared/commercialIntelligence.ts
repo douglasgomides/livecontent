@@ -35,6 +35,24 @@ vez de uma sugestão genérica — nunca invente um produto que não esteja no c
 do catálogo se aplicar à oportunidade identificada, deixe "produto_catalogo_id" null (a
 oportunidade continua válida, só sem produto específico associado).
 
+Gere também um PROTOCOLO INDIVIDUALIZADO: uma sequência curta de etapas (avaliação, procedimento,
+acompanhamento etc.) que atenda a necessidade REAL desse paciente específico, identificada só a
+partir do que foi dito na consulta (dores, queixas, procedimentos de interesse) — nunca a partir de
+uma necessidade genérica de manual. Regras não-negociáveis, nessa ordem de prioridade:
+1. Toda etapa precisa ser clinicamente coerente com a necessidade identificada. Isso vem sempre
+   antes de qualquer consideração comercial — nunca inclua uma etapa só porque tem margem maior se
+   ela não atende de verdade o que o paciente precisa.
+2. Só entre etapas/produtos igualmente adequados pra mesma necessidade, prefira o item do catálogo
+   com "margem_estimada" maior (quando o catálogo trouxer esse dado) — e deixe esse critério
+   explícito e transparente em "racional_priorizacao", nunca escondido.
+3. Se nenhuma "margem_estimada" estiver disponível no catálogo pra nenhuma opção equivalente, essa
+   preferência de margem apenas não se aplica — não infira nem estime um valor.
+4. Cada etapa que apontar pra um produto do catálogo deve usar o ID exato — nunca invente produto.
+   Etapas sem produto correspondente no catálogo ficam com "produto_catalogo_id" null.
+5. Se a consulta não trouxer contexto suficiente pra montar um protocolo real e específico, retorne
+   "etapas": [] e "necessidade_identificada" vazio — nunca invente pra preencher.
+6. Máximo 6 etapas.
+
 Retorne SÓ um JSON no formato exato abaixo — sem markdown, sem texto fora do JSON:
 {
   "houve_oferta_comercial": boolean,
@@ -48,7 +66,12 @@ Retorne SÓ um JSON no formato exato abaixo — sem markdown, sem texto fora do 
   "proxima_acao_combinada": string ou null,
   "resumo_comercial": string,
   "oportunidades_upsell": [{"oportunidade": string, "tipo": "plano_recorrente|combo_procedimentos|upgrade_pacote|manutencao_periodica|indicacao_familiar|outro", "racional": string, "produto_catalogo_id": string ou null}],
-  "argumento_recomendado_proximo_contato": string ou null
+  "argumento_recomendado_proximo_contato": string ou null,
+  "protocolo_individualizado": {
+    "necessidade_identificada": string,
+    "etapas": [{"ordem": number, "titulo": string, "descricao": string, "produto_catalogo_id": string ou null, "opcional": boolean}],
+    "racional_priorizacao": string ou null
+  }
 }
 
 Regras:
@@ -56,7 +79,8 @@ Regras:
 - Se não houver contexto comercial na consulta, retorne "houve_oferta_comercial": false, "resultado": "nao_se_aplica" e os arrays vazios.
 - "resumo_comercial" tem no máximo 3 frases.
 - "argumento_recomendado_proximo_contato" é null se não houver objeção pendente ou próximo contato previsto.
-- Máximo 10 itens por array (argumentos, objeções, dores, procedimentos, oportunidades de upsell).`;
+- Máximo 10 itens por array (argumentos, objeções, dores, procedimentos, oportunidades de upsell).
+- "protocolo_individualizado.racional_priorizacao" é null se nenhuma etapa envolveu escolha por margem.`;
 
 export interface CommercialArgument {
   argumento: string;
@@ -98,6 +122,28 @@ export interface UpsellOpportunity {
 export interface ProductCatalogItem {
   id: string;
   name: string;
+  // Margem estimada (avg_price - cost) quando o médico preencheu ambos — só
+  // usada como critério de desempate ENTRE opções já clinicamente
+  // equivalentes, nunca pra justificar uma etapa clinicamente inadequada.
+  margem_estimada?: number | null;
+}
+
+export interface ProtocolStep {
+  ordem: number;
+  titulo: string;
+  descricao: string;
+  produto_catalogo_id: string | null;
+  produto_catalogo_nome: string | null;
+  opcional: boolean;
+}
+
+export interface IndividualizedProtocol {
+  necessidade_identificada: string;
+  etapas: ProtocolStep[];
+  racional_priorizacao: string | null;
+  // Sempre 'pendente' na extração — só o médico aprova ou descarta depois,
+  // nunca a IA.
+  status: 'pendente';
 }
 
 export interface CommercialIntelligenceRow {
@@ -113,6 +159,7 @@ export interface CommercialIntelligenceRow {
   resumo_comercial: string;
   oportunidades_upsell: UpsellOpportunity[];
   argumento_recomendado_proximo_contato: string | null;
+  protocolo_individualizado: IndividualizedProtocol | null;
 }
 
 const FALLBACK: CommercialIntelligenceRow = {
@@ -128,6 +175,7 @@ const FALLBACK: CommercialIntelligenceRow = {
   resumo_comercial: '',
   oportunidades_upsell: [],
   argumento_recomendado_proximo_contato: null,
+  protocolo_individualizado: null,
 };
 
 const VALID_RESULTADO = new Set(['fechou', 'nao_fechou', 'indefinido', 'nao_se_aplica']);
@@ -147,7 +195,10 @@ export async function extractCommercialIntelligence(
   try {
     const catalogById = new Map(productCatalog.map(p => [p.id, p.name]));
     const catalogBlock = productCatalog.length
-      ? `\n\n## Catálogo de produtos/procedimentos da clínica (use o ID exato quando aplicável)\n${productCatalog.map(p => `- ${p.name} (id: ${p.id})`).join('\n')}`
+      ? `\n\n## Catálogo de produtos/procedimentos da clínica (use o ID exato quando aplicável)\n${productCatalog.map(p => {
+          const margem = typeof p.margem_estimada === 'number' ? ` — margem_estimada: R$${p.margem_estimada.toFixed(2)}` : '';
+          return `- ${p.name} (id: ${p.id})${margem}`;
+        }).join('\n')}`
       : '';
     const userContent = (preConsultContext
       ? `## Respostas do paciente no formulário de pré-consulta (preenchido antes desta consulta)\n${preConsultContext}\n\n## Transcrição da consulta\n${anonymizedTranscript}`
@@ -222,6 +273,34 @@ export async function extractCommercialIntelligence(
         })
       : [];
 
+    const protocoloRaw = parsed.protocolo_individualizado;
+    const necessidade = String(protocoloRaw?.necessidade_identificada || '').trim().slice(0, 300);
+    const etapasRaw = Array.isArray(protocoloRaw?.etapas) ? protocoloRaw.etapas.slice(0, 6) : [];
+    // Sem necessidade real identificada, não existe protocolo — nunca monta uma
+    // sequência de etapas "genérica" só porque o modelo devolveu algo no campo.
+    const protocoloIndividualizado: IndividualizedProtocol | null = necessidade && etapasRaw.length
+      ? {
+          necessidade_identificada: necessidade,
+          etapas: etapasRaw.map((e: any, i: number) => {
+            const catalogId = typeof e?.produto_catalogo_id === 'string' && catalogById.has(e.produto_catalogo_id)
+              ? e.produto_catalogo_id
+              : null;
+            return {
+              ordem: Number.isFinite(Number(e?.ordem)) ? Number(e.ordem) : i + 1,
+              titulo: String(e?.titulo || '').slice(0, 120),
+              descricao: String(e?.descricao || '').slice(0, 400),
+              produto_catalogo_id: catalogId,
+              produto_catalogo_nome: catalogId ? catalogById.get(catalogId)! : null,
+              opcional: !!e?.opcional,
+            };
+          }),
+          racional_priorizacao: protocoloRaw?.racional_priorizacao
+            ? String(protocoloRaw.racional_priorizacao).slice(0, 400)
+            : null,
+          status: 'pendente',
+        }
+      : null;
+
     return {
       houve_oferta_comercial: !!parsed.houve_oferta_comercial,
       resultado,
@@ -237,6 +316,7 @@ export async function extractCommercialIntelligence(
       argumento_recomendado_proximo_contato: parsed.argumento_recomendado_proximo_contato
         ? String(parsed.argumento_recomendado_proximo_contato).slice(0, 400)
         : null,
+      protocolo_individualizado: protocoloIndividualizado,
     };
   } catch (e) {
     console.warn('[commercial-intel] failed', e);

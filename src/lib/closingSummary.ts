@@ -16,7 +16,7 @@ export interface ClosingSummaryData {
   pitch?: string;
 }
 
-function fmtPrice(product: Product | undefined): string | null {
+export function fmtPrice(product: Product | undefined): string | null {
   if (!product) return null;
   if (product.avgPrice != null) {
     return product.avgPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });

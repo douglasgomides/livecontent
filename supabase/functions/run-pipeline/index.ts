@@ -287,12 +287,20 @@ Deno.serve(async (req) => {
           .join('\n');
       }
     }
-    let productCatalog: { id: string; name: string }[] = [];
+    let productCatalog: { id: string; name: string; margem_estimada?: number | null }[] = [];
     if (isRealConsultation) {
       const { data: productRows } = await supabase
-        .from('products').select('id, name')
+        .from('products').select('id, name, avg_price, cost')
         .eq('user_id', userId).eq('active', true).limit(50);
-      productCatalog = (productRows ?? []).map(p => ({ id: p.id, name: p.name }));
+      productCatalog = (productRows ?? []).map(p => ({
+        id: p.id,
+        name: p.name,
+        // Só existe margem real quando o médico preencheu preço médio E custo —
+        // sem os dois, não estimamos nada (evita número fabricado guiando a IA).
+        margem_estimada: (typeof p.avg_price === 'number' && typeof p.cost === 'number')
+          ? p.avg_price - p.cost
+          : null,
+      }));
     }
     const commercialIntelPromise = isRealConsultation
       ? extractCommercialIntelligence(anthropicKey, anonymized, preConsultContext, productCatalog).catch(() => null)
@@ -373,6 +381,7 @@ Deno.serve(async (req) => {
         resumo_comercial: commercialIntel.resumo_comercial,
         oportunidades_upsell: commercialIntel.oportunidades_upsell,
         argumento_recomendado_proximo_contato: commercialIntel.argumento_recomendado_proximo_contato,
+        protocolo_individualizado: commercialIntel.protocolo_individualizado,
       });
       if (ciErr) console.warn('[commercial-intel] insert failed', ciErr.message);
     }

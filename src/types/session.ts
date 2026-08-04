@@ -222,6 +222,33 @@ export interface UpsellOpportunity {
   produtoCatalogoNome: string | null;
   status: UpsellStatus;
 }
+
+// Status do protocolo — mesmo princípio do UpsellStatus: a IA sempre nasce
+// 'pendente', só o médico decide aprovar (usar em consulta/orçamento) ou
+// descartar (não se aplicou àquele paciente).
+export type ProtocolStatus = 'pendente' | 'aprovado' | 'descartado';
+
+export interface ProtocolStep {
+  ordem: number;
+  titulo: string;
+  descricao: string;
+  produtoCatalogoId: string | null;
+  produtoCatalogoNome: string | null;
+  opcional: boolean;
+}
+
+// Protocolo individualizado sugerido pela IA a partir da necessidade real
+// identificada na consulta — nunca uma recomendação clínica autônoma, é um
+// rascunho de apoio que só vira ação com aprovação explícita do médico.
+export interface IndividualizedProtocol {
+  necessidadeIdentificada: string;
+  etapas: ProtocolStep[];
+  // Explica quando/por que uma etapa foi priorizada por margem entre opções
+  // já clinicamente equivalentes — null quando não houve esse critério.
+  racionalPriorizacao: string | null;
+  status: ProtocolStatus;
+}
+
 export interface SessionCommercialIntelligence {
   houveOfertaComercial: boolean;
   resultado: 'fechou' | 'nao_fechou' | 'indefinido' | 'nao_se_aplica';
@@ -235,6 +262,7 @@ export interface SessionCommercialIntelligence {
   resumoComercial: string;
   oportunidadesUpsell: UpsellOpportunity[];
   argumentoRecomendadoProximoContato: string | null;
+  protocoloIndividualizado: IndividualizedProtocol | null;
 }
 
 // Ideia de conteúdo em alta pra especialidade, pesquisada de verdade na web
@@ -397,6 +425,9 @@ export interface Product {
   // Valor numérico único (opcional) — só isso permite projetar receita de
   // verdade; priceRange é texto livre pro médico, não dá pra somar.
   avgPrice: number | null;
+  // Custo opcional — só com avgPrice E cost preenchidos dá pra calcular
+  // margem real; fica em branco por padrão, nunca obrigatório.
+  cost: number | null;
   active: boolean;
   createdAt: string;
 }

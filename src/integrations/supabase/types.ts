@@ -288,6 +288,7 @@ export type Database = {
           objecoes_paciente: Json
           oportunidades_upsell: Json
           procedimentos_mencionados: string[]
+          protocolo_individualizado: Json | null
           proxima_acao: string | null
           resultado: string
           resumo_comercial: string
@@ -307,6 +308,7 @@ export type Database = {
           objecoes_paciente?: Json
           oportunidades_upsell?: Json
           procedimentos_mencionados?: string[]
+          protocolo_individualizado?: Json | null
           proxima_acao?: string | null
           resultado?: string
           resumo_comercial?: string
@@ -326,6 +328,7 @@ export type Database = {
           objecoes_paciente?: Json
           oportunidades_upsell?: Json
           procedimentos_mencionados?: string[]
+          protocolo_individualizado?: Json | null
           proxima_acao?: string | null
           resultado?: string
           resumo_comercial?: string
@@ -1118,6 +1121,7 @@ export type Database = {
           active: boolean
           avg_price: number | null
           category: string
+          cost: number | null
           created_at: string
           description: string | null
           id: string
@@ -1130,6 +1134,7 @@ export type Database = {
           active?: boolean
           avg_price?: number | null
           category?: string
+          cost?: number | null
           created_at?: string
           description?: string | null
           id?: string
@@ -1142,6 +1147,7 @@ export type Database = {
           active?: boolean
           avg_price?: number | null
           category?: string
+          cost?: number | null
           created_at?: string
           description?: string | null
           id?: string

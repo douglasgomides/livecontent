@@ -13,6 +13,7 @@ import AnonymizationReview from '@/components/session/AnonymizationReview';
 import TopicsReview from '@/components/session/TopicsReview';
 import ContentPieceCard from '@/components/session/ContentPieceCard';
 import ClosingSummaryCard from '@/components/session/ClosingSummaryCard';
+import ProtocolCard from '@/components/session/ProtocolCard';
 import WhatsappFollowupCard from '@/components/session/WhatsappFollowupCard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -168,6 +169,15 @@ export default function SessionDetail() {
       {showCommercial && session.status === 'ready' && (
         <>
           <ClosingSummaryCard signals={signals} commercial={commercial} products={products} history={history} allSignals={allSignals} />
+          <ProtocolCard
+            sessionId={session.id}
+            protocol={commercial?.protocoloIndividualizado ?? null}
+            products={products}
+            onStatusChange={status => setCommercial(prev => prev && prev.protocoloIndividualizado && {
+              ...prev,
+              protocoloIndividualizado: { ...prev.protocoloIndividualizado, status },
+            })}
+          />
           <WhatsappFollowupCard sessionId={session.id} signals={signals} commercial={commercial} products={products} />
         </>
       )}

@@ -36,6 +36,7 @@ export default function Products() {
   const [description, setDescription] = useState('');
   const [priceRange, setPriceRange] = useState('');
   const [avgPrice, setAvgPrice] = useState('');
+  const [cost, setCost] = useState('');
 
   const refresh = async () => {
     const uid = getUserId();
@@ -59,8 +60,9 @@ export default function Products() {
     setSaving(true);
     try {
       const parsedAvgPrice = avgPrice.trim() ? Number(avgPrice.trim().replace(',', '.')) : null;
-      await addProduct(uid, name.trim(), category, description.trim(), priceRange.trim(), parsedAvgPrice);
-      setName(''); setDescription(''); setPriceRange(''); setAvgPrice(''); setCategory('procedimento');
+      const parsedCost = cost.trim() ? Number(cost.trim().replace(',', '.')) : null;
+      await addProduct(uid, name.trim(), category, description.trim(), priceRange.trim(), parsedAvgPrice, parsedCost);
+      setName(''); setDescription(''); setPriceRange(''); setAvgPrice(''); setCost(''); setCategory('procedimento');
       setShowForm(false);
       await refresh();
       toast.success('Produto adicionado');
@@ -143,6 +145,19 @@ export default function Products() {
               </p>
             </div>
             <div className="space-y-2">
+              <Label>Custo (opcional — nunca aparece pro paciente)</Label>
+              <Input
+                value={cost}
+                onChange={e => setCost(e.target.value)}
+                inputMode="decimal"
+                placeholder="Ex: 400"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Preenchendo valor médio e custo, o protocolo individualizado sugerido passa a considerar
+                a margem real pra priorizar entre opções igualmente indicadas pro paciente — uso 100% interno.
+              </p>
+            </div>
+            <div className="space-y-2">
               <Label>Descrição (opcional)</Label>
               <Textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} placeholder="Pra quem é indicado, o que resolve..." />
             </div>
@@ -173,6 +188,11 @@ export default function Products() {
                     {p.avgPrice !== null && (
                       <span className="t-micro px-2 py-0.5 rounded-full bg-success/10 text-success font-medium">
                         ~R$ {p.avgPrice.toLocaleString('pt-BR')}
+                      </span>
+                    )}
+                    {p.avgPrice !== null && p.cost !== null && (
+                      <span className="t-micro text-muted-foreground">
+                        margem ~R$ {(p.avgPrice - p.cost).toLocaleString('pt-BR')}
                       </span>
                     )}
                   </div>

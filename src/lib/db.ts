@@ -822,6 +822,17 @@ function mapCommercialIntelligenceRow(row: any): SessionCommercialIntelligence {
       status: u.status ?? 'pendente',
     })),
     argumentoRecomendadoProximoContato: row.argumento_recomendado_proximo_contato ?? null,
+    protocoloIndividualizado: row.protocolo_individualizado ? {
+      necessidadeIdentificada: row.protocolo_individualizado.necessidade_identificada ?? '',
+      etapas: (row.protocolo_individualizado.etapas ?? []).map((e: any) => ({
+        ordem: e.ordem, titulo: e.titulo, descricao: e.descricao,
+        produtoCatalogoId: e.produto_catalogo_id ?? null,
+        produtoCatalogoNome: e.produto_catalogo_nome ?? null,
+        opcional: !!e.opcional,
+      })),
+      racionalPriorizacao: row.protocolo_individualizado.racional_priorizacao ?? null,
+      status: row.protocolo_individualizado.status ?? 'pendente',
+    } : null,
   };
 }
 
@@ -877,6 +888,28 @@ export async function updateUpsellOpportunityStatus(
   const { error: upErr } = await supabase
     .from('commercial_intelligence')
     .update({ oportunidades_upsell: list })
+    .eq('session_id', sessionId);
+  if (upErr) throw upErr;
+}
+
+// Marca a decisão do médico sobre o protocolo individualizado sugerido —
+// 'aprovado' (vai usar com o paciente) ou 'descartado' (não se aplicou).
+// Mesmo princípio de updateUpsellOpportunityStatus: só o médico decide, a IA
+// nunca muda esse status sozinha.
+export async function updateProtocolStatus(
+  sessionId: string,
+  status: 'aprovado' | 'descartado',
+): Promise<void> {
+  const { data, error: fetchErr } = await supabase
+    .from('commercial_intelligence')
+    .select('protocolo_individualizado')
+    .eq('session_id', sessionId)
+    .maybeSingle();
+  if (fetchErr) throw fetchErr;
+  if (!data?.protocolo_individualizado) throw new Error('Protocolo não encontrado');
+  const { error: upErr } = await supabase
+    .from('commercial_intelligence')
+    .update({ protocolo_individualizado: { ...(data.protocolo_individualizado as any), status } })
     .eq('session_id', sessionId);
   if (upErr) throw upErr;
 }
@@ -1227,6 +1260,7 @@ function mapProductRow(row: any): Product {
     description: row.description ?? null,
     priceRange: row.price_range ?? null,
     avgPrice: row.avg_price ?? null,
+    cost: row.cost ?? null,
     active: row.active,
     createdAt: row.created_at,
   };
@@ -1249,6 +1283,7 @@ export async function addProduct(
   description: string,
   priceRange: string,
   avgPrice: number | null,
+  cost: number | null = null,
 ): Promise<void> {
   const { error } = await supabase.from('products').insert({
     user_id: userId,
@@ -1257,6 +1292,7 @@ export async function addProduct(
     description: description || null,
     price_range: priceRange || null,
     avg_price: avgPrice,
+    cost,
   });
   if (error) throw error;
 }
