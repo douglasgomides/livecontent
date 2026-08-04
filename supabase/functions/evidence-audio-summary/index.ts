@@ -3,6 +3,7 @@
 // (audio_summary_path) — só chama Claude + TTS na primeira vez; depois disso
 // só gera uma nova signed URL pro mesmo arquivo.
 import { corsHeaders } from '../_shared/cors.ts';
+import { checkAndRecordRateLimit } from '../_shared/rateLimit.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const CLAUDE = 'claude-sonnet-4-5';
@@ -25,6 +26,9 @@ Deno.serve(async (req) => {
     const { data: claims, error: authErr } = await supabase.auth.getClaims(authHeader.replace('Bearer ', ''));
     if (authErr || !claims?.claims) return json({ error: 'Unauthorized' }, 401);
     const userId = claims.claims.sub;
+
+    const rl = await checkAndRecordRateLimit(supabase, userId, 'evidence-audio-summary');
+    if (!rl.allowed) return json({ error: rl.message }, 429);
 
     const { source_id } = await req.json();
     if (!source_id) return json({ error: 'Missing source_id' }, 400);

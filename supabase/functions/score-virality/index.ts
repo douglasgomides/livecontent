@@ -3,6 +3,7 @@
 // (tema, artigo, peça) — stateless, quem chama decide onde persistir o resultado.
 import { corsHeaders } from '../_shared/cors.ts';
 import { scoreViralitySemantic, type ViralityContentType } from '../_shared/virality.ts';
+import { checkAndRecordRateLimit } from '../_shared/rateLimit.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const VALID_TYPES: ViralityContentType[] = ['tema', 'artigo', 'noticia', 'peca'];
@@ -22,6 +23,10 @@ Deno.serve(async (req) => {
     );
     const { data: claims, error } = await supabase.auth.getClaims(authHeader.replace('Bearer ', ''));
     if (error || !claims?.claims) return json({ error: 'Unauthorized' }, 401);
+    const userId = claims.claims.sub;
+
+    const rl = await checkAndRecordRateLimit(supabase, userId, 'score-virality');
+    if (!rl.allowed) return json({ error: rl.message }, 429);
 
     const { title, text, contentType } = await req.json();
     if (typeof text !== 'string' || !text.trim()) return json({ error: 'Empty text' }, 400);

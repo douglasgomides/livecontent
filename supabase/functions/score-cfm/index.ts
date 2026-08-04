@@ -2,6 +2,7 @@
 // palavra-chave. Usado pelo botão "Rescan" no cliente após edição manual.
 import { corsHeaders } from '../_shared/cors.ts';
 import { scoreCFMSemantic } from '../_shared/cfm.ts';
+import { checkAndRecordRateLimit } from '../_shared/rateLimit.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 Deno.serve(async (req) => {
@@ -19,6 +20,10 @@ Deno.serve(async (req) => {
     );
     const { data: claims, error } = await supabase.auth.getClaims(authHeader.replace('Bearer ', ''));
     if (error || !claims?.claims) return json({ error: 'Unauthorized' }, 401);
+    const userId = claims.claims.sub;
+
+    const rl = await checkAndRecordRateLimit(supabase, userId, 'score-cfm');
+    if (!rl.allowed) return json({ error: rl.message }, 429);
 
     const { body } = await req.json();
     if (typeof body !== 'string' || !body.trim()) return json({ error: 'Empty body' }, 400);

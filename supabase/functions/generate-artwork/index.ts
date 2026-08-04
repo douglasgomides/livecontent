@@ -5,6 +5,7 @@
 import { corsHeaders } from '../_shared/cors.ts';
 import { ARTWORK_DIMS, generateArtworkSlides } from '../_shared/artwork.ts';
 import { generateImageBase64, base64ToUint8Array } from '../_shared/gptImage.ts';
+import { checkAndRecordRateLimit } from '../_shared/rateLimit.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 Deno.serve(async (req) => {
@@ -23,6 +24,9 @@ Deno.serve(async (req) => {
     const { data: claims, error: authErr } = await supabase.auth.getClaims(authHeader.replace('Bearer ', ''));
     if (authErr || !claims?.claims) return json({ error: 'Unauthorized' }, 401);
     const userId = claims.claims.sub;
+
+    const rl = await checkAndRecordRateLimit(supabase, userId, 'generate-artwork');
+    if (!rl.allowed) return json({ error: rl.message }, 429);
 
     const { piece_id, background_prompt } = await req.json();
     if (!piece_id) return json({ error: 'Missing piece_id' }, 400);

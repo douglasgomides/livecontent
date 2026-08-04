@@ -1,6 +1,7 @@
 // generate-content — Claude gera o corpo de uma peça de conteúdo por formato.
 // Recebe { topic, format, transcript, brain } e retorna { body }.
 import { corsHeaders } from '../_shared/cors.ts';
+import { checkAndRecordRateLimit } from '../_shared/rateLimit.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const MODEL = 'claude-sonnet-4-5';
@@ -140,6 +141,9 @@ Deno.serve(async (req) => {
     const { data: claims, error } = await supabase.auth.getClaims(authHeader.replace('Bearer ', ''));
     if (error || !claims?.claims) return json({ error: 'Unauthorized' }, 401);
     const userId = claims.claims.sub;
+
+    const rl = await checkAndRecordRateLimit(supabase, userId, 'generate-content');
+    if (!rl.allowed) return json({ error: rl.message }, 429);
 
     const { topic, format, transcript, brain } = await req.json();
     if (!topic || !format) return json({ error: 'Missing topic/format' }, 400);

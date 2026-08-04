@@ -9,6 +9,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { AD_DIMENSIONS } from '../_shared/artwork.ts';
 import { generateAdCopy } from '../_shared/adCreative.ts';
 import { generateImageBase64, base64ToUint8Array } from '../_shared/gptImage.ts';
+import { checkAndRecordRateLimit } from '../_shared/rateLimit.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 Deno.serve(async (req) => {
@@ -29,6 +30,9 @@ Deno.serve(async (req) => {
     const { data: claims, error: authErr } = await supabase.auth.getClaims(authHeader.replace('Bearer ', ''));
     if (authErr || !claims?.claims) return json({ error: 'Unauthorized' }, 401);
     const userId = claims.claims.sub;
+
+    const rl = await checkAndRecordRateLimit(supabase, userId, 'generate-ad-creative');
+    if (!rl.allowed) return json({ error: rl.message }, 429);
 
     const { prompt, dimension } = await req.json();
     if (!prompt || typeof prompt !== 'string' || !prompt.trim()) return json({ error: 'Missing prompt' }, 400);
