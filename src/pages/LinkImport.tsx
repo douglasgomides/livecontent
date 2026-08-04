@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { upsertSession } from '@/lib/storage';
 import { createBlankSession, runPipeline } from '@/lib/pipeline';
 import { toast } from 'sonner';
-import { toFriendlyMessage } from '@/lib/friendlyError';
 
 type LinkKind = 'youtube' | 'reels' | 'tiktok' | 'article';
 
@@ -52,7 +51,7 @@ export default function LinkImport() {
     upsertSession(s);
     // Extração de tópicos e geração de conteúdo reais rodam no servidor a partir do
     // texto/contexto informado (a transcrição de vídeo em si ainda não é automática).
-    runPipeline(s.id).catch(err => toast.error(toFriendlyMessage(err, 'Não foi possível gerar o conteúdo agora.')));
+    runPipeline(s.id).catch(err => toast.error(err?.message || 'Não foi possível gerar o conteúdo agora.'));
     nav(`/app/session/${s.id}`);
   };
 

@@ -62,7 +62,8 @@ export default function UploadAudio() {
       upsertSession(session);
       runPipeline(session.id).catch(err => {
         console.error('[pipeline]', err);
-        toast.error(toFriendlyMessage(err, 'Não foi possível iniciar o pipeline agora.'));
+        // err.message já vem seguro daqui — ver nota em describeFunctionError.
+        toast.error(err?.message || 'Não foi possível iniciar o pipeline agora.');
       });
       nav(`/app/session/${session.id}`);
     } catch (err: any) {
@@ -83,7 +84,8 @@ export default function UploadAudio() {
       // já existe rawTranscript e vai direto pra anonimização/revisão.
       runPipeline(session.id).catch(err => {
         console.error('[pipeline]', err);
-        toast.error(toFriendlyMessage(err, 'Não foi possível iniciar o pipeline agora.'));
+        // err.message já vem seguro daqui — ver nota em describeFunctionError.
+        toast.error(err?.message || 'Não foi possível iniciar o pipeline agora.');
       });
       nav(`/app/session/${session.id}`);
     } catch (err: any) {

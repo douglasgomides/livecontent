@@ -73,7 +73,7 @@ export default function TopicsReview({ session, onConfirm }: { session: Session;
       // segundos) — o status da sessão já mudou, a tela de processamento
       // acompanha o resto.
       const referenceStyleId = styleId !== 'none' ? styleId : undefined;
-      runPipeline(session.id, formats, referenceStyleId).catch(err => toast.error(toFriendlyMessage(err, 'Não foi possível gerar o conteúdo agora.')));
+      runPipeline(session.id, formats, referenceStyleId).catch(err => toast.error(err?.message || 'Não foi possível gerar o conteúdo agora.'));
     } catch (err: any) {
       toast.error(toFriendlyMessage(err, 'Não foi possível salvar os temas agora.'));
     } finally {

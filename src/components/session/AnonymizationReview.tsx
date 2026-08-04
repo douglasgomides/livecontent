@@ -54,7 +54,7 @@ export default function AnonymizationReview({ session, onConfirm }: { session: S
       // O pipeline em si continua fire-and-forget (pode levar dezenas de
       // segundos) — o status da sessão já mudou, e a tela de processamento
       // (renderizada a partir dele) acompanha o resto.
-      runPipeline(session.id).catch(err => toast.error(toFriendlyMessage(err, 'Não foi possível extrair os temas agora.')));
+      runPipeline(session.id).catch(err => toast.error(err?.message || 'Não foi possível extrair os temas agora.'));
     } catch (err: any) {
       toast.error(toFriendlyMessage(err, 'Não foi possível salvar a revisão agora.'));
     } finally {

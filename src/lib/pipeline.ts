@@ -26,21 +26,30 @@ export const uid = () => crypto.randomUUID();
 // configured") fica em error.context (a Response bruta) e nunca é lido a
 // menos que a gente busque explicitamente. Sem isso, todo erro real da função
 // vira essa mesma frase genérica e inútil pra diagnosticar qualquer coisa.
+//
+// Status importa: 4xx é sempre uma rejeição deliberada que a própria function
+// escreveu pra alguém ler (limite de uso, "Sessão não encontrada", validação
+// de campo) — seguro mostrar direto. 5xx passa pelo catch-all de cada function
+// (`String(e.message)`), que PODE conter erro interno cru (Postgres, rede) —
+// aí não confiamos no texto, devolvemos o fallback amigável. Sem essa
+// distinção por status, um caller que aplica friendly-error por cima do
+// retorno daqui (ex.: toFriendlyMessage) engole também as mensagens 4xx que
+// a function já escreveu com cuidado pro usuário — foi exatamente isso que
+// escondeu o aviso real de limite de plano atrás de "Não foi possível
+// iniciar o pipeline agora".
 export async function describeFunctionError(error: any, fallback: string): Promise<string> {
   if (!error) return fallback;
   const ctx = error.context;
+  const status = ctx && typeof ctx === 'object' ? ctx.status : undefined;
   if (ctx && typeof ctx.clone === 'function') {
     try {
       const body = await ctx.clone().json();
-      if (body?.error) return String(body.error);
-    } catch {
-      try {
-        const text = await ctx.clone().text();
-        if (text) return text.slice(0, 300);
-      } catch { /* noop */ }
-    }
+      if (body?.error && typeof status === 'number' && status >= 400 && status < 500) {
+        return String(body.error);
+      }
+    } catch { /* corpo não é JSON — nunca repassar texto cru, cai no fallback abaixo */ }
   }
-  return error.message ?? fallback;
+  return fallback;
 }
 
 // Delegamos geração local ao mock (para peças síncronas/manuais nas telas atuais).

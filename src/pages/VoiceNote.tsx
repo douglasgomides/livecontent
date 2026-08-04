@@ -23,7 +23,7 @@ export default function VoiceNote() {
       s.audioUrl = path;
       s.status = 'transcribing';
       upsertSession(s);
-      runPipeline(s.id).catch(err => toast.error(toFriendlyMessage(err, 'Não foi possível gerar o conteúdo agora.')));
+      runPipeline(s.id).catch(err => toast.error(err?.message || 'Não foi possível gerar o conteúdo agora.'));
       nav(`/app/session/${s.id}`);
     } catch (err: any) {
       toast.error(toFriendlyMessage(err, 'Não foi possível enviar o áudio agora. Tente de novo em instantes.'));

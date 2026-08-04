@@ -32,7 +32,10 @@ export default function Recording() {
       // fire-and-forget: Realtime updates UI stepwise
       runPipeline(session.id).catch(err => {
         console.error('[pipeline]', err);
-        toast.error(toFriendlyMessage(err, 'Não foi possível iniciar o pipeline agora.'));
+        // err.message já vem seguro daqui — describeFunctionError só repassa
+        // mensagem 4xx deliberada da própria function (limite de uso, etc.),
+        // nunca erro interno cru. toFriendlyMessage por cima escondia isso.
+        toast.error(err?.message || 'Não foi possível iniciar o pipeline agora.');
       });
       nav(`/app/session/${session.id}`);
     } catch (err: any) {

@@ -123,7 +123,7 @@ export default function Trends() {
     s.title = `Objeção: ${OBJECTION_LABEL[weeklySuggestion.category] ?? weeklySuggestion.category}`;
     s.rawTranscript = buildSyntheticTranscript(weeklySuggestion);
     upsertSession(s);
-    runPipeline(s.id).catch(err => toast.error(toFriendlyMessage(err, 'Não foi possível gerar o conteúdo agora.')));
+    runPipeline(s.id).catch(err => toast.error(err?.message || 'Não foi possível gerar o conteúdo agora.'));
     updateWeeklySuggestion(weeklySuggestion.id, { status: 'generated', sessionId: s.id }).catch(() => {});
     setWeeklySuggestion({ ...weeklySuggestion, status: 'generated', sessionId: s.id });
     nav(`/app/session/${s.id}`);

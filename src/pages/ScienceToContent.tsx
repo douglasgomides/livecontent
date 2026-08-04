@@ -78,7 +78,7 @@ export default function ScienceToContent() {
     s.science = { reference: reference.trim(), kind, originalText: text.trim() };
     upsertSession(s);
     // Extração de tópicos e geração de conteúdo reais rodam no servidor a partir daqui.
-    runPipeline(s.id).catch(err => toast.error(toFriendlyMessage(err, 'Não foi possível gerar o conteúdo agora.')));
+    runPipeline(s.id).catch(err => toast.error(err?.message || 'Não foi possível gerar o conteúdo agora.'));
     nav(`/app/session/${s.id}`);
   };
 
